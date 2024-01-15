@@ -107,6 +107,7 @@ extend-ignore = [
     "PLR0915",  # too-many-statements
     "PLR0916",  # too-many-boolean-expressions
     "PLR2004",  # magic-value-comparison
+    "TRY003",
 ]
 
 [tool.ruff.lint.flake8-annotations]
