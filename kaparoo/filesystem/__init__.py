@@ -30,8 +30,11 @@ __all__ = (
     "get_files",
     "get_paths",
     "make_dirs",
+    # collections
+    "DataFolder",
 )
 
+from kaparoo.filesystem.collections import DataFolder
 from kaparoo.filesystem.directory import (
     dir_empty,
     dirs_empty,
