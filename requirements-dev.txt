@@ -13,3 +13,4 @@ hatch>=1.9.1
 ruff>=0.1.13
 mypy>=1.8.0
 pytest>=7.4.4
+pytest-order>=1.2.0
