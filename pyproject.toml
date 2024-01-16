@@ -49,6 +49,7 @@ GitHub = "https://www.github.com/kaparoo/kaparoo-python"
 
 [tool.hatch.build]
 only-include = ["kaparoo"]
+
 [tool.hatch.version]
 path = "kaparoo/__about__.py"
 
@@ -107,7 +108,7 @@ extend-ignore = [
     "PLR0915",  # too-many-statements
     "PLR0916",  # too-many-boolean-expressions
     "PLR2004",  # magic-value-comparison
-    "TRY003",
+    "TRY003",   # raise-vanilla-args
 ]
 
 [tool.ruff.lint.flake8-annotations]
