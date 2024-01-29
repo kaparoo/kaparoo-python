@@ -48,7 +48,3 @@ class DataFolder(Sequence[T_co]):
     @abstractmethod
     def list_files(cls: type[Self], path: StrPath) -> StrPaths:
         raise NotImplementedError
-
-    def refresh(self: Self) -> None:
-        """Refresh the list of files."""
-        self.files = self.list_files(self.path)
