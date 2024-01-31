@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-__all__ = ("DataSequence", "DataFileFolder")
+__all__ = ("DataSequence", "DataFileFolder", "MultiDataFile")
 
 from abc import abstractmethod
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, overload
 
-from kaparoo.filesystem.existence import ensure_dir_exists
+from kaparoo.filesystem.existence import ensure_dir_exists, ensure_file_exists
 from kaparoo.utils.types import T_co
 
 if TYPE_CHECKING:
@@ -53,3 +53,8 @@ class DataFileFolder(DataSequence):
 
     def __len__(self: Self) -> int:
         return len(self.files)
+
+
+class MultiDataFile(DataSequence):
+    def __init__(self: Self, path: StrPath) -> None:
+        self.path = ensure_file_exists(path)

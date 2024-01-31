@@ -33,9 +33,10 @@ __all__ = (
     # collections
     "DataFileFolder",
     "DataSequence",
+    "MultiDataFile",
 )
 
-from kaparoo.filesystem.collections import DataFileFolder, DataSequence
+from kaparoo.filesystem.collections import DataFileFolder, DataSequence, MultiDataFile
 from kaparoo.filesystem.directory import (
     dir_empty,
     dirs_empty,
