@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("DataFolder",)
+__all__ = ("DataSequence", "DataFolder")
 
 from abc import abstractmethod
 from collections.abc import Sequence
@@ -12,16 +12,17 @@ from kaparoo.utils.types import T_co
 if TYPE_CHECKING:
     from typing import Self
 
-    from kaparoo.filesystem.types import StrPath, StrPaths
+    from kaparoo.filesystem.types import StrPath
 
 
-class DataFolder(Sequence[T_co]):
+class DataSequence(Sequence[T_co]):
+    @abstractmethod
     def __init__(self: Self, path: StrPath) -> None:
-        self.path = ensure_dir_exists(path)
-        self.files = self.list_files(self.path)
+        raise NotImplementedError
 
+    @abstractmethod
     def __len__(self: Self) -> int:
-        return len(self.files)
+        raise NotImplementedError
 
     @overload
     def __getitem__(self: Self, index: int, /) -> T_co:
@@ -34,17 +35,21 @@ class DataFolder(Sequence[T_co]):
     def __getitem__(self: Self, index: int | slice, /) -> T_co | Sequence[T_co]:
         if isinstance(index, slice):
             start, stop, step = index.indices(len(self))
-            return self.parse_files(range(start, stop, step))
-        return self.parse_file(index)
+            return self.from_indices(range(start, stop, step))
+        return self.from_index(index)
 
     @abstractmethod
-    def parse_file(self: Self, index: int) -> T_co:
+    def from_index(self: Self, index: int) -> T_co:
         raise NotImplementedError
 
-    def parse_files(self: Self, indices: Sequence[int]) -> Sequence[T_co]:
-        return [self.parse_file(i) for i in indices]
+    def from_indices(self: Self, indices: Sequence[int]) -> Sequence[T_co]:
+        return [self.from_index(index) for index in indices]
 
-    @classmethod
-    @abstractmethod
-    def list_files(cls: type[Self], path: StrPath) -> StrPaths:
-        raise NotImplementedError
+
+class DataFolder(DataSequence):
+    def __init__(self: Self, path: StrPath) -> None:
+        self.path = ensure_dir_exists(path)
+        self.files: list[str]
+
+    def __len__(self: Self) -> int:
+        return len(self.files)

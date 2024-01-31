@@ -34,7 +34,7 @@ __all__ = (
     "DataFolder",
 )
 
-from kaparoo.filesystem.collections import DataFolder
+from kaparoo.filesystem.collections import DataFolder, DataSequence
 from kaparoo.filesystem.directory import (
     dir_empty,
     dirs_empty,
