@@ -10,14 +10,14 @@ from kaparoo.filesystem.existence import ensure_dir_exists, ensure_file_exists
 from kaparoo.utils.types import T_co
 
 if TYPE_CHECKING:
-    from typing import Self
+    from typing import Any, Self
 
     from kaparoo.filesystem.types import StrPath
 
 
 class DataSequence(Sequence[T_co]):
     @abstractmethod
-    def __init__(self: Self, path: StrPath) -> None:
+    def __init__(self: Self, path: StrPath, *args: Any, **kwargs: Any) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -47,10 +47,10 @@ class DataSequence(Sequence[T_co]):
 
 
 class DataFilesFolder(DataSequence[T_co]):
-    def __init__(self: Self, path: StrPath) -> None:
+    def __init__(self: Self, path: StrPath, *args: Any, **kwargs: Any) -> None:
         self.path = ensure_dir_exists(path)
 
 
 class UnifiedDataFile(DataSequence[T_co]):
-    def __init__(self: Self, path: StrPath) -> None:
+    def __init__(self: Self, path: StrPath, *args: Any, **kwargs: Any) -> None:
         self.path = ensure_file_exists(path)
