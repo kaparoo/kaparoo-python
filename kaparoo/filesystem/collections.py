@@ -35,15 +35,15 @@ class DataSequence(Sequence[T_co]):
     def __getitem__(self: Self, index: int | slice, /) -> T_co | Sequence[T_co]:
         if isinstance(index, slice):
             start, stop, step = index.indices(len(self))
-            return self.from_indices(range(start, stop, step))
-        return self.from_index(index)
+            return self.by_indices(range(start, stop, step))
+        return self.by_index(index)
 
     @abstractmethod
-    def from_index(self: Self, index: int) -> T_co:
+    def by_index(self: Self, index: int) -> T_co:
         raise NotImplementedError
 
-    def from_indices(self: Self, indices: Sequence[int]) -> Sequence[T_co]:
-        return [self.from_index(index) for index in indices]
+    def by_indices(self: Self, indices: Sequence[int]) -> Sequence[T_co]:
+        return [self.by_index(index) for index in indices]
 
 
 class DataFilesFolder(DataSequence):
