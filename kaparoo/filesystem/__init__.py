@@ -31,12 +31,12 @@ __all__ = (
     "get_paths",
     "make_dirs",
     # collections
-    "DataFileFolder",
+    "DataFilesFolder",
     "DataSequence",
     "MultiDataFile",
 )
 
-from kaparoo.filesystem.collections import DataFileFolder, DataSequence, MultiDataFile
+from kaparoo.filesystem.collections import DataFilesFolder, DataSequence, MultiDataFile
 from kaparoo.filesystem.directory import (
     dir_empty,
     dirs_empty,

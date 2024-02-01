@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("DataSequence", "DataFileFolder", "MultiDataFile")
+__all__ = ("DataSequence", "DataFilesFolder", "MultiDataFile")
 
 from abc import abstractmethod
 from collections.abc import Sequence
@@ -46,13 +46,9 @@ class DataSequence(Sequence[T_co]):
         return [self.from_index(index) for index in indices]
 
 
-class DataFileFolder(DataSequence):
+class DataFilesFolder(DataSequence):
     def __init__(self: Self, path: StrPath) -> None:
         self.path = ensure_dir_exists(path)
-        self.files: list[str]
-
-    def __len__(self: Self) -> int:
-        return len(self.files)
 
 
 class MultiDataFile(DataSequence):
