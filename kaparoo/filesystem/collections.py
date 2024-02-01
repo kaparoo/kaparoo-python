@@ -46,11 +46,11 @@ class DataSequence(Sequence[T_co]):
         return [self.by_index(index) for index in indices]
 
 
-class DataFilesFolder(DataSequence):
+class DataFilesFolder(DataSequence[T_co]):
     def __init__(self: Self, path: StrPath) -> None:
         self.path = ensure_dir_exists(path)
 
 
-class MultiDataFile(DataSequence):
+class MultiDataFile(DataSequence[T_co]):
     def __init__(self: Self, path: StrPath) -> None:
         self.path = ensure_file_exists(path)
