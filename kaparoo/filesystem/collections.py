@@ -49,13 +49,14 @@ class DataSequence(Sequence[T_co]):
 class DataFilesFolder(DataSequence[T_co]):
     def __init__(self: Self, path: StrPath, *args: Any, **kwargs: Any) -> None:
         self.path = ensure_dir_exists(path)
-        self.files = self.list_files()
+        self.files = self.list_files(*args, **kwargs)
 
     def __len__(self: Self) -> int:
         return len(self.files)
 
+    @classmethod
     @abstractmethod
-    def list_files(self: Self) -> StrPaths:
+    def list_files(cls: type[Self], *args: Any, **kwargs: Any) -> StrPaths:
         raise NotImplementedError
 
 
