@@ -1,10 +1,4 @@
 __all__ = (
-    # exceptions
-    "DirectoryNotFoundError",
-    "NotAFileError",
-    # types
-    "StrPath",
-    "StrPaths",
     # utils
     "prepend_path",
     "prepend_paths",
@@ -30,17 +24,8 @@ __all__ = (
     "get_files",
     "get_paths",
     "make_dirs",
-    # collections
-    "DataSequence",
-    "DataFilesFolder",
-    "UnifiedDataFile",
 )
 
-from kaparoo.filesystem.collections import (
-    DataFilesFolder,
-    DataSequence,
-    UnifiedDataFile,
-)
 from kaparoo.filesystem.directory import (
     dir_empty,
     dirs_empty,
@@ -48,10 +33,6 @@ from kaparoo.filesystem.directory import (
     get_files,
     get_paths,
     make_dirs,
-)
-from kaparoo.filesystem.exceptions import (
-    DirectoryNotFoundError,
-    NotAFileError,
 )
 from kaparoo.filesystem.existence import (
     dir_exists,
@@ -67,7 +48,6 @@ from kaparoo.filesystem.existence import (
     path_exists,
     paths_exist,
 )
-from kaparoo.filesystem.types import StrPath, StrPaths
 from kaparoo.filesystem.utils import (
     prepend_path,
     prepend_paths,
