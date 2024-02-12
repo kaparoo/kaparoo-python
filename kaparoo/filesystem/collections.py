@@ -12,7 +12,7 @@ from kaparoo.utils.types import T_co
 if TYPE_CHECKING:
     from typing import Any, Self
 
-    from kaparoo.filesystem.types import StrPath
+    from kaparoo.filesystem.types import StrPath, StrPaths
 
 
 class DataSequence(Sequence[T_co]):
@@ -49,6 +49,14 @@ class DataSequence(Sequence[T_co]):
 class DataFilesFolder(DataSequence[T_co]):
     def __init__(self: Self, path: StrPath, *args: Any, **kwargs: Any) -> None:
         self.path = ensure_dir_exists(path)
+        self.files = self.list_files()
+
+    def __len__(self: Self) -> int:
+        return len(self.files)
+
+    @abstractmethod
+    def list_files(self: Self) -> StrPaths:
+        raise NotImplementedError
 
 
 class UnifiedDataFile(DataSequence[T_co]):
