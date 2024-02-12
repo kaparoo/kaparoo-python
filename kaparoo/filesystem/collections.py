@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("DataSequence", "DataFilesFolder", "UnifiedDataFile")
+__all__ = ("DataSequence", "DataFilesFolder", "UnifiedDataFile", "UnifiedDataFolder")
 
 from abc import abstractmethod
 from collections.abc import Sequence
@@ -62,3 +62,8 @@ class DataFilesFolder(DataSequence[T_co]):
 class UnifiedDataFile(DataSequence[T_co]):
     def __init__(self: Self, path: StrPath, *args: Any, **kwargs: Any) -> None:
         self.path = ensure_file_exists(path)
+
+
+class UnifiedDataFolder(DataFilesFolder[T_co]):
+    def __init__(self: Self, path: StrPath, *args: Any, **kwargs: Any) -> None:
+        self.path = ensure_dir_exists(path)
