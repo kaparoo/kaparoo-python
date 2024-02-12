@@ -213,18 +213,12 @@ def get_paths(
 
     paths = list(root.rglob(pattern) if recursive else root.glob(pattern))
 
-    if root in paths:
-        paths.remove(root)
+    excludes_set = {root}
+    if excludes:
+        resolve = lambda p: p if p.is_relative_to(root) else root / p  # noqa: E731
+        excludes_set.update(resolve(Path(e)) for e in excludes)
 
-    if not excludes:
-        excludes = []
-
-    for exclude in excludes:
-        path_exclude = Path(exclude)
-        if not path_exclude.is_relative_to(root):
-            path_exclude = root / path_exclude
-        if path_exclude in paths:
-            paths.remove(path_exclude)
+    paths = [p for p in paths if p not in excludes_set]
 
     if callable(condition):
         paths = [p for p in paths if condition(p)]
