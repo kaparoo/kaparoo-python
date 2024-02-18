@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 class DataSequence(Sequence[T_co]):
     @abstractmethod
-    def __init__(self: Self, path: StrPath, *args: Any, **kwargs: Any) -> None:
+    def __init__(self: Self, path: StrPath) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -63,10 +63,10 @@ class DataFilesFolder(DataSequence[T_co]):
 
 
 class UnifiedDataFile(DataSequence[T_co]):
-    def __init__(self: Self, path: StrPath, *args: Any, **kwargs: Any) -> None:
+    def __init__(self: Self, path: StrPath) -> None:
         self.path = ensure_file_exists(path)
 
 
 class UnifiedDataFolder(DataFilesFolder[T_co]):
-    def __init__(self: Self, path: StrPath, *args: Any, **kwargs: Any) -> None:
+    def __init__(self: Self, path: StrPath) -> None:
         self.path = ensure_dir_exists(path)
