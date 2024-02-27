@@ -10,7 +10,7 @@
 # $ python -m pip install [-U] -r requirements-dev.txt
 
 hatch>=1.9.3
-ruff>=0.2.1
+ruff>=0.2.2
 mypy>=1.8.0
-pytest>=8.0.0
+pytest>=8.0.2
 pytest-order>=1.2.0
