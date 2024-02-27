@@ -34,7 +34,7 @@ def generate_batches(
     stop = replace_if_none(stop, len_ := len(sequence))
     if not (start < stop <= len_ and start >= 0):
         raise ValueError(
-            f"invalid range [{start}, {stop}) for sequence of length {len_}]"
+            f"invalid range [{start}, {stop}) for sequence of length {len_}"
         )
 
     head = start
