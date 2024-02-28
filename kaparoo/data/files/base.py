@@ -10,7 +10,7 @@ from kaparoo.filesystem.existence import ensure_dir_exists, ensure_file_exists
 from kaparoo.utils.types import T_co
 
 if TYPE_CHECKING:
-    from typing import Any, Self
+    from typing import Self
 
     from kaparoo.filesystem.types import StrPath, StrPaths
 
@@ -47,18 +47,15 @@ class DataSequence(Sequence[T_co]):
 
 
 class DataFilesFolder(DataSequence[T_co]):
-    def __init__(self: Self, path: StrPath, *args: Any, **kwargs: Any) -> None:
+    def __init__(self: Self, path: StrPath) -> None:
         self.path = ensure_dir_exists(path)
-        self.files = self.list_files(self.path, *args, **kwargs)
+        self.files = self.list_files()
 
     def __len__(self: Self) -> int:
         return len(self.files)
 
-    @classmethod
     @abstractmethod
-    def list_files(
-        cls: type[Self], path: StrPath, *args: Any, **kwargs: Any
-    ) -> StrPaths:
+    def list_files(self: Self) -> StrPaths:
         raise NotImplementedError
 
 
