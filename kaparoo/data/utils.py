@@ -23,13 +23,13 @@ def generate_batches(
     *,
     drop_last: bool = True,
 ) -> Generator[Sequence[T_co], Any, None]:
-    def die_if_not_positive(var: int, name: str) -> None:
-        if var <= 0:
-            raise ValueError(f"{name} must be positive (got {var})")
+    def die_if_not_positive(name: str, value: int) -> None:
+        if value <= 0:
+            raise ValueError(f"{name} must be positive (got {value})")
 
-    die_if_not_positive(size, "size")
-    die_if_not_positive(step, "step")
-    die_if_not_positive(skip, "skip")
+    die_if_not_positive("size", size)
+    die_if_not_positive("step", step)
+    die_if_not_positive("skip", skip)
 
     stop = replace_if_none(stop, len_ := len(sequence))
     if not (start < stop <= len_ and start >= 0):
