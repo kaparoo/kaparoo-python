@@ -1,18 +1,17 @@
 from __future__ import annotations
 
-__all__ = ("DataSequence", "DataFilesFolder", "UnifiedDataFile", "UnifiedDataFolder")
+__all__ = ("DataSequence",)
 
 from abc import abstractmethod
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, overload
 
-from kaparoo.filesystem.existence import ensure_dir_exists, ensure_file_exists
 from kaparoo.utils.types import T_co
 
 if TYPE_CHECKING:
     from typing import Self
 
-    from kaparoo.filesystem.types import StrPath, StrPaths
+    from kaparoo.filesystem.types import StrPath
 
 
 class DataSequence(Sequence[T_co]):
@@ -44,26 +43,3 @@ class DataSequence(Sequence[T_co]):
 
     def by_indices(self: Self, indices: Sequence[int]) -> Sequence[T_co]:
         return [self.by_index(index) for index in indices]
-
-
-class DataFilesFolder(DataSequence[T_co]):
-    def __init__(self: Self, path: StrPath) -> None:
-        self.path = ensure_dir_exists(path)
-        self.files = self.list_files()
-
-    def __len__(self: Self) -> int:
-        return len(self.files)
-
-    @abstractmethod
-    def list_files(self: Self) -> StrPaths:
-        raise NotImplementedError
-
-
-class UnifiedDataFile(DataSequence[T_co]):
-    def __init__(self: Self, path: StrPath) -> None:
-        self.path = ensure_file_exists(path)
-
-
-class UnifiedDataFolder(DataFilesFolder[T_co]):
-    def __init__(self: Self, path: StrPath) -> None:
-        self.path = ensure_dir_exists(path)
