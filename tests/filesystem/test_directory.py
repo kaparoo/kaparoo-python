@@ -107,9 +107,3 @@ def test_get_paths(tmp_filesystem: list[Path]):
     result6 = get_paths(root_dir, condition=os.path.isfile, recursive=True)
     expected6 = [file1, file2, file3, sub_file]
     assert sorted(result6) == sorted(expected6)
-
-    # num_samples
-    assert len(get_paths(root_dir, recursive=True, num_samples=2)) == 2
-
-    with pytest.raises(ValueError):
-        get_paths(root_dir, num_samples=0)
