@@ -74,7 +74,6 @@ testpaths = ["tests/"]
 [tool.ruff]
 cache-dir = "./.cache/ruff"
 extend-exclude = [".cache", ".venv*", ".vscode", "tests"]
-ignore-init-module-imports = true
 
 [tool.ruff.lint]
 extend-select = [
