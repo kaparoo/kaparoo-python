@@ -34,11 +34,11 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = [
-    "hatch>=1.9.3",
-    "ruff>=0.2.2",
-    "mypy>=1.8.0",
-    "pytest>=8.0.2",
-    "pytest-order>=1.2.0",
+    "hatch>=1.12.0",
+    "ruff>=0.5.3",
+    "mypy>=1.10.1",
+    "pytest>=8.2.2",
+    "pytest-order>=1.2.1",
 ]
 
 [project.urls]
