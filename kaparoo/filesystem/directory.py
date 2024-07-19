@@ -141,8 +141,7 @@ def get_paths(
     num_samples: int | None = None,
     recursive: bool = False,
     stringify: Literal[False] = False,
-) -> Sequence[Path]:
-    ...
+) -> Sequence[Path]: ...
 
 
 @overload
@@ -155,8 +154,7 @@ def get_paths(
     num_samples: int | None = None,
     recursive: bool = False,
     stringify: Literal[True],
-) -> Sequence[str]:
-    ...
+) -> Sequence[str]: ...
 
 
 @overload
@@ -169,8 +167,7 @@ def get_paths(
     num_samples: int | None = None,
     recursive: bool = False,
     stringify: bool,
-) -> Sequence[Path] | Sequence[str]:
-    ...
+) -> Sequence[Path] | Sequence[str]: ...
 
 
 def get_paths(
@@ -241,8 +238,7 @@ def get_files(
     num_samples: int | None = None,
     recursive: bool = False,
     stringify: Literal[False] = False,
-) -> Sequence[Path]:
-    ...
+) -> Sequence[Path]: ...
 
 
 @overload
@@ -255,8 +251,7 @@ def get_files(
     num_samples: int | None = None,
     recursive: bool = False,
     stringify: Literal[True],
-) -> Sequence[str]:
-    ...
+) -> Sequence[str]: ...
 
 
 @overload
@@ -269,8 +264,7 @@ def get_files(
     num_samples: int | None = None,
     recursive: bool = False,
     stringify: bool,
-) -> Sequence[Path] | Sequence[str]:
-    ...
+) -> Sequence[Path] | Sequence[str]: ...
 
 
 def get_files(
@@ -335,8 +329,7 @@ def get_dirs(
     num_samples: int | None = None,
     recursive: bool = False,
     stringify: Literal[False] = False,
-) -> Sequence[Path]:
-    ...
+) -> Sequence[Path]: ...
 
 
 @overload
@@ -349,8 +342,7 @@ def get_dirs(
     num_samples: int | None = None,
     recursive: bool = False,
     stringify: Literal[True],
-) -> Sequence[str]:
-    ...
+) -> Sequence[str]: ...
 
 
 @overload
@@ -363,8 +355,7 @@ def get_dirs(
     num_samples: int | None = None,
     recursive: bool = False,
     stringify: bool,
-) -> Sequence[Path] | Sequence[str]:
-    ...
+) -> Sequence[Path] | Sequence[str]: ...
 
 
 def get_dirs(

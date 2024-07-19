@@ -23,13 +23,11 @@ if TYPE_CHECKING:
 
 
 @overload
-def replace_if_none(optional: None, surrogate: U) -> U:
-    ...
+def replace_if_none(optional: None, surrogate: U) -> U: ...
 
 
 @overload
-def replace_if_none(optional: T, surrogate: U) -> T:
-    ...
+def replace_if_none(optional: T, surrogate: U) -> T: ...
 
 
 def replace_if_none(optional: T | None, surrogate: U) -> T | U:
@@ -90,13 +88,11 @@ def unwrap_or_defaults(
 
 
 @overload
-def factory_if_none(optional: None, factory: Callable[[], U]) -> U:
-    ...
+def factory_if_none(optional: None, factory: Callable[[], U]) -> U: ...
 
 
 @overload
-def factory_if_none(optional: T, factory: Callable[[], U]) -> T:
-    ...
+def factory_if_none(optional: T, factory: Callable[[], U]) -> T: ...
 
 
 def factory_if_none(optional: T | None, factory: Callable[[], U]) -> T | U:

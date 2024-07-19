@@ -52,18 +52,15 @@ def dir_exists(path: StrPath) -> bool:
 
 
 @overload
-def ensure_path_exists(path: StrPath, *, stringify: Literal[False] = False) -> Path:
-    ...
+def ensure_path_exists(path: StrPath, *, stringify: Literal[False] = False) -> Path: ...
 
 
 @overload
-def ensure_path_exists(path: StrPath, *, stringify: Literal[True]) -> str:
-    ...
+def ensure_path_exists(path: StrPath, *, stringify: Literal[True]) -> str: ...
 
 
 @overload
-def ensure_path_exists(path: StrPath, *, stringify: bool) -> Path | str:
-    ...
+def ensure_path_exists(path: StrPath, *, stringify: bool) -> Path | str: ...
 
 
 def ensure_path_exists(path: StrPath, *, stringify: bool = False) -> Path | str:
@@ -85,18 +82,15 @@ def ensure_path_exists(path: StrPath, *, stringify: bool = False) -> Path | str:
 
 
 @overload
-def ensure_file_exists(path: StrPath, *, stringify: Literal[False] = False) -> Path:
-    ...
+def ensure_file_exists(path: StrPath, *, stringify: Literal[False] = False) -> Path: ...
 
 
 @overload
-def ensure_file_exists(path: StrPath, *, stringify: Literal[True]) -> str:
-    ...
+def ensure_file_exists(path: StrPath, *, stringify: Literal[True]) -> str: ...
 
 
 @overload
-def ensure_file_exists(path: StrPath, *, stringify: bool) -> Path | str:
-    ...
+def ensure_file_exists(path: StrPath, *, stringify: bool) -> Path | str: ...
 
 
 def ensure_file_exists(path: StrPath, *, stringify: bool = False) -> Path | str:
@@ -123,22 +117,19 @@ def ensure_file_exists(path: StrPath, *, stringify: bool = False) -> Path | str:
 @overload
 def ensure_dir_exists(
     path: StrPath, *, make: bool | int = False, stringify: Literal[False] = False
-) -> Path:
-    ...
+) -> Path: ...
 
 
 @overload
 def ensure_dir_exists(
     path: StrPath, *, make: bool | int = False, stringify: Literal[True]
-) -> str:
-    ...
+) -> str: ...
 
 
 @overload
 def ensure_dir_exists(
     path: StrPath, *, make: bool | int = False, stringify: bool
-) -> Path | str:
-    ...
+) -> Path | str: ...
 
 
 def ensure_dir_exists(
@@ -240,22 +231,19 @@ def dirs_exist(paths: StrPaths, *, root: StrPath | None = None) -> bool:
 @overload
 def ensure_paths_exist(
     paths: StrPaths, *, root: StrPath | None = None, stringify: Literal[False] = False
-) -> Sequence[Path]:
-    ...
+) -> Sequence[Path]: ...
 
 
 @overload
 def ensure_paths_exist(
     paths: StrPaths, *, root: StrPath | None = None, stringify: Literal[True]
-) -> Sequence[str]:
-    ...
+) -> Sequence[str]: ...
 
 
 @overload
 def ensure_paths_exist(
     paths: StrPaths, *, root: StrPath | None = None, stringify: bool
-) -> Sequence[Path] | Sequence[str]:
-    ...
+) -> Sequence[Path] | Sequence[str]: ...
 
 
 def ensure_paths_exist(
@@ -285,22 +273,19 @@ def ensure_paths_exist(
 @overload
 def ensure_files_exist(
     paths: StrPaths, *, root: StrPath | None = None, stringify: Literal[False] = False
-) -> Sequence[Path]:
-    ...
+) -> Sequence[Path]: ...
 
 
 @overload
 def ensure_files_exist(
     paths: StrPaths, *, root: StrPath | None = None, stringify: Literal[True]
-) -> Sequence[str]:
-    ...
+) -> Sequence[str]: ...
 
 
 @overload
 def ensure_files_exist(
     paths: StrPaths, *, root: StrPath | None = None, stringify: bool
-) -> Sequence[Path] | Sequence[str]:
-    ...
+) -> Sequence[Path] | Sequence[str]: ...
 
 
 def ensure_files_exist(
@@ -335,8 +320,7 @@ def ensure_dirs_exist(
     root: StrPath | None = None,
     make: bool | int = False,
     stringify: Literal[False] = False,
-) -> Sequence[Path]:
-    ...
+) -> Sequence[Path]: ...
 
 
 @overload
@@ -346,8 +330,7 @@ def ensure_dirs_exist(
     root: StrPath | None = None,
     make: bool | int = False,
     stringify: Literal[True],
-) -> Sequence[str]:
-    ...
+) -> Sequence[str]: ...
 
 
 @overload
@@ -357,8 +340,7 @@ def ensure_dirs_exist(
     root: StrPath | None = None,
     make: bool | int = False,
     stringify: bool,
-) -> Sequence[Path] | Sequence[str]:
-    ...
+) -> Sequence[Path] | Sequence[str]: ...
 
 
 def ensure_dirs_exist(

@@ -60,18 +60,15 @@ def stringify_paths(paths: StrPaths, after: StrPath | None = None) -> Sequence[s
 @overload
 def prepend_path(
     path: StrPath, base: StrPath, *, stringify: Literal[False] = False
-) -> Path:
-    ...
+) -> Path: ...
 
 
 @overload
-def prepend_path(path: StrPath, base: StrPath, *, stringify: Literal[True]) -> str:
-    ...
+def prepend_path(path: StrPath, base: StrPath, *, stringify: Literal[True]) -> str: ...
 
 
 @overload
-def prepend_path(path: StrPath, base: StrPath, *, stringify: bool) -> Path | str:
-    ...
+def prepend_path(path: StrPath, base: StrPath, *, stringify: bool) -> Path | str: ...
 
 
 def prepend_path(
@@ -100,22 +97,19 @@ def prepend_path(
 @overload
 def prepend_paths(
     paths: StrPaths, base: StrPath, *, stringify: Literal[False] = False
-) -> Sequence[Path]:
-    ...
+) -> Sequence[Path]: ...
 
 
 @overload
 def prepend_paths(
     paths: StrPaths, base: StrPath, *, stringify: Literal[True]
-) -> Sequence[str]:
-    ...
+) -> Sequence[str]: ...
 
 
 @overload
 def prepend_paths(
     paths: StrPaths, base: StrPath, *, stringify: bool
-) -> Sequence[Path] | Sequence[str]:
-    ...
+) -> Sequence[Path] | Sequence[str]: ...
 
 
 def prepend_paths(
