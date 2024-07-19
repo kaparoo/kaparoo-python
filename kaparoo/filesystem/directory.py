@@ -13,7 +13,6 @@ __all__ = (
 )
 
 import os
-import random
 from pathlib import Path
 from typing import TYPE_CHECKING, overload
 
@@ -138,7 +137,6 @@ def get_paths(
     pattern: str = "*",
     excludes: StrPaths | None = None,
     condition: Callable[[Path], bool] | None = None,
-    num_samples: int | None = None,
     recursive: bool = False,
     stringify: Literal[False] = False,
 ) -> Sequence[Path]: ...
@@ -151,7 +149,6 @@ def get_paths(
     pattern: str = "*",
     excludes: StrPaths | None = None,
     condition: Callable[[Path], bool] | None = None,
-    num_samples: int | None = None,
     recursive: bool = False,
     stringify: Literal[True],
 ) -> Sequence[str]: ...
@@ -164,7 +161,6 @@ def get_paths(
     pattern: str = "*",
     excludes: StrPaths | None = None,
     condition: Callable[[Path], bool] | None = None,
-    num_samples: int | None = None,
     recursive: bool = False,
     stringify: bool,
 ) -> Sequence[Path] | Sequence[str]: ...
@@ -176,14 +172,13 @@ def get_paths(
     pattern: str = "*",
     excludes: StrPaths | None = None,
     condition: Callable[[Path], bool] | None = None,
-    num_samples: int | None = None,
     recursive: bool = False,
     stringify: bool = False,
 ) -> Sequence[Path] | Sequence[str]:
     """Get paths that match the specified criteria.
 
     The criteria are applied in the following order:
-        `pattern` -> `excludes` -> `condition` -> `num_samples`
+        `pattern` -> `excludes` -> `condition`
 
     Args:
         root: The root directory to search.
@@ -192,8 +187,6 @@ def get_paths(
             and relative paths are supported. Defaults to None.
         condition: A predicate function to filter the paths. Only paths that satisfy
             the predicate are returned. Defaults to None.
-        num_samples: The maximum number of paths to return. If provided, only the
-            `num_samples` paths are randomly selected and returned. Defaults to None.
         recursive: Whether to search recursively in the root directory. Defaults to False.
         stringify: Whether to return the paths as strings. Defaults to False.
 
@@ -204,7 +197,6 @@ def get_paths(
     Raises:
         DirectoryNotFoundError: If the root directory does not exist.
         NotADirectoryError: If the root directory is not a directory.
-        ValueError: If `num_samples` is not greater than 0.
     """
     root = ensure_dir_exists(root)
 
@@ -220,11 +212,6 @@ def get_paths(
     if callable(condition):
         paths = [p for p in paths if condition(p)]
 
-    if isinstance(num_samples, int) and num_samples < len(paths):
-        if num_samples <= 0:
-            raise ValueError(f"num_samples must be greater than 0 (got {num_samples})")
-        paths = random.sample(paths, num_samples)
-
     return stringify_paths(paths) if stringify else paths
 
 
@@ -235,7 +222,6 @@ def get_files(
     pattern: str = "*",
     excludes: StrPaths | None = None,
     condition: Callable[[Path], bool] | None = None,
-    num_samples: int | None = None,
     recursive: bool = False,
     stringify: Literal[False] = False,
 ) -> Sequence[Path]: ...
@@ -248,7 +234,6 @@ def get_files(
     pattern: str = "*",
     excludes: StrPaths | None = None,
     condition: Callable[[Path], bool] | None = None,
-    num_samples: int | None = None,
     recursive: bool = False,
     stringify: Literal[True],
 ) -> Sequence[str]: ...
@@ -261,7 +246,6 @@ def get_files(
     pattern: str = "*",
     excludes: StrPaths | None = None,
     condition: Callable[[Path], bool] | None = None,
-    num_samples: int | None = None,
     recursive: bool = False,
     stringify: bool,
 ) -> Sequence[Path] | Sequence[str]: ...
@@ -273,14 +257,13 @@ def get_files(
     pattern: str = "*",
     excludes: StrPaths | None = None,
     condition: Callable[[Path], bool] | None = None,
-    num_samples: int | None = None,
     recursive: bool = False,
     stringify: bool = False,
 ) -> Sequence[Path] | Sequence[str]:
     """Get file paths that match the specified criteria.
 
     The criteria are applied in the following order:
-        `pattern` -> `excludes` -> `condition` -> `num_samples`
+        `pattern` -> `excludes` -> `condition`
 
     Args:
         root: The root directory to search.
@@ -289,8 +272,6 @@ def get_files(
             and relative paths are supported. Defaults to None.
         condition: A predicate function to filter the paths. Only paths that satisfy
             the predicate are returned. Defaults to None.
-        num_samples: The maximum number of paths to return. If provided, only the
-            `num_samples` paths are randomly selected and returned. Defaults to None.
         recursive: Whether to search recursively in the root directory. Defaults to False.
         stringify: Whether to return the paths as strings. Defaults to False.
 
@@ -301,7 +282,6 @@ def get_files(
     Raises:
         DirectoryNotFoundError: If the root directory does not exist.
         NotADirectoryError: If the root directory is not a directory.
-        ValueError: If `num_samples` is not greater than 0.
     """
     if callable(condition):
         file_condition = lambda path: file_exists(path) and condition(path)  # noqa: E731
@@ -313,7 +293,6 @@ def get_files(
         pattern=pattern,
         excludes=excludes,
         condition=file_condition,
-        num_samples=num_samples,
         recursive=recursive,
         stringify=stringify,
     )
@@ -326,7 +305,6 @@ def get_dirs(
     pattern: str = "*",
     excludes: StrPaths | None = None,
     condition: Callable[[Path], bool] | None = None,
-    num_samples: int | None = None,
     recursive: bool = False,
     stringify: Literal[False] = False,
 ) -> Sequence[Path]: ...
@@ -339,7 +317,6 @@ def get_dirs(
     pattern: str = "*",
     excludes: StrPaths | None = None,
     condition: Callable[[Path], bool] | None = None,
-    num_samples: int | None = None,
     recursive: bool = False,
     stringify: Literal[True],
 ) -> Sequence[str]: ...
@@ -352,7 +329,6 @@ def get_dirs(
     pattern: str = "*",
     excludes: StrPaths | None = None,
     condition: Callable[[Path], bool] | None = None,
-    num_samples: int | None = None,
     recursive: bool = False,
     stringify: bool,
 ) -> Sequence[Path] | Sequence[str]: ...
@@ -364,14 +340,13 @@ def get_dirs(
     pattern: str = "*",
     excludes: StrPaths | None = None,
     condition: Callable[[Path], bool] | None = None,
-    num_samples: int | None = None,
     recursive: bool = False,
     stringify: bool = False,
 ) -> Sequence[Path] | Sequence[str]:
     """Get directory paths that match the specified criteria.
 
     The criteria are applied in the following order:
-        `pattern` -> `excludes` -> `condition` -> `num_samples`
+        `pattern` -> `excludes` -> `condition`
 
     Args:
         root: The root directory to search.
@@ -380,8 +355,6 @@ def get_dirs(
             and relative paths are supported. Defaults to None.
         condition: A predicate function to filter the paths. Only paths that satisfy
             the predicate are returned. Defaults to None.
-        num_samples: The maximum number of paths to return. If provided, only the
-            `num_samples` paths are randomly selected and returned. Defaults to None.
         recursive: Whether to search recursively in the root directory. Defaults to False.
         stringify: Whether to return the paths as strings. Defaults to False.
 
@@ -392,7 +365,6 @@ def get_dirs(
     Raises:
         DirectoryNotFoundError: If the root directory does not exist.
         NotADirectoryError: If the root directory is not a directory.
-        ValueError: If `num_samples` is not greater than 0.
     """
     if callable(condition):
         dir_condition = lambda path: dir_exists(path) and condition(path)  # noqa: E731
@@ -404,7 +376,6 @@ def get_dirs(
         pattern=pattern,
         excludes=excludes,
         condition=dir_condition,
-        num_samples=num_samples,
         recursive=recursive,
         stringify=stringify,
     )
