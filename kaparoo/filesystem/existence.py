@@ -62,7 +62,7 @@ def ensure_path_exists(path: StrPath, *, stringify: bool) -> Path | str: ...
 
 
 def ensure_path_exists(path: StrPath, *, stringify: bool = False) -> Path | str:
-    """Check if a given path exists and return it as a Path object.
+    """Check if a given path exists and return it.
 
     Args:
         path: The path to check for existence.
@@ -93,7 +93,7 @@ def ensure_file_exists(path: StrPath, *, stringify: bool) -> Path | str: ...
 
 
 def ensure_file_exists(path: StrPath, *, stringify: bool = False) -> Path | str:
-    """Check if a given path exists and is a file, and return it as a Path object.
+    """Check if a given path exists and is a file, and return it.
 
     Args:
         path: The file path to check for existence.
@@ -143,7 +143,7 @@ def ensure_dir_exists(
 def ensure_dir_exists(
     path: StrPath, *, make: bool | int = False, stringify: bool = False
 ) -> Path | str:
-    """Check if a given path exists and is a directory, and return it as a Path object.
+    """Check if a given path exists and is a directory, and return it.
 
     Args:
         path: The directory path to check for existence.
@@ -179,6 +179,7 @@ def ensure_dir_exists(
 
 
 def _join_root_if_provided(paths: StrPaths, root: StrPath | None) -> StrPaths:
+    """Prepend `root` to each of `paths` if `root` is provided."""
     if root is not None:
         root = ensure_dir_exists(root)
         paths = wrap_paths(paths, prepend=root)
@@ -263,7 +264,7 @@ def ensure_paths_exist(
 def ensure_paths_exist(
     paths: StrPaths, *, root: StrPath | None = None, stringify: bool = False
 ) -> Sequence[Path] | Sequence[str]:
-    """Check if all of the given paths exist and return them as Path objects.
+    """Check if all of the given paths exist and return them.
 
     Args:
         paths: The paths to check for existence.
@@ -305,7 +306,7 @@ def ensure_files_exist(
 def ensure_files_exist(
     paths: StrPaths, *, root: StrPath | None = None, stringify: bool = False
 ) -> Sequence[Path] | Sequence[str]:
-    """Check if all of the given paths exist and are files, and return them as Path objects.
+    """Check if all of the given paths exist and are files, and return them.
 
     Args:
         paths: The file paths to check for existence.
@@ -364,7 +365,7 @@ def ensure_dirs_exist(
     make: bool | int = False,
     stringify: bool = False,
 ) -> Sequence[Path] | Sequence[str]:
-    """Check if all of the given paths exist and are directories, and return them as Path objects.
+    """Check if all of the given paths exist and are directories, and return them.
 
     Args:
         paths: The directory paths to check for existence.

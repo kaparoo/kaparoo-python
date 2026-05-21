@@ -22,12 +22,10 @@ class DataSequence[T](Sequence[T]):
         raise NotImplementedError
 
     @overload
-    def __getitem__(self: Self, index: int, /) -> T:
-        pass
+    def __getitem__(self: Self, index: int, /) -> T: ...
 
     @overload
-    def __getitem__(self: Self, index: slice, /) -> Sequence[T]:
-        pass
+    def __getitem__(self: Self, index: slice, /) -> Sequence[T]: ...
 
     def __getitem__(self: Self, index: int | slice, /) -> T | Sequence[T]:
         if isinstance(index, slice):

@@ -58,7 +58,7 @@ def unwrap_or_defaults[T](
     default: T,
     callback: Callable[[T], T] | None = None,
 ) -> Sequence[T]:
-    """Unwrap a sequence of optional values or replace them with default values if they are None.
+    """Unwrap each optional value or replace it with a default if it is None.
 
     Args:
         optionals: The sequence of optional values to be checked.
@@ -115,7 +115,7 @@ def unwrap_or_factories[T](
     factory: Callable[[], T],
     callback: Callable[[T], T] | None = None,
 ) -> Sequence[T]:
-    """Unwrap a sequence of optional values or replace them using a factory if they are None.
+    """Unwrap each optional value or replace it using the factory if it is None.
 
     Args:
         optionals: The sequence of optional values to be checked.

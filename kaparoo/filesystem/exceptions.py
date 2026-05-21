@@ -4,7 +4,7 @@ __all__ = ("DirectoryNotFoundError", "NotAFileError")
 
 
 class DirectoryNotFoundError(FileNotFoundError):
-    """Exception to raise when a directory does not exist.
+    """Raised when a directory does not exist.
 
     Note:
         Since this exception inherits from `FileNotFoundError`,
@@ -14,4 +14,4 @@ class DirectoryNotFoundError(FileNotFoundError):
 
 
 class NotAFileError(OSError):
-    """Exception to raise when a path exists but is not a file."""
+    """Raised when a path exists but is not a file."""
