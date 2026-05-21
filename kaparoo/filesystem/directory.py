@@ -113,7 +113,7 @@ def dirs_empty(paths: StrPaths, root: StrPath | None = None) -> bool:
 
     Raises:
         DirectoryNotFoundError: If `root` is provided and does not exist.
-        DirectoryNotEmptyError: If any of the paths do not exist.
+        DirectoryNotFoundError: If any of the paths do not exist.
         NotADirectoryError: If `root` is provided and is not a directory.
         NotADirectoryError: If any of the paths are not directories.
         ValueError: If `root` is provided and any of the paths are absolute.
