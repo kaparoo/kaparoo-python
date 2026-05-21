@@ -115,6 +115,13 @@ def ensure_file_exists(path: StrPath, *, stringify: bool = False) -> Path | str:
     return stringify_path(path) if stringify else path
 
 
+def _validate_mode(mode: int) -> None:
+    """Reject directory modes outside 0o1-0o7777 (skipped on Windows)."""
+    if platform.system() != "Windows" and not (0 < mode <= 0o7777):
+        msg = f"invalid directory mode: {mode:#o}"
+        raise ValueError(msg)
+
+
 @overload
 def ensure_dir_exists(
     path: StrPath, *, make: bool | int = False, stringify: Literal[False] = False
@@ -153,13 +160,8 @@ def ensure_dir_exists(
         DirectoryNotFoundError: If the path does not exist and `make` is False.
         NotADirectoryError: If the path exists but is not a directory.
     """
-    if (
-        not isinstance(make, bool)
-        and platform.system() != "Windows"
-        and not (0 < make <= 0o7777)
-    ):
-        msg = f"invalid directory mode: {make:#o}"
-        raise ValueError(msg)
+    if not isinstance(make, bool):
+        _validate_mode(make)
     if not path_exists(path := Path(path)):
         if make is False:
             msg = f"no such directory: {path}"

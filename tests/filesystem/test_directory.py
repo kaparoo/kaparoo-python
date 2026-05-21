@@ -5,11 +5,27 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from kaparoo.filesystem.directory import dir_empty, dirs_empty, get_paths, make_dirs
+from kaparoo.filesystem.directory import (
+    dir_empty,
+    dirs_empty,
+    get_paths,
+    make_dir,
+    make_dirs,
+)
 from kaparoo.filesystem.utils import stringify_paths
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+def test_make_dir(tmp_path: Path):
+    created = make_dir(tmp_path / "new")
+    assert created.is_dir()
+
+    # `exist_ok` controls the behavior when the directory already exists.
+    make_dir(created, exist_ok=True)
+    with pytest.raises(FileExistsError):
+        make_dir(created)
 
 
 def test_make_dirs(tmp_path: Path, tmp_dirs: list[Path]):

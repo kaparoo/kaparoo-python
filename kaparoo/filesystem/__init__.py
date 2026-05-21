@@ -14,6 +14,7 @@ __all__ = (
     "get_dirs",
     "get_files",
     "get_paths",
+    "make_dir",
     "make_dirs",
     "path_exists",
     "paths_exist",
@@ -29,6 +30,7 @@ from kaparoo.filesystem.directory import (
     get_dirs,
     get_files,
     get_paths,
+    make_dir,
     make_dirs,
 )
 from kaparoo.filesystem.existence import (
