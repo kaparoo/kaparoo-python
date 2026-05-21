@@ -27,9 +27,6 @@ __all__ = (
 from kaparoo.filesystem.directory import (
     dir_empty,
     dirs_empty,
-    get_dirs,
-    get_files,
-    get_paths,
     make_dir,
     make_dirs,
 )
@@ -46,6 +43,11 @@ from kaparoo.filesystem.existence import (
     files_exist,
     path_exists,
     paths_exist,
+)
+from kaparoo.filesystem.search import (
+    get_dirs,
+    get_files,
+    get_paths,
 )
 from kaparoo.filesystem.utils import (
     stringify_path,
