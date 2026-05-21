@@ -10,11 +10,9 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Sequence
     from typing import Any
 
-    from kaparoo.utils.types import T_co
 
-
-def generate_batches(
-    sequence: Sequence[T_co],
+def generate_batches[T](
+    sequence: Sequence[T],
     size: int,
     step: int = 1,
     skip: int = 1,
@@ -22,7 +20,7 @@ def generate_batches(
     stop: int | None = None,
     *,
     drop_last: bool = True,
-) -> Generator[Sequence[T_co], Any]:
+) -> Generator[Sequence[T], Any]:
     def die_if_not_positive(name: str, value: int) -> None:
         if value <= 0:
             msg = f"{name} must be positive (got {value})"

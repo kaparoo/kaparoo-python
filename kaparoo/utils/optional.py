@@ -14,15 +14,13 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-    from kaparoo.utils.types import T
-
 
 # ========================== #
 #          Replace           #
 # ========================== #
 
 
-def replace_if_none(optional: T | None, surrogate: T) -> T:
+def replace_if_none[T](optional: T | None, surrogate: T) -> T:
     """Replace the value if it is None.
 
     Args:
@@ -35,7 +33,7 @@ def replace_if_none(optional: T | None, surrogate: T) -> T:
     return surrogate if optional is None else optional
 
 
-def unwrap_or_default(
+def unwrap_or_default[T](
     optional: T | None,
     default: T,
     callback: Callable[[T], T] | None = None,
@@ -55,7 +53,7 @@ def unwrap_or_default(
     return callback(result) if callable(callback) else result
 
 
-def unwrap_or_defaults(
+def unwrap_or_defaults[T](
     optionals: Sequence[T | None],
     default: T,
     callback: Callable[[T], T] | None = None,
@@ -79,7 +77,7 @@ def unwrap_or_defaults(
 # ========================== #
 
 
-def factory_if_none(optional: T | None, factory: Callable[[], T]) -> T:
+def factory_if_none[T](optional: T | None, factory: Callable[[], T]) -> T:
     """Replace the value using the factory if it is None.
 
     Args:
@@ -92,7 +90,7 @@ def factory_if_none(optional: T | None, factory: Callable[[], T]) -> T:
     return factory() if optional is None else optional
 
 
-def unwrap_or_factory(
+def unwrap_or_factory[T](
     optional: T | None,
     factory: Callable[[], T],
     callback: Callable[[T], T] | None = None,
@@ -112,7 +110,7 @@ def unwrap_or_factory(
     return callback(result) if callable(callback) else result
 
 
-def unwrap_or_factories(
+def unwrap_or_factories[T](
     optionals: Sequence[T | None],
     factory: Callable[[], T],
     callback: Callable[[T], T] | None = None,
