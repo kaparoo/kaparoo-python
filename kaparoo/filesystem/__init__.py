@@ -17,10 +17,10 @@ __all__ = (
     "make_dirs",
     "path_exists",
     "paths_exist",
-    "prepend_path",
-    "prepend_paths",
     "stringify_path",
     "stringify_paths",
+    "wrap_path",
+    "wrap_paths",
 )
 
 from kaparoo.filesystem.directory import (
@@ -46,8 +46,8 @@ from kaparoo.filesystem.existence import (
     paths_exist,
 )
 from kaparoo.filesystem.utils import (
-    prepend_path,
-    prepend_paths,
     stringify_path,
     stringify_paths,
+    wrap_path,
+    wrap_paths,
 )

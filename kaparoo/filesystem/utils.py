@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("prepend_path", "prepend_paths", "stringify_path", "stringify_paths")
+__all__ = ("stringify_path", "stringify_paths", "wrap_path", "wrap_paths")
 
 import os
 import platform
@@ -88,77 +88,121 @@ def stringify_paths(
 
 
 @overload
-def prepend_path(
-    path: StrPath, base: StrPath, *, stringify: Literal[False] = False
+def wrap_path(
+    path: StrPath,
+    *,
+    prepend: StrPath | None = None,
+    append: StrPath | None = None,
+    stringify: Literal[False] = False,
 ) -> Path: ...
 
 
 @overload
-def prepend_path(path: StrPath, base: StrPath, *, stringify: Literal[True]) -> str: ...
+def wrap_path(
+    path: StrPath,
+    *,
+    prepend: StrPath | None = None,
+    append: StrPath | None = None,
+    stringify: Literal[True],
+) -> str: ...
 
 
 @overload
-def prepend_path(path: StrPath, base: StrPath, *, stringify: bool) -> Path | str: ...
+def wrap_path(
+    path: StrPath,
+    *,
+    prepend: StrPath | None = None,
+    append: StrPath | None = None,
+    stringify: bool,
+) -> Path | str: ...
 
 
-def prepend_path(
-    path: StrPath, base: StrPath, *, stringify: bool = False
+def wrap_path(
+    path: StrPath,
+    *,
+    prepend: StrPath | None = None,
+    append: StrPath | None = None,
+    stringify: bool = False,
 ) -> Path | str:
-    """Prepend a base path to a relative path.
+    """Wrap a path with an optional leading and/or trailing path.
 
     Args:
-        path: The relative path to which the base path will be prepended.
-        base: The base path to prepend to the provided relative path.
-        stringify: Whether to return the prepended path as a string. Defaults to False.
+        path: The path to wrap.
+        prepend: A path to attach in front of `path`. Defaults to None.
+        append: A relative path to attach after `path`. Defaults to None.
+        stringify: Whether to return the result as a string. Defaults to False.
 
     Returns:
-        A Path object or a string with the base path prepended,
-            depending on the value of `stringify`.
+        A Path object or a string, depending on the value of `stringify`.
 
     Raises:
-        ValueError: If the provided path is an absolute path.
+        ValueError: If `prepend` is given and `path` is an absolute path.
+        ValueError: If `append` is given and is an absolute path.
     """
-    if os.path.isabs(path):  # noqa: PTH117
+    if prepend is not None and os.path.isabs(path):  # noqa: PTH117
         msg = f"cannot prepend to absolute path: {path}"
         raise ValueError(msg)
-    path = Path(base, path)
-    return stringify_path(path) if stringify else path
+    if append is not None and os.path.isabs(append):  # noqa: PTH117
+        msg = f"cannot append an absolute path: {append}"
+        raise ValueError(msg)
+    result = Path(path) if prepend is None else Path(prepend, path)
+    if append is not None:
+        result = result / append
+    return stringify_path(result) if stringify else result
 
 
 @overload
-def prepend_paths(
-    paths: StrPaths, base: StrPath, *, stringify: Literal[False] = False
+def wrap_paths(
+    paths: StrPaths,
+    *,
+    prepend: StrPath | None = None,
+    append: StrPath | None = None,
+    stringify: Literal[False] = False,
 ) -> Sequence[Path]: ...
 
 
 @overload
-def prepend_paths(
-    paths: StrPaths, base: StrPath, *, stringify: Literal[True]
+def wrap_paths(
+    paths: StrPaths,
+    *,
+    prepend: StrPath | None = None,
+    append: StrPath | None = None,
+    stringify: Literal[True],
 ) -> Sequence[str]: ...
 
 
 @overload
-def prepend_paths(
-    paths: StrPaths, base: StrPath, *, stringify: bool
+def wrap_paths(
+    paths: StrPaths,
+    *,
+    prepend: StrPath | None = None,
+    append: StrPath | None = None,
+    stringify: bool,
 ) -> Sequence[Path] | Sequence[str]: ...
 
 
-def prepend_paths(
-    paths: StrPaths, base: StrPath, *, stringify: bool = False
+def wrap_paths(
+    paths: StrPaths,
+    *,
+    prepend: StrPath | None = None,
+    append: StrPath | None = None,
+    stringify: bool = False,
 ) -> Sequence[Path] | Sequence[str]:
-    """Prepend a base path to a sequence of relative paths.
+    """Wrap a sequence of paths with an optional leading and/or trailing path.
 
     Args:
-        paths: A sequence of relative paths to which the base path will be prepended.
-        base: The base path to prepend to each of the provided relative paths
-        stringify: Whether to return the prepended paths as strings. Defaults to False.
+        paths: The sequence of paths to wrap.
+        prepend: A path to attach in front of each path. Defaults to None.
+        append: A relative path to attach after each path. Defaults to None.
+        stringify: Whether to return the results as strings. Defaults to False.
 
     Returns:
-        A sequence of Path objects or strings with the base path prepended,
-            depending on the value of `stringify`.
+        A sequence of Path objects or strings, depending on the value of
+            `stringify`.
 
     Raises:
-        ValueError: If any of the provided paths is an absolute path.
+        ValueError: If `prepend` is given and any path is an absolute path.
+        ValueError: If `append` is given and is an absolute path.
     """
-    paths = [prepend_path(path, base) for path in paths]
+    paths = [wrap_path(path, prepend=prepend, append=append) for path in paths]
     return stringify_paths(paths) if stringify else paths

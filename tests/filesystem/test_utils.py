@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING
 import pytest
 
 from kaparoo.filesystem.utils import (
-    prepend_path,
-    prepend_paths,
     stringify_path,
     stringify_paths,
+    wrap_path,
+    wrap_paths,
 )
 
 if TYPE_CHECKING:
@@ -81,38 +81,44 @@ def test_stringify_paths(
         stringify_paths([dummy_path], before="ile")
 
 
-def test_prepend_path(tmp_path: Path, cwd_path: Path):
+def test_wrap_path(tmp_path: Path, cwd_path: Path):
+    # `prepend` attaches a leading path (the former prepend_path behavior).
     expected = tmp_path / "dir"
-    expected_str = _stringify(expected)
-    assert prepend_path("dir", base=tmp_path) == expected
-    assert prepend_path("dir", base=tmp_path, stringify=True) == expected_str
+    assert wrap_path("dir", prepend=tmp_path) == expected
+    assert wrap_path("dir", prepend=tmp_path, stringify=True) == _stringify(expected)
 
-    expected = tmp_path / "file.txt"
-    expected_str = _stringify(expected)
-    assert prepend_path("file.txt", base=tmp_path) == expected
-    assert prepend_path("file.txt", base=tmp_path, stringify=True) == expected_str
+    # `append` attaches a trailing path.
+    assert wrap_path(tmp_path, append="dir") == expected
 
+    # `prepend` and `append` together.
+    nested = expected / "file.txt"
+    assert wrap_path("dir", prepend=tmp_path, append="file.txt") == nested
+
+    # `prepend` rejects an absolute `path`.
     with pytest.raises(ValueError, match="cannot prepend to absolute path"):
-        prepend_path(cwd_path, tmp_path)
+        wrap_path(cwd_path, prepend=tmp_path)
+
+    # `append` must not be an absolute path.
+    with pytest.raises(ValueError, match="cannot append an absolute path"):
+        wrap_path("dir", append=cwd_path)
 
 
-def test_prepend_paths(
+def test_wrap_paths(
     cwd_path: Path,
     tmp_path: Path,
     tmp_dirs: list[Path],
-    tmp_files: list[Path],
     tmp_dirnames: list[str],
-    tmp_filenames: list[str],
 ):
-    expected = tmp_dirs
+    # `prepend` is applied to every path (the former prepend_paths behavior).
+    assert wrap_paths(tmp_dirnames, prepend=tmp_path) == tmp_dirs
     expected_str = [_stringify(dirpath) for dirpath in tmp_dirs]
-    assert prepend_paths(tmp_dirnames, tmp_path) == expected
-    assert prepend_paths(tmp_dirnames, tmp_path, stringify=True) == expected_str
+    assert wrap_paths(tmp_dirnames, prepend=tmp_path, stringify=True) == expected_str
 
-    expected = tmp_files
-    expected_str = [_stringify(path) for path in expected]
-    assert prepend_paths(tmp_filenames, tmp_path) == expected
-    assert prepend_paths(tmp_filenames, tmp_path, stringify=True) == expected_str
+    # `append` is applied to every path.
+    assert wrap_paths(tmp_dirs, append="x") == [dirpath / "x" for dirpath in tmp_dirs]
 
     with pytest.raises(ValueError, match="cannot prepend to absolute path"):
-        prepend_paths([cwd_path], tmp_path)
+        wrap_paths([cwd_path], prepend=tmp_path)
+
+    with pytest.raises(ValueError, match="cannot append an absolute path"):
+        wrap_paths(tmp_dirnames, append=cwd_path)

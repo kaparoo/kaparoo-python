@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, overload
 
 from kaparoo.filesystem.exceptions import DirectoryNotFoundError, NotAFileError
-from kaparoo.filesystem.utils import prepend_paths, stringify_path, stringify_paths
+from kaparoo.filesystem.utils import stringify_path, stringify_paths, wrap_paths
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -169,7 +169,7 @@ def ensure_dir_exists(
 def _join_root_if_provided(paths: StrPaths, root: StrPath | None) -> StrPaths:
     if root is not None:
         root = ensure_dir_exists(root)
-        paths = prepend_paths(paths, root)
+        paths = wrap_paths(paths, prepend=root)
     return paths
 
 
