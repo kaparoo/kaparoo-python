@@ -15,6 +15,7 @@ __all__ = (
     "paths_exist",
 )
 
+import platform
 from pathlib import Path
 from typing import TYPE_CHECKING, overload
 
@@ -147,9 +148,18 @@ def ensure_dir_exists(
         The path as a Path object or a string, depending on the value of `stringify`.
 
     Raises:
+        ValueError: If `make` is an int outside the range 0o1-0o7777
+            (not checked on Windows, where the mode is ignored).
         DirectoryNotFoundError: If the path does not exist and `make` is False.
         NotADirectoryError: If the path exists but is not a directory.
     """
+    if (
+        not isinstance(make, bool)
+        and platform.system() != "Windows"
+        and not (0 < make <= 0o7777)
+    ):
+        msg = f"invalid directory mode: {make:#o}"
+        raise ValueError(msg)
     if not path_exists(path := Path(path)):
         if make is False:
             msg = f"no such directory: {path}"
@@ -370,6 +380,7 @@ def ensure_dirs_exist(
         NotADirectoryError: If `root` is provided and is not a directory.
         NotADirectoryError: If any of the paths exist but are not directories.
         ValueError: If `root` is provided and any of the paths are absolute.
+        ValueError: If `make` is an int outside the range 0o1-0o7777.
     """
     paths = _join_root_if_provided(paths, root)
     paths = [ensure_dir_exists(p, make=make) for p in paths]

@@ -96,6 +96,16 @@ def test_ensure_dir_exists(tmp_paths: tuple[Path, ...], unknown_path: Path):
     existing_dir.rmdir()
 
 
+@pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason="directory mode is ignored on Windows",
+)
+def test_ensure_dir_exists_invalid_mode(tmp_path: Path):
+    for bad_mode in (0, -1, 0o77777):
+        with pytest.raises(ValueError, match="invalid directory mode"):
+            ensure_dir_exists(tmp_path / "new", make=bad_mode)
+
+
 def test_ensure_paths_exist(tmp_filesystem: tuple[Path, ...]):
     root_dir, file1, file2, file3, sub_dir, sub_file = tmp_filesystem
 
