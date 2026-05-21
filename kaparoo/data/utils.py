@@ -22,10 +22,11 @@ def generate_batches(
     stop: int | None = None,
     *,
     drop_last: bool = True,
-) -> Generator[Sequence[T_co], Any, None]:
+) -> Generator[Sequence[T_co], Any]:
     def die_if_not_positive(name: str, value: int) -> None:
         if value <= 0:
-            raise ValueError(f"{name} must be positive (got {value})")
+            msg = f"{name} must be positive (got {value})"
+            raise ValueError(msg)
 
     die_if_not_positive("size", size)
     die_if_not_positive("step", step)
@@ -33,9 +34,8 @@ def generate_batches(
 
     stop = replace_if_none(stop, len_ := len(sequence))
     if not (start < stop <= len_ and start >= 0):
-        raise ValueError(
-            f"invalid range [{start}, {stop}) for sequence of length {len_}"
-        )
+        msg = f"invalid range [{start}, {stop}) for sequence of length {len_}"
+        raise ValueError(msg)
 
     head = start
     tail = head + (size - 1) * skip + 1

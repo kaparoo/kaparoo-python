@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 __all__ = (
     "cwd_path",
     "dummy_path",
-    "unknown_path",
     "tmp_dir",
     "tmp_file",
-    "tmp_paths",
     "tmp_filesystem",
+    "tmp_paths",
+    "unknown_path",
 )
 
 import shutil
@@ -14,22 +16,22 @@ from pathlib import Path
 import pytest
 
 
-@pytest.fixture
+@pytest.fixture()
 def cwd_path() -> Path:
     return Path.cwd()
 
 
-@pytest.fixture
+@pytest.fixture()
 def dummy_path() -> Path:
     return Path("path/to/file")
 
 
-@pytest.fixture
+@pytest.fixture()
 def unknown_path() -> Path:
     return Path("unknown path")
 
 
-@pytest.fixture
+@pytest.fixture()
 def tmp_dir(tmp_path: Path) -> Path:
     dir_path = tmp_path / "dir"
     dir_path.mkdir()
@@ -37,7 +39,7 @@ def tmp_dir(tmp_path: Path) -> Path:
     dir_path.rmdir()
 
 
-@pytest.fixture
+@pytest.fixture()
 def tmp_file(tmp_path: Path) -> Path:
     file_path = tmp_path / "file.txt"
     file_path.touch()
@@ -45,35 +47,35 @@ def tmp_file(tmp_path: Path) -> Path:
     file_path.unlink()
 
 
-@pytest.fixture
+@pytest.fixture()
 def tmp_paths(tmp_path: Path, tmp_dir: Path, tmp_file: Path) -> tuple[Path, Path, Path]:
     return tmp_path, tmp_dir, tmp_file
 
 
-@pytest.fixture
+@pytest.fixture()
 def tmp_dirnames() -> list[str]:
     return [f"dir{i}" for i in range(1, 4)]
 
 
-@pytest.fixture
+@pytest.fixture()
 def tmp_dirs(tmp_path: Path, tmp_dirnames: list[str]) -> list[Path]:
     dirs = [tmp_path / dirname for dirname in tmp_dirnames]
 
-    for dir in dirs:
-        dir.mkdir()
+    for dirpath in dirs:
+        dirpath.mkdir()
 
     yield dirs
 
-    for dir in dirs:
-        shutil.rmtree(dir, ignore_errors=True)
+    for dirpath in dirs:
+        shutil.rmtree(dirpath, ignore_errors=True)
 
 
-@pytest.fixture
+@pytest.fixture()
 def tmp_filenames() -> list[str]:
     return [f"file{i}.txt" for i in range(1, 4)]
 
 
-@pytest.fixture
+@pytest.fixture()
 def tmp_files(tmp_path: Path, tmp_filenames: list[str]) -> list[Path]:
     files = [tmp_path / filename for filename in tmp_filenames]
 
@@ -86,7 +88,7 @@ def tmp_files(tmp_path: Path, tmp_filenames: list[str]) -> list[Path]:
         file.unlink()
 
 
-@pytest.fixture
+@pytest.fixture()
 def tmp_filesystem(tmp_path: Path) -> list[Path]:
     root_dir = tmp_path / "root_dir"
     root_dir.mkdir()

@@ -1,20 +1,20 @@
 from __future__ import annotations
 
 __all__ = (
-    "replace_if_none",
     "factory_if_none",
+    "replace_if_none",
     "unwrap_or_default",
-    "unwrap_or_factory",
     "unwrap_or_defaults",
     "unwrap_or_factories",
+    "unwrap_or_factory",
 )
 
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-    from kaparoo.utils.types import T, U
+    from kaparoo.utils.types import T
 
 
 # ========================== #
@@ -22,15 +22,7 @@ if TYPE_CHECKING:
 # ========================== #
 
 
-@overload
-def replace_if_none(optional: None, surrogate: U) -> U: ...
-
-
-@overload
-def replace_if_none(optional: T, surrogate: U) -> T: ...
-
-
-def replace_if_none(optional: T | None, surrogate: U) -> T | U:
+def replace_if_none(optional: T | None, surrogate: T) -> T:
     """Replace the value if it is None.
 
     Args:
@@ -87,15 +79,7 @@ def unwrap_or_defaults(
 # ========================== #
 
 
-@overload
-def factory_if_none(optional: None, factory: Callable[[], U]) -> U: ...
-
-
-@overload
-def factory_if_none(optional: T, factory: Callable[[], U]) -> T: ...
-
-
-def factory_if_none(optional: T | None, factory: Callable[[], U]) -> T | U:
+def factory_if_none(optional: T | None, factory: Callable[[], T]) -> T:
     """Replace the value using the factory if it is None.
 
     Args:

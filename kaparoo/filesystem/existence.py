@@ -1,23 +1,20 @@
 from __future__ import annotations
 
 __all__ = (
-    # single
-    "path_exists",
-    "file_exists",
     "dir_exists",
-    "ensure_path_exists",
-    "ensure_file_exists",
-    "ensure_dir_exists",
-    # multiple
-    "paths_exist",
-    "files_exist",
     "dirs_exist",
-    "ensure_paths_exist",
-    "ensure_files_exist",
+    "ensure_dir_exists",
     "ensure_dirs_exist",
+    "ensure_file_exists",
+    "ensure_files_exist",
+    "ensure_path_exists",
+    "ensure_paths_exist",
+    "file_exists",
+    "files_exist",
+    "path_exists",
+    "paths_exist",
 )
 
-import os
 from pathlib import Path
 from typing import TYPE_CHECKING, overload
 
@@ -38,17 +35,17 @@ if TYPE_CHECKING:
 
 def path_exists(path: StrPath) -> bool:
     """Test whether a given path exists."""
-    return os.path.exists(path)
+    return Path(path).exists()
 
 
 def file_exists(path: StrPath) -> bool:
     """Test whether a given path is an existing file."""
-    return os.path.isfile(path)
+    return Path(path).is_file()
 
 
 def dir_exists(path: StrPath) -> bool:
     """Test whether a given path is an existing directory."""
-    return os.path.isdir(path)
+    return Path(path).is_dir()
 
 
 @overload
@@ -77,7 +74,8 @@ def ensure_path_exists(path: StrPath, *, stringify: bool = False) -> Path | str:
         FileNotFoundError: If the path does not exist.
     """
     if not path_exists(path := Path(path)):
-        raise FileNotFoundError(f"no such path: {path}")
+        msg = f"no such path: {path}"
+        raise FileNotFoundError(msg)
     return stringify_path(path) if stringify else path
 
 
@@ -108,9 +106,11 @@ def ensure_file_exists(path: StrPath, *, stringify: bool = False) -> Path | str:
         NotAFileError: If the path exists but is not a file.
     """
     if not path_exists(path := Path(path)):
-        raise FileNotFoundError(f"no such file: {path}")
+        msg = f"no such file: {path}"
+        raise FileNotFoundError(msg)
     if not path.is_file():
-        raise NotAFileError(f"not a file: {path}")
+        msg = f"not a file: {path}"
+        raise NotAFileError(msg)
     return stringify_path(path) if stringify else path
 
 
@@ -152,10 +152,12 @@ def ensure_dir_exists(
     """
     if not path_exists(path := Path(path)):
         if make is False:
-            raise DirectoryNotFoundError(f"no such directory: {path}")
+            msg = f"no such directory: {path}"
+            raise DirectoryNotFoundError(msg)
         path.mkdir(mode=0o777 if make is True else make, parents=True)
     if not path.is_dir():
-        raise NotADirectoryError(f"not a directory: {path}")
+        msg = f"not a directory: {path}"
+        raise NotADirectoryError(msg)
     return stringify_path(path) if stringify else path
 
 

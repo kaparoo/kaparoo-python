@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 __all__ = (
-    # make
-    "make_dirs",
-    # empty
     "dir_empty",
     "dirs_empty",
-    # search
-    "get_paths",
-    "get_files",
     "get_dirs",
+    "get_files",
+    "get_paths",
+    "make_dirs",
 )
 
 import os
@@ -65,7 +62,7 @@ def make_dirs(
     """
     paths = _join_root_if_provided(paths, root)
     for path in paths:
-        os.makedirs(path, mode, exist_ok)
+        Path(path).mkdir(mode=mode, parents=True, exist_ok=exist_ok)
     return paths
 
 
@@ -83,7 +80,7 @@ def dir_empty_unsafe(path: StrPath) -> bool:
 def dirs_empty_unsafe(paths: StrPaths, root: StrPath | None = None) -> bool:
     """Check if directories are empty without existence checks."""
     if root is not None:
-        paths = [os.path.join(root, p) for p in paths]
+        paths = [Path(root) / p for p in paths]
     return all(dir_empty_unsafe(p) for p in paths)
 
 

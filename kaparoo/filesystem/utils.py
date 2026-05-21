@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("stringify_path", "stringify_paths", "prepend_path", "prepend_paths")
+__all__ = ("prepend_path", "prepend_paths", "stringify_path", "stringify_paths")
 
 import os
 import platform
@@ -88,8 +88,9 @@ def prepend_path(
     Raises:
         ValueError: If the provided path is an absolute path.
     """
-    if os.path.isabs(path):
-        raise ValueError(f"cannot prepend to absolute path: {path}")
+    if os.path.isabs(path):  # noqa: PTH117
+        msg = f"cannot prepend to absolute path: {path}"
+        raise ValueError(msg)
     path = Path(base, path)
     return stringify_path(path) if stringify else path
 

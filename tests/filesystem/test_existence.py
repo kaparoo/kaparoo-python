@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+from __future__ import annotations
 
 import platform
 from pathlib import Path
@@ -23,7 +23,6 @@ def _stringify(path: Path) -> str:
     return path
 
 
-@pytest.mark.order(1)
 def test_ensure_path_exists(cwd_path: Path, unknown_path: Path):
     cwd_str = _stringify(cwd_path)
 
@@ -43,7 +42,6 @@ def test_ensure_path_exists(cwd_path: Path, unknown_path: Path):
         ensure_path_exists(unknown_path)
 
 
-@pytest.mark.order(2)
 def test_ensure_file_exists(tmp_dir: Path, tmp_file: Path, unknown_path: Path):
     tmp_file_str = _stringify(tmp_file)
 
@@ -66,7 +64,6 @@ def test_ensure_file_exists(tmp_dir: Path, tmp_file: Path, unknown_path: Path):
         ensure_file_exists(tmp_dir)
 
 
-@pytest.mark.order(2)
 def test_ensure_dir_exists(tmp_paths: tuple[Path, ...], unknown_path: Path):
     tmp_path, tmp_dir, tmp_file = tmp_paths
     tmp_dir_str = _stringify(tmp_dir)
@@ -94,11 +91,11 @@ def test_ensure_dir_exists(tmp_paths: tuple[Path, ...], unknown_path: Path):
     assert not not_existing_dir.exists()
     existing_dir = ensure_dir_exists(not_existing_dir, make=True)
 
-    assert isinstance(existing_dir, Path) and existing_dir.is_dir()
+    assert isinstance(existing_dir, Path)
+    assert existing_dir.is_dir()
     existing_dir.rmdir()
 
 
-@pytest.mark.order(3)
 def test_ensure_paths_exist(tmp_filesystem: tuple[Path, ...]):
     root_dir, file1, file2, file3, sub_dir, sub_file = tmp_filesystem
 
@@ -109,7 +106,6 @@ def test_ensure_paths_exist(tmp_filesystem: tuple[Path, ...]):
     assert result == expected
 
 
-@pytest.mark.order(3)
 def test_ensure_files_exist(tmp_filesystem: tuple[Path, ...]):
     root_dir, file1, file2, file3, _, sub_file = tmp_filesystem
 
@@ -120,7 +116,6 @@ def test_ensure_files_exist(tmp_filesystem: tuple[Path, ...]):
     assert result == expected
 
 
-@pytest.mark.order(3)
 def test_ensure_dirs_exist(
     tmp_path: Path, tmp_dir: Path, tmp_filesystem: tuple[Path, ...]
 ):

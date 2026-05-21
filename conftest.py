@@ -1,9 +1,8 @@
-import glob
-import platform
+from __future__ import annotations
 
-pytest_plugins = []
+from pathlib import Path
 
-for fixture_file in glob.glob("tests/fixtures/[!__]*.py", recursive=True):
-    if platform.system() == "Windows":
-        fixture_file = fixture_file.replace("\\", "/")  # noqa: PLW2901
-    pytest_plugins.append(fixture_file.replace("/", ".").replace(".py", ""))
+pytest_plugins = [
+    ".".join(path.with_suffix("").parts)
+    for path in Path("tests/fixtures").glob("[!__]*.py")
+]

@@ -1,4 +1,4 @@
-import pytest
+from __future__ import annotations
 
 from kaparoo.utils.optional import (
     factory_if_none,
@@ -10,13 +10,11 @@ from kaparoo.utils.optional import (
 )
 
 
-@pytest.mark.order(1)
 def test_replace_if_none():
     assert replace_if_none(None, 42) == 42
     assert replace_if_none("value", 42) == "value"
 
 
-@pytest.mark.order(2)
 def test_unwrap_or_default():
     assert unwrap_or_default(None, "default") == "default"
     assert unwrap_or_default("value", "default") == "value"
@@ -24,7 +22,6 @@ def test_unwrap_or_default():
     assert unwrap_or_default("value", "default", str.upper) == "VALUE"
 
 
-@pytest.mark.order(3)
 def test_unwrap_or_defaults():
     optionals = [None, "value1", None, "value2"]
 
@@ -35,13 +32,11 @@ def test_unwrap_or_defaults():
     assert result2 == ["DEFAULT", "VALUE1", "DEFAULT", "VALUE2"]
 
 
-@pytest.mark.order(1)
 def test_factory_if_none():
     assert factory_if_none(None, lambda: 42) == 42
     assert factory_if_none("value", lambda: 42) == "value"
 
 
-@pytest.mark.order(2)
 def test_unwrap_or_factory():
     assert unwrap_or_factory(None, lambda: "factory") == "factory"
     assert unwrap_or_factory("value", lambda: "factory") == "value"
@@ -49,7 +44,6 @@ def test_unwrap_or_factory():
     assert unwrap_or_factory("value", lambda: "factory", str.upper) == "VALUE"
 
 
-@pytest.mark.order(3)
 def test_unwrap_or_factories():
     optionals = [None, "value1", None, "value2"]
 
