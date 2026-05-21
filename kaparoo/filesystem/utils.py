@@ -14,47 +14,77 @@ if TYPE_CHECKING:
     from kaparoo.filesystem.types import StrPath, StrPaths
 
 
-def stringify_path(path: StrPath, after: StrPath | None = None) -> str:
-    r"""Convert a path to a string and optionally make it relative.
+def _stringify_path(
+    path: StrPath,
+    after: StrPath | None,
+    tail: tuple[str, ...],
+    *,
+    is_windows: bool,
+) -> str:
+    """Core of `stringify_path` taking pre-computed loop-invariant inputs."""
+    if after is not None or tail:
+        path = Path(path)
+        if after is not None:
+            path = path.relative_to(after)  # raise ValueError if not possible
+        if tail:
+            if path.parts[-len(tail) :] != tail:
+                msg = f"path {path} does not end with {Path(*tail)}"
+                raise ValueError(msg)
+            path = Path(*path.parts[: -len(tail)])
+    text = os.fspath(path)
+    if is_windows:
+        text = text.replace("\\", "/")
+    return text
+
+
+def stringify_path(
+    path: StrPath, after: StrPath | None = None, before: StrPath | None = None
+) -> str:
+    r"""Convert a path to a string and optionally trim shared head/tail parts.
 
     Args:
         path: The path to be converted to a string. In Windows platform,
             all "\\" will be replaced with "/".
-        after: The base path to make the `path` relative to. If provided,
-            returns only the string representation of `path` after `after`.
-            Defaults to None.
+        after: The leading base path to make `path` relative to. If provided,
+            returns only the part of `path` after `after`. Defaults to None.
+        before: The trailing path to trim from `path`. If provided, returns
+            only the part of `path` before `before`. Defaults to None.
 
     Returns:
         The string representation of the `path`.
 
     Raises:
-        ValueError: If `path` does not start with `after`.
+        ValueError: If `path` does not start with `after`,
+            or does not end with `before`.
     """
-    if after is not None:
-        path = Path(path).relative_to(after)  # raise ValueError if not possible
-    path = os.fspath(path)
-    if platform.system() == "Windows":
-        path = path.replace("\\", "/")
-    return path
+    tail = Path(before).parts if before is not None else ()
+    is_windows = platform.system() == "Windows"
+    return _stringify_path(path, after, tail, is_windows=is_windows)
 
 
-def stringify_paths(paths: StrPaths, after: StrPath | None = None) -> Sequence[str]:
-    r"""Convert a sequence of paths to strings and optionally make them relative.
+def stringify_paths(
+    paths: StrPaths, after: StrPath | None = None, before: StrPath | None = None
+) -> Sequence[str]:
+    r"""Convert a sequence of paths to strings and optionally trim shared parts.
 
     Args:
         paths: The sequence of paths to be converted to strings.
             In Windows platform, all "\\" will be replaced with "/".
-        after: The base path to make all of `paths` relative to. If provided,
-            returns only the string representation of each path in `paths`
-            after `after`. Defaults to None.
+        after: The leading base path to make each path relative to. If provided,
+            returns only the part of each path after `after`. Defaults to None.
+        before: The trailing path to trim from each path. If provided, returns
+            only the part of each path before `before`. Defaults to None.
 
     Returns:
         The sequence of string representations of the `paths`.
 
     Raises:
-        ValueError: If any of `paths` does not start with `after`.
+        ValueError: If any of `paths` does not start with `after`,
+            or does not end with `before`.
     """
-    return [stringify_path(path, after) for path in paths]
+    tail = Path(before).parts if before is not None else ()
+    is_windows = platform.system() == "Windows"
+    return [_stringify_path(path, after, tail, is_windows=is_windows) for path in paths]
 
 
 @overload

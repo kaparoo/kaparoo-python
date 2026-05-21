@@ -36,6 +36,16 @@ def test_stringify_path(
     assert stringify_path(dummy_path, after="path") == "to/file"
     assert stringify_path(dummy_path, after="path/to") == "file"
 
+    # `before` trims trailing components; with `after` it extracts a span.
+    assert stringify_path(dummy_path, before="file") == "path/to"
+    assert stringify_path(dummy_path, before="to/file") == "path"
+    assert stringify_path(dummy_path, before="path/to/file") == "."
+    assert stringify_path(dummy_path, after="path", before="file") == "to"
+
+    # `before` matches whole components, not bare string suffixes.
+    with pytest.raises(ValueError, match="does not end with"):
+        stringify_path(dummy_path, before="ile")
+
     # tmp_paths holds the temp root plus a child dir and a child file.
     tmp_path, tmp_dir, tmp_file = tmp_paths
     assert stringify_path(tmp_dir, after=tmp_path) == "dir"
@@ -46,6 +56,7 @@ def test_stringify_path(
 
 
 def test_stringify_paths(
+    dummy_path: Path,
     tmp_paths: tuple[Path, Path, Path],
     tmp_dirs: list[Path],
     tmp_files: list[Path],
@@ -60,8 +71,14 @@ def test_stringify_paths(
     assert stringify_paths(tmp_dirs) == [_stringify(p) for p in tmp_dirs]
     assert stringify_paths(tmp_dirs, after=tmp_path) == [p.name for p in tmp_dirs]
 
+    # `before` is threaded through to every path.
+    assert stringify_paths([dummy_path], before="file") == ["path/to"]
+
     with pytest.raises(ValueError, match="is not in the subpath of"):
         stringify_paths(tmp_paths, after=tmp_file)
+
+    with pytest.raises(ValueError, match="does not end with"):
+        stringify_paths([dummy_path], before="ile")
 
 
 def test_prepend_path(tmp_path: Path, cwd_path: Path):
