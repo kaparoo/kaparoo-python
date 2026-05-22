@@ -4,7 +4,7 @@ __all__ = ("dir_empty", "dirs_empty", "make_dir", "make_dirs")
 
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 from kaparoo.filesystem.existence import (
     _join_root_if_provided,
@@ -12,8 +12,12 @@ from kaparoo.filesystem.existence import (
     ensure_dir_exists,
     ensure_dirs_exist,
 )
+from kaparoo.filesystem.utils import stringify_path, stringify_paths
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from typing import Literal
+
     from kaparoo.filesystem.types import StrPath, StrPaths
 
 
@@ -22,7 +26,43 @@ if TYPE_CHECKING:
 # ========================== #
 
 
-def make_dir(path: StrPath, *, mode: int = 0o777, exist_ok: bool = False) -> Path:
+@overload
+def make_dir(
+    path: StrPath,
+    *,
+    mode: int = 0o777,
+    exist_ok: bool = False,
+    stringify: Literal[False] = False,
+) -> Path: ...
+
+
+@overload
+def make_dir(
+    path: StrPath,
+    *,
+    mode: int = 0o777,
+    exist_ok: bool = False,
+    stringify: Literal[True],
+) -> str: ...
+
+
+@overload
+def make_dir(
+    path: StrPath,
+    *,
+    mode: int = 0o777,
+    exist_ok: bool = False,
+    stringify: bool,
+) -> Path | str: ...
+
+
+def make_dir(
+    path: StrPath,
+    *,
+    mode: int = 0o777,
+    exist_ok: bool = False,
+    stringify: bool = False,
+) -> Path | str:
     """Recursively create a directory.
 
     Args:
@@ -30,20 +70,58 @@ def make_dir(path: StrPath, *, mode: int = 0o777, exist_ok: bool = False) -> Pat
         mode: The mode to use when creating the directory. Defaults to 0o777.
         exist_ok: Whether to suppress OSError if the path already exists.
             Defaults to False.
+        stringify: Whether to return the path as a string. Defaults to False.
 
     Returns:
-        The directory path that was created.
+        The created directory path as a Path object or a string,
+            depending on the value of `stringify`.
 
     Raises:
         ValueError: If `mode` is outside the range 0o1-0o7777
             (not checked on Windows, where the mode is ignored).
+        NotADirectoryError: If the path exists but is not a directory.
         OSError: If `exist_ok` is False and the path already exists.
-        OSError: If the path is not a directory.
     """
     _validate_mode(mode)
     path = Path(path)
+    if path.exists() and not path.is_dir():
+        msg = f"not a directory: {path}"
+        raise NotADirectoryError(msg)
     path.mkdir(mode=mode, parents=True, exist_ok=exist_ok)
-    return path
+    return stringify_path(path) if stringify else path
+
+
+@overload
+def make_dirs(
+    paths: StrPaths,
+    *,
+    root: StrPath | None = None,
+    mode: int = 0o777,
+    exist_ok: bool = False,
+    stringify: Literal[False] = False,
+) -> Sequence[Path]: ...
+
+
+@overload
+def make_dirs(
+    paths: StrPaths,
+    *,
+    root: StrPath | None = None,
+    mode: int = 0o777,
+    exist_ok: bool = False,
+    stringify: Literal[True],
+) -> Sequence[str]: ...
+
+
+@overload
+def make_dirs(
+    paths: StrPaths,
+    *,
+    root: StrPath | None = None,
+    mode: int = 0o777,
+    exist_ok: bool = False,
+    stringify: bool,
+) -> Sequence[Path] | Sequence[str]: ...
 
 
 def make_dirs(
@@ -52,7 +130,8 @@ def make_dirs(
     root: StrPath | None = None,
     mode: int = 0o777,
     exist_ok: bool = False,
-) -> StrPaths:
+    stringify: bool = False,
+) -> Sequence[Path] | Sequence[str]:
     """Recursively create directories.
 
     Args:
@@ -61,9 +140,11 @@ def make_dirs(
         mode: The mode to use when creating the directories. Defaults to 0o777.
         exist_ok: Whether to suppress OSError if any of the paths already exist.
             Defaults to False.
+        stringify: Whether to return the paths as strings. Defaults to False.
 
     Returns:
-        The directory paths that were created.
+        The created directory paths as Path objects or strings,
+            depending on the value of `stringify`.
 
     Raises:
         ValueError: If `mode` is outside the range 0o1-0o7777
@@ -76,9 +157,10 @@ def make_dirs(
     """
     _validate_mode(mode)
     paths = _join_root_if_provided(paths, root)
-    for path in paths:
-        Path(path).mkdir(mode=mode, parents=True, exist_ok=exist_ok)
-    return paths
+    directories = [Path(p) for p in paths]
+    for directory in directories:
+        directory.mkdir(mode=mode, parents=True, exist_ok=exist_ok)
+    return stringify_paths(directories) if stringify else directories
 
 
 # ========================== #
