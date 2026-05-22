@@ -1,7 +1,15 @@
 from __future__ import annotations
 
-__all__ = ("get_dirs", "get_files", "get_paths")
+__all__ = (
+    "DirSearch",
+    "FileSearch",
+    "PathSearch",
+    "get_dirs",
+    "get_files",
+    "get_paths",
+)
 
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, overload
 
@@ -13,6 +21,10 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from kaparoo.filesystem.types import StrPath, StrPaths
+
+    # TODO(filter): placeholder for the `part` / `name` filter inputs;
+    # replace `object` with the real `Filter` type once it is designed.
+    type _Filters = Sequence[object]
 
 
 @overload
@@ -264,3 +276,143 @@ def get_dirs(
         recursive=recursive,
         stringify=stringify,
     )
+
+
+# New search API (work in progress).
+#
+# `PathSearch` / `FileSearch` / `DirSearch` will replace
+# `get_paths` / `get_dirs` / `get_files`. Each is a configured, reusable
+# search object: construct it with the search criteria, then call
+# `run(root)`. This is a skeleton -- the `Path.walk` traversal, depth
+# limiting, collection and `stringify` handling are implemented; the
+# `part` / `name` filtering and subtree pruning are not (search for
+# "TODO(filter)").
+
+
+class _Search(ABC):
+    """Private base for `PathSearch` / `FileSearch` / `DirSearch`.
+
+    Holds the search configuration and implements the walk in `run`.
+    Subclasses implement `_select` to choose which entry kinds to collect.
+    """
+
+    def __init__(
+        self,
+        *,
+        part: _Filters | None = None,
+        name: _Filters | None = None,
+        condition: Callable[[Path], bool] | None = None,
+        min_depth: int = 1,
+        max_depth: int | None = None,
+    ) -> None:
+        """Store the search configuration.
+
+        A direct child of the search root has depth 1; `max_depth` of None
+        means unlimited.
+
+        Raises:
+            ValueError: If `min_depth` or `max_depth` is not a positive int
+                (`max_depth` may also be None), or if `min_depth` exceeds
+                `max_depth`.
+        """
+        if min_depth < 1:
+            msg = f"min_depth must be positive (got {min_depth})"
+            raise ValueError(msg)
+        if max_depth is not None and max_depth < 1:
+            msg = f"max_depth must be positive or None (got {max_depth})"
+            raise ValueError(msg)
+        if max_depth is not None and min_depth > max_depth:
+            msg = f"min_depth ({min_depth}) cannot exceed max_depth ({max_depth})"
+            raise ValueError(msg)
+
+        self._part = part
+        self._name = name
+        self._condition = condition
+        self._min_depth = min_depth
+        self._max_depth = max_depth
+
+    @abstractmethod
+    def _select(self, dirnames: list[str], filenames: list[str], /) -> list[str]:
+        """Return the entry names to collect at one walked directory."""
+        raise NotImplementedError
+
+    @overload
+    def run(
+        self, root: StrPath, *, stringify: Literal[False] = False
+    ) -> Sequence[Path]: ...
+
+    @overload
+    def run(self, root: StrPath, *, stringify: Literal[True]) -> Sequence[str]: ...
+
+    @overload
+    def run(
+        self, root: StrPath, *, stringify: bool
+    ) -> Sequence[Path] | Sequence[str]: ...
+
+    def run(
+        self, root: StrPath, *, stringify: bool = False
+    ) -> Sequence[Path] | Sequence[str]:
+        """Walk `root` and return the matching paths, sorted.
+
+        Work in progress: the `part` / `name` filtering is not implemented
+        yet -- see TODO(filter).
+
+        Raises:
+            DirectoryNotFoundError: If `root` does not exist.
+            NotADirectoryError: If `root` is not a directory.
+        """
+        root = ensure_dir_exists(root)
+        root_depth = len(root.parts)
+        min_depth = self._min_depth
+        max_depth = self._max_depth
+        condition = self._condition
+
+        results: list[Path] = []
+
+        for dirpath, dirnames, filenames in root.walk():
+            # Depth of the entries in `dirnames` / `filenames`; a direct
+            # child of `root` has depth 1.
+            child_depth = len(dirpath.parts) - root_depth + 1
+
+            # TODO(filter): match `part` against `dirpath.relative_to(root)`
+            # and prune subtrees by removing names from `dirnames` in place.
+
+            # `max_depth` is enforced by the prune below (the walk never
+            # descends past it), so collection only needs the `min_depth`
+            # lower bound.
+            if child_depth >= min_depth:
+                # TODO(filter): drop names rejected by `name` filters.
+                names = self._select(dirnames, filenames)
+                results.extend(dirpath / name for name in names)
+
+            # Stop descending once the next level down would exceed `max_depth`.
+            if max_depth is not None and child_depth >= max_depth:
+                dirnames.clear()
+
+        if callable(condition):
+            results = [path for path in results if condition(path)]
+
+        results.sort()
+
+        return stringify_paths(results) if stringify else results
+
+
+class PathSearch(_Search):
+    """Search for both directories and files."""
+
+    def _select(self, dirnames: list[str], filenames: list[str], /) -> list[str]:
+        return [*dirnames, *filenames]
+
+
+class FileSearch(_Search):
+    """Search for files."""
+
+    def _select(self, _dirnames: list[str], filenames: list[str], /) -> list[str]:
+        return list(filenames)
+
+
+class DirSearch(_Search):
+    """Search for directories."""
+
+    def _select(self, dirnames: list[str], _filenames: list[str], /) -> list[str]:
+        return list(dirnames)
