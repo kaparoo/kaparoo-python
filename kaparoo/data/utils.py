@@ -7,8 +7,7 @@ from typing import TYPE_CHECKING
 from kaparoo.utils.optional import replace_if_none
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Sequence
-    from typing import Any
+    from collections.abc import Iterator, Sequence
 
 
 def generate_batches[T](
@@ -20,7 +19,7 @@ def generate_batches[T](
     stop: int | None = None,
     *,
     drop_last: bool = True,
-) -> Generator[Sequence[T], Any]:
+) -> Iterator[Sequence[T]]:
     def die_if_not_positive(name: str, value: int) -> None:
         if value <= 0:
             msg = f"{name} must be positive (got {value})"
