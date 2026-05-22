@@ -92,7 +92,7 @@ def dir_empty_unsafe(path: StrPath) -> bool:
         return not any(it)
 
 
-def dirs_empty_unsafe(paths: StrPaths, root: StrPath | None = None) -> bool:
+def dirs_empty_unsafe(paths: StrPaths, *, root: StrPath | None = None) -> bool:
     """Check if directories are empty without existence checks."""
     if root is not None:
         paths = [Path(root) / p for p in paths]
@@ -116,7 +116,7 @@ def dir_empty(path: StrPath) -> bool:
     return dir_empty_unsafe(path)
 
 
-def dirs_empty(paths: StrPaths, root: StrPath | None = None) -> bool:
+def dirs_empty(paths: StrPaths, *, root: StrPath | None = None) -> bool:
     """Check if directories are empty.
 
     Args:
