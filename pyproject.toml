@@ -31,11 +31,12 @@ classifiers = [
     "Typing :: Typed",
     # See https://pypi.org/classifiers/ for more classifiers
 ]
-keywords = []
+keywords = ["filesystem", "pathlib", "paths", "utilities"]
 dependencies = []
 
 [project.urls]
 GitHub = "https://www.github.com/kaparoo/kaparoo-python"
+Issues = "https://www.github.com/kaparoo/kaparoo-python/issues"
 
 # ========================== #
 #      [tool.*] Sections     #
