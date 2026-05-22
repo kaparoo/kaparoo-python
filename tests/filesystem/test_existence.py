@@ -136,3 +136,21 @@ def test_ensure_dirs_exist(
     expected = [tmp_dir, root_dir, sub_dir]
 
     assert result == expected
+
+
+@pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason="directory mode is ignored on Windows",
+)
+def test_ensure_dirs_exist_invalid_mode():
+    # `make` is validated even when `paths` is empty.
+    for bad_mode in (0, -1, 0o77777):
+        with pytest.raises(ValueError, match="invalid directory mode"):
+            ensure_dirs_exist([], make=bad_mode)
+
+
+def test_exceptions_reexported_from_package():
+    from kaparoo import filesystem
+
+    assert filesystem.DirectoryNotFoundError is DirectoryNotFoundError
+    assert filesystem.NotAFileError is NotAFileError

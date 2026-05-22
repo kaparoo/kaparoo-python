@@ -52,3 +52,14 @@ def test_unwrap_or_factories():
 
     result2 = unwrap_or_factories(optionals, lambda: "factory", str.upper)
     assert result2 == ["FACTORY", "VALUE1", "FACTORY", "VALUE2"]
+
+
+def test_optional_helpers_reexported_from_package():
+    from kaparoo import utils
+
+    assert utils.factory_if_none is factory_if_none
+    assert utils.replace_if_none is replace_if_none
+    assert utils.unwrap_or_default is unwrap_or_default
+    assert utils.unwrap_or_defaults is unwrap_or_defaults
+    assert utils.unwrap_or_factories is unwrap_or_factories
+    assert utils.unwrap_or_factory is unwrap_or_factory
