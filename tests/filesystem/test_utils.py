@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import platform
 from typing import TYPE_CHECKING
 
 import pytest
@@ -12,15 +11,10 @@ from kaparoo.filesystem.utils import (
     wrap_paths,
 )
 
+from .helpers import _stringify
+
 if TYPE_CHECKING:
     from pathlib import Path
-
-
-def _stringify(path: Path) -> str:
-    path = str(path)
-    if platform.system() == "Windows":
-        path = path.replace("\\", "/")
-    return path
 
 
 def test_stringify_path(

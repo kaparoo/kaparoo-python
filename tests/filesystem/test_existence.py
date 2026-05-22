@@ -15,12 +15,7 @@ from kaparoo.filesystem.existence import (
     ensure_paths_exist,
 )
 
-
-def _stringify(path: Path) -> str:
-    path = str(path)
-    if platform.system() == "Windows":
-        path = path.replace("\\", "/")
-    return path
+from .helpers import _stringify
 
 
 def test_ensure_path_exists(cwd_path: Path, unknown_path: Path):

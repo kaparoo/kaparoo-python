@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import platform
 from pathlib import Path
 
 import pytest
@@ -14,12 +13,7 @@ from kaparoo.filesystem.directory import (
     make_dirs,
 )
 
-
-def _stringify(path: Path) -> str:
-    path = str(path)
-    if platform.system() == "Windows":
-        path = path.replace("\\", "/")
-    return path
+from .helpers import _stringify
 
 
 def test_make_dir(tmp_path: Path, tmp_file: Path):
