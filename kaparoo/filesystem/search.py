@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, overload
 
 from kaparoo.filesystem.existence import dir_exists, ensure_dir_exists, file_exists
-from kaparoo.filesystem.utils import stringify_paths
+from kaparoo.filesystem.utils import stringify_path, stringify_paths
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -285,8 +285,8 @@ def get_dirs(
 # search object: construct it with the search criteria, then call
 # `run(root)`. This is a skeleton -- the `Path.walk` traversal, depth
 # limiting, collection and `stringify` handling are implemented; the
-# `part` / `name` filtering and subtree pruning are not (search for
-# "TODO(filter)").
+# `part` / `name` filter methods (`_accept_part` / `_accept_name`) are
+# stubs and subtree pruning is not done (search for "TODO(filter)").
 
 
 class _Search(ABC):
@@ -336,6 +336,19 @@ class _Search(ABC):
         """Return the entry names to collect at one walked directory."""
         raise NotImplementedError
 
+    def _accept_part(self, part: str, /) -> bool:  # noqa: ARG002
+        """Whether entries under a directory with this `part` are eligible.
+
+        `part` is the directory's path relative to the search root.
+        """
+        # TODO(filter): apply the `part` filters (`self._part`).
+        return True
+
+    def _accept_name(self, name: str, /) -> bool:  # noqa: ARG002
+        """Whether an entry with this basename is included."""
+        # TODO(filter): apply the `name` filters (`self._name`).
+        return True
+
     @overload
     def run(
         self, root: StrPath, *, stringify: Literal[False] = False
@@ -374,16 +387,20 @@ class _Search(ABC):
             # child of `root` has depth 1.
             child_depth = len(dirpath.parts) - root_depth + 1
 
-            # TODO(filter): match `part` against `dirpath.relative_to(root)`
-            # and prune subtrees by removing names from `dirnames` in place.
+            # `part` is this directory's path relative to `root`.
+            part = stringify_path(dirpath.relative_to(root))
+
+            # TODO(filter): when `_accept_part` rejects via a prunable
+            # filter, also prune the subtree by clearing `dirnames`.
 
             # `max_depth` is enforced by the prune below (the walk never
             # descends past it), so collection only needs the `min_depth`
             # lower bound.
-            if child_depth >= min_depth:
-                # TODO(filter): drop names rejected by `name` filters.
+            if child_depth >= min_depth and self._accept_part(part):
                 names = self._select(dirnames, filenames)
-                results.extend(dirpath / name for name in names)
+                results.extend(
+                    dirpath / name for name in names if self._accept_name(name)
+                )
 
             # Stop descending once the next level down would exceed `max_depth`.
             if max_depth is not None and child_depth >= max_depth:
