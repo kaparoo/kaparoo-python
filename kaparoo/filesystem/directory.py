@@ -1,6 +1,13 @@
 from __future__ import annotations
 
-__all__ = ("dir_empty", "dirs_empty", "make_dir", "make_dirs")
+__all__ = (
+    "dir_empty",
+    "dir_empty_unsafe",
+    "dirs_empty",
+    "dirs_empty_unsafe",
+    "make_dir",
+    "make_dirs",
+)
 
 import os
 from pathlib import Path

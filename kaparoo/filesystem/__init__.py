@@ -1,7 +1,11 @@
 __all__ = (
+    "DirectoryNotFoundError",
+    "NotAFileError",
     "dir_empty",
+    "dir_empty_unsafe",
     "dir_exists",
     "dirs_empty",
+    "dirs_empty_unsafe",
     "dirs_exist",
     "ensure_dir_exists",
     "ensure_dirs_exist",
@@ -26,9 +30,15 @@ __all__ = (
 
 from kaparoo.filesystem.directory import (
     dir_empty,
+    dir_empty_unsafe,
     dirs_empty,
+    dirs_empty_unsafe,
     make_dir,
     make_dirs,
+)
+from kaparoo.filesystem.exceptions import (
+    DirectoryNotFoundError,
+    NotAFileError,
 )
 from kaparoo.filesystem.existence import (
     dir_exists,
