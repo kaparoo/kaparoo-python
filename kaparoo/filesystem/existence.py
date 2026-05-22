@@ -385,6 +385,8 @@ def ensure_dirs_exist(
         ValueError: If `root` is provided and any of the paths are absolute.
         ValueError: If `make` is an int outside the range 0o1-0o7777.
     """
+    if not isinstance(make, bool):
+        _validate_mode(make)
     paths = _join_root_if_provided(paths, root)
     paths = [ensure_dir_exists(p, make=make) for p in paths]
     return stringify_paths(paths) if stringify else paths
