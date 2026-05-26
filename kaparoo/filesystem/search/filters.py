@@ -136,24 +136,32 @@ class RegexFilter(PatternFilter):
     pattern. For partial matches, anchor explicitly with `.*` in the
     pattern. `case_sensitive=False` is wired via `re.IGNORECASE`.
 
+    The pattern is compiled with the appropriate flags once at
+    construction and stored in `_compiled`, so `matches` is a single
+    `re.Pattern.fullmatch` call -- no per-call flag computation, and
+    `re`'s internal pattern cache is bypassed entirely.
+
     Raises:
         ValueError: If `pattern` is not a valid regular expression
             (validated at construction).
     """
 
+    _compiled: re.Pattern[str] = field(init=False, repr=False, compare=False)
+
     def __post_init__(self) -> None:
         # Intentionally skip `PatternFilter.__post_init__`: regex
         # case-insensitivity uses `re.IGNORECASE`, and casefolding the
         # pattern would corrupt constructs like `(?-i:[A-Z])`.
+        flags = 0 if self.case_sensitive else re.IGNORECASE
         try:
-            re.compile(self.pattern)
+            compiled = re.compile(self.pattern, flags)
         except re.error as e:
             msg = f"invalid regex pattern {self.pattern!r}: {e}"
             raise ValueError(msg) from e
+        object.__setattr__(self, "_compiled", compiled)
 
     def matches(self, target: str) -> bool:
-        flags = 0 if self.case_sensitive else re.IGNORECASE
-        return bool(re.fullmatch(self.pattern, target, flags))
+        return bool(self._compiled.fullmatch(target))
 
 
 @dataclass(frozen=True)
