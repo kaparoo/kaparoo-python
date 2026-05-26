@@ -36,6 +36,8 @@ class Search(ABC):
 
     @classmethod
     def _filter_names(cls, names: Iterable[str], filter: Filter | None, /) -> list[str]:  # noqa: A002
+        if filter is None:
+            return list(names)
         return [name for name in names if cls._filter_name(name, filter)]
 
     @classmethod
