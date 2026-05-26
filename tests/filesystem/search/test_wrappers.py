@@ -15,8 +15,7 @@ from kaparoo.filesystem.search.filters import (
     StartsWith,
 )
 from kaparoo.filesystem.search.wrappers import search_dirs, search_files, search_paths
-
-from .helpers import _stringify
+from tests.filesystem.helpers import _stringify
 
 if TYPE_CHECKING:
     from pathlib import Path
