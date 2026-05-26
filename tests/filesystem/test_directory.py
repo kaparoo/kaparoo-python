@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import platform
 from pathlib import Path
 
 import pytest
@@ -57,13 +58,6 @@ def test_make_dirs(tmp_path: Path, tmp_dirs: list[Path]):
     subdir1.rmdir()
     subdir2.rmdir()
 
-    # Test creating directories with custom permissions
-    custom_mode = 0o755
-    custom_mode_dir, *_ = make_dirs([tmp_path / "custom_mode_dir"], mode=custom_mode)
-    assert custom_mode_dir.is_dir()
-    assert custom_mode_dir.stat().st_mode & custom_mode == custom_mode
-    custom_mode_dir.rmdir()
-
     # Test that string inputs are normalized to Path objects in the result
     norm_dir, *_ = make_dirs([str(tmp_path / "norm_dir")])
     assert isinstance(norm_dir, Path)
@@ -84,6 +78,18 @@ def test_make_dirs(tmp_path: Path, tmp_dirs: list[Path]):
     # Test creating directories with exist_ok=False for existing directories
     with pytest.raises(FileExistsError):
         make_dirs(tmp_dirs)  # `exist_ok` is False
+
+
+@pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason="directory mode is ignored on Windows",
+)
+def test_make_dirs_custom_mode(tmp_path: Path):
+    custom_mode = 0o755
+    custom_mode_dir, *_ = make_dirs([tmp_path / "custom_mode_dir"], mode=custom_mode)
+    assert custom_mode_dir.is_dir()
+    assert custom_mode_dir.stat().st_mode & custom_mode == custom_mode
+    custom_mode_dir.rmdir()
 
 
 def test_dir_empty(tmp_dir: Path):
