@@ -292,28 +292,114 @@ def get_dirs(
 class Search(ABC):
     """Abstract base for `PathSearch` / `FileSearch` / `DirSearch`.
 
-    Holds the search configuration and implements the walk in `run`.
-    Subclasses implement `_select` to choose which entry kinds to collect.
+    Stateless: subclasses are namespaces with no instance state.
+    `_select` chooses which entry kinds to collect; `run` implements the
+    walk and is the only public entry point.
     """
 
-    def __init__(
-        self,
+    @classmethod
+    @abstractmethod
+    def _select(cls, dirnames: list[str], filenames: list[str], /) -> list[str]:
+        """Return the entry names to collect at one walked directory."""
+        raise NotImplementedError
+
+    @classmethod
+    def _accept_part(
+        cls,
+        part: str,  # noqa: ARG003
+        filters: _Filters | None,  # noqa: ARG003
+        /,
+    ) -> bool:
+        """Whether entries under a directory with this `part` are eligible.
+
+        `part` is the directory's path relative to the search root.
+        """
+        # TODO(filter): apply the `part` filters.
+        return True
+
+    @classmethod
+    def _accept_name(
+        cls,
+        name: str,  # noqa: ARG003
+        filters: _Filters | None,  # noqa: ARG003
+        /,
+    ) -> bool:
+        """Whether an entry with this basename is included."""
+        # TODO(filter): apply the `name` filters.
+        return True
+
+    @overload
+    @classmethod
+    def run(
+        cls,
+        root: StrPath,
         *,
         part: _Filters | None = None,
         name: _Filters | None = None,
         condition: Callable[[Path], bool] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
-    ) -> None:
-        """Store the search configuration.
+        ordered: bool = True,
+        stringify: Literal[False] = False,
+    ) -> Sequence[Path]: ...
 
-        A direct child of the search root has depth 1; `max_depth` of None
-        means unlimited.
+    @overload
+    @classmethod
+    def run(
+        cls,
+        root: StrPath,
+        *,
+        part: _Filters | None = None,
+        name: _Filters | None = None,
+        condition: Callable[[Path], bool] | None = None,
+        min_depth: int = 1,
+        max_depth: int | None = None,
+        ordered: bool = True,
+        stringify: Literal[True],
+    ) -> Sequence[str]: ...
+
+    @overload
+    @classmethod
+    def run(
+        cls,
+        root: StrPath,
+        *,
+        part: _Filters | None = None,
+        name: _Filters | None = None,
+        condition: Callable[[Path], bool] | None = None,
+        min_depth: int = 1,
+        max_depth: int | None = None,
+        ordered: bool = True,
+        stringify: bool,
+    ) -> Sequence[Path] | Sequence[str]: ...
+
+    @classmethod
+    def run(
+        cls,
+        root: StrPath,
+        *,
+        part: _Filters | None = None,
+        name: _Filters | None = None,
+        condition: Callable[[Path], bool] | None = None,
+        min_depth: int = 1,
+        max_depth: int | None = None,
+        ordered: bool = True,
+        stringify: bool = False,
+    ) -> Sequence[Path] | Sequence[str]:
+        """Walk `root` and return the matching paths.
+
+        A direct child of `root` has depth 1; `max_depth` of None means
+        unlimited.
+
+        Work in progress: the `part` / `name` filtering is not implemented
+        yet -- see TODO(filter).
 
         Raises:
             ValueError: If `min_depth` or `max_depth` is not a positive int
                 (`max_depth` may also be None), or if `min_depth` exceeds
                 `max_depth`.
+            DirectoryNotFoundError: If `root` does not exist.
+            NotADirectoryError: If `root` is not a directory.
         """
         if min_depth < 1:
             msg = f"min_depth must be positive (got {min_depth})"
@@ -325,78 +411,8 @@ class Search(ABC):
             msg = f"min_depth ({min_depth}) cannot exceed max_depth ({max_depth})"
             raise ValueError(msg)
 
-        self._part = part
-        self._name = name
-        self._condition = condition
-        self._min_depth = min_depth
-        self._max_depth = max_depth
-
-    @abstractmethod
-    def _select(self, dirnames: list[str], filenames: list[str], /) -> list[str]:
-        """Return the entry names to collect at one walked directory."""
-        raise NotImplementedError
-
-    def _accept_part(self, part: str, /) -> bool:  # noqa: ARG002
-        """Whether entries under a directory with this `part` are eligible.
-
-        `part` is the directory's path relative to the search root.
-        """
-        # TODO(filter): apply the `part` filters (`self._part`).
-        return True
-
-    def _accept_name(self, name: str, /) -> bool:  # noqa: ARG002
-        """Whether an entry with this basename is included."""
-        # TODO(filter): apply the `name` filters (`self._name`).
-        return True
-
-    @overload
-    def run(
-        self,
-        root: StrPath,
-        *,
-        ordered: bool = True,
-        stringify: Literal[False] = False,
-    ) -> Sequence[Path]: ...
-
-    @overload
-    def run(
-        self,
-        root: StrPath,
-        *,
-        ordered: bool = True,
-        stringify: Literal[True],
-    ) -> Sequence[str]: ...
-
-    @overload
-    def run(
-        self,
-        root: StrPath,
-        *,
-        ordered: bool = True,
-        stringify: bool,
-    ) -> Sequence[Path] | Sequence[str]: ...
-
-    def run(
-        self,
-        root: StrPath,
-        *,
-        ordered: bool = True,
-        stringify: bool = False,
-    ) -> Sequence[Path] | Sequence[str]:
-        """Walk `root` and return the matching paths.
-
-        Work in progress: the `part` / `name` filtering is not implemented
-        yet -- see TODO(filter).
-
-        Raises:
-            DirectoryNotFoundError: If `root` does not exist.
-            NotADirectoryError: If `root` is not a directory.
-        """
         root = ensure_dir_exists(root)
         root_depth = len(root.parts)
-        min_depth = self._min_depth
-        max_depth = self._max_depth
-        condition = self._condition
 
         results: list[Path] = []
 
@@ -406,7 +422,7 @@ class Search(ABC):
             child_depth = len(dirpath.parts) - root_depth + 1
 
             # `part` is this directory's path relative to `root`.
-            part = stringify_path(dirpath.relative_to(root))
+            part_str = stringify_path(dirpath.relative_to(root))
 
             # TODO(filter): when `_accept_part` rejects via a prunable
             # filter, also prune the subtree by clearing `dirnames`.
@@ -414,18 +430,16 @@ class Search(ABC):
             # `max_depth` is enforced by the prune below (the walk never
             # descends past it), so collection only needs the `min_depth`
             # lower bound.
-            if child_depth >= min_depth and self._accept_part(part):
-                names = self._select(dirnames, filenames)
-                results.extend(
-                    dirpath / name for name in names if self._accept_name(name)
-                )
+            if child_depth >= min_depth and cls._accept_part(part_str, part):
+                names = cls._select(dirnames, filenames)
+                results.extend(dirpath / n for n in names if cls._accept_name(n, name))
 
             # Stop descending once the next level down would exceed `max_depth`.
             if max_depth is not None and child_depth >= max_depth:
                 dirnames.clear()
 
         if callable(condition):
-            results = [path for path in results if condition(path)]
+            results = [p for p in results if condition(p)]
 
         if ordered:
             results.sort()
@@ -436,19 +450,22 @@ class Search(ABC):
 class PathSearch(Search):
     """Search for both directories and files."""
 
-    def _select(self, dirnames: list[str], filenames: list[str], /) -> list[str]:
+    @classmethod
+    def _select(cls, dirnames: list[str], filenames: list[str], /) -> list[str]:
         return [*dirnames, *filenames]
 
 
 class FileSearch(Search):
     """Search for files."""
 
-    def _select(self, _dirnames: list[str], filenames: list[str], /) -> list[str]:
+    @classmethod
+    def _select(cls, _dirnames: list[str], filenames: list[str], /) -> list[str]:
         return list(filenames)
 
 
 class DirSearch(Search):
     """Search for directories."""
 
-    def _select(self, dirnames: list[str], _filenames: list[str], /) -> list[str]:
+    @classmethod
+    def _select(cls, dirnames: list[str], _filenames: list[str], /) -> list[str]:
         return list(dirnames)
