@@ -48,14 +48,7 @@ class Filter(ABC):
           input string against a single `pattern`.
         - `LogicalFilter` and its concretes: composite rules that combine
           the results of one or more child filters.
-
-    Attributes:
-        include: Polarity metadata (allow vs deny). Not consulted by
-            `matches` itself -- composers (e.g. `Search`) inspect it to
-            decide what to do with a positive match. Defaults to True.
     """
-
-    include: bool = field(default=True, kw_only=True)
 
     @abstractmethod
     def matches(self, target: str) -> bool:
@@ -69,8 +62,7 @@ class PatternFilter(Filter, ABC):
     Concrete subclasses (`EqualsFilter`, `StartsWithFilter`,
     `EndsWithFilter`, `ContainsFilter`, `RegexFilter`, `GlobFilter`, or
     user-defined) implement `matches` to compare the input against
-    `pattern`. Polarity (`include`) is inherited from `Filter` and is
-    not consulted by `matches`.
+    `pattern`.
 
     When `case_sensitive=False`, `pattern` is `casefold`-normalized
     once in `__post_init__` so `matches` only has to normalize the
@@ -184,8 +176,6 @@ class MultiPatternFilter(Filter, ABC):
     Concrete subclasses (`EqualsAnyFilter`, `StartsWithAnyFilter`,
     `EndsWithAnyFilter`, `ContainsAnyFilter`, or user-defined) implement
     `matches` to return True if the input satisfies ANY of `patterns`.
-    Polarity (`include`) is inherited from `Filter` and is not consulted
-    by `matches`.
 
     In `__post_init__`, `patterns` is `casefold`-normalized when
     `case_sensitive=False` and then deduplicated while preserving
@@ -266,7 +256,6 @@ class LogicalFilter(Filter, ABC):
 
     Because children are typed as `Filter`, logical filters can nest
     arbitrarily -- e.g. `AndFilter((f1, NotFilter(OrFilter((f2, f3)))))`.
-    Polarity (`include`) is inherited from `Filter`.
     """
 
 
@@ -319,10 +308,6 @@ class OrFilter(LogicalFilter):
 @dataclass(frozen=True)
 class NotFilter(LogicalFilter):
     """Match strings that do NOT satisfy `child` (logical negation).
-
-    Distinct from `include=False`: the latter is composer metadata not
-    consulted by `matches`, while `NotFilter` inverts the actual
-    `matches` result of its child.
 
     Attributes:
         child: The single component filter whose result is inverted.

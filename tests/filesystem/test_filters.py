@@ -407,16 +407,6 @@ def test_alias_is_canonical_class(alias: type, canonical: type):
     assert alias is canonical
 
 
-# --- Polarity (include) -----------------------------------------------------
-
-
-def test_include_polarity_stored_but_not_consulted_by_matches():
-    # include=False does NOT invert matches -- it is composer metadata only.
-    f = EqualsFilter("foo", include=False)
-    assert f.include is False
-    assert f.matches("foo")
-
-
 # --- Hashability & frozen ---------------------------------------------------
 
 
