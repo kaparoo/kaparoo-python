@@ -13,9 +13,8 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Literal
 
+    from kaparoo.filesystem.search.filters import Filter
     from kaparoo.filesystem.types import StrPath
-
-    type _Filters = Sequence[object]  # TODO(filter): real `Filter` type
 
 
 class Search(ABC):
@@ -31,7 +30,7 @@ class Search(ABC):
     def _filter_part(
         cls,
         part: str,  # noqa: ARG003
-        filter: _Filters | None,  # noqa: A002, ARG003
+        filter: Filter | None,  # noqa: A002, ARG003
         /,
     ) -> bool:
         return True  # TODO(filter)
@@ -40,7 +39,7 @@ class Search(ABC):
     def _filter_name(
         cls,
         name: str,  # noqa: ARG003
-        filter: _Filters | None,  # noqa: A002, ARG003
+        filter: Filter | None,  # noqa: A002, ARG003
         /,
     ) -> bool:
         return True  # TODO(filter)
@@ -49,7 +48,7 @@ class Search(ABC):
     def _filter_names(
         cls,
         names: Iterable[str],
-        filter: _Filters | None,  # noqa: A002
+        filter: Filter | None,  # noqa: A002
         /,
     ) -> list[str]:
         return [name for name in names if cls._filter_name(name, filter)]
@@ -60,8 +59,8 @@ class Search(ABC):
         cls,
         root: StrPath,
         *,
-        part_filter: _Filters | None = None,
-        name_filter: _Filters | None = None,
+        part_filter: Filter | None = None,
+        name_filter: Filter | None = None,
         predicate: Callable[[Path], bool] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
@@ -75,8 +74,8 @@ class Search(ABC):
         cls,
         root: StrPath,
         *,
-        part_filter: _Filters | None = None,
-        name_filter: _Filters | None = None,
+        part_filter: Filter | None = None,
+        name_filter: Filter | None = None,
         predicate: Callable[[Path], bool] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
@@ -90,8 +89,8 @@ class Search(ABC):
         cls,
         root: StrPath,
         *,
-        part_filter: _Filters | None = None,
-        name_filter: _Filters | None = None,
+        part_filter: Filter | None = None,
+        name_filter: Filter | None = None,
         predicate: Callable[[Path], bool] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
@@ -104,8 +103,8 @@ class Search(ABC):
         cls,
         root: StrPath,
         *,
-        part_filter: _Filters | None = None,
-        name_filter: _Filters | None = None,
+        part_filter: Filter | None = None,
+        name_filter: Filter | None = None,
         predicate: Callable[[Path], bool] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
@@ -149,8 +148,10 @@ class Search(ABC):
 
         if callable(predicate):
             results = [p for p in results if predicate(p)]
+
         if ordered:
             results.sort()
+
         return stringify_paths(results) if stringify else results
 
 

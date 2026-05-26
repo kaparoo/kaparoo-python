@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Literal
 
-    from kaparoo.filesystem.search.classes import _Filters
+    from kaparoo.filesystem.search.filters import Filter
     from kaparoo.filesystem.types import StrPath
 
 
@@ -19,8 +19,8 @@ if TYPE_CHECKING:
 def search_paths(
     root: StrPath,
     *,
-    part_filter: _Filters | None = None,
-    name_filter: _Filters | None = None,
+    part_filter: Filter | None = None,
+    name_filter: Filter | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -33,8 +33,8 @@ def search_paths(
 def search_paths(
     root: StrPath,
     *,
-    part_filter: _Filters | None = None,
-    name_filter: _Filters | None = None,
+    part_filter: Filter | None = None,
+    name_filter: Filter | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -47,8 +47,8 @@ def search_paths(
 def search_paths(
     root: StrPath,
     *,
-    part_filter: _Filters | None = None,
-    name_filter: _Filters | None = None,
+    part_filter: Filter | None = None,
+    name_filter: Filter | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -60,8 +60,8 @@ def search_paths(
 def search_paths(
     root: StrPath,
     *,
-    part_filter: _Filters | None = None,
-    name_filter: _Filters | None = None,
+    part_filter: Filter | None = None,
+    name_filter: Filter | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -85,8 +85,8 @@ def search_paths(
 def search_files(
     root: StrPath,
     *,
-    part_filter: _Filters | None = None,
-    name_filter: _Filters | None = None,
+    part_filter: Filter | None = None,
+    name_filter: Filter | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -99,8 +99,8 @@ def search_files(
 def search_files(
     root: StrPath,
     *,
-    part_filter: _Filters | None = None,
-    name_filter: _Filters | None = None,
+    part_filter: Filter | None = None,
+    name_filter: Filter | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -113,8 +113,8 @@ def search_files(
 def search_files(
     root: StrPath,
     *,
-    part_filter: _Filters | None = None,
-    name_filter: _Filters | None = None,
+    part_filter: Filter | None = None,
+    name_filter: Filter | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -126,8 +126,8 @@ def search_files(
 def search_files(
     root: StrPath,
     *,
-    part_filter: _Filters | None = None,
-    name_filter: _Filters | None = None,
+    part_filter: Filter | None = None,
+    name_filter: Filter | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -151,8 +151,8 @@ def search_files(
 def search_dirs(
     root: StrPath,
     *,
-    part_filter: _Filters | None = None,
-    name_filter: _Filters | None = None,
+    part_filter: Filter | None = None,
+    name_filter: Filter | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -165,8 +165,8 @@ def search_dirs(
 def search_dirs(
     root: StrPath,
     *,
-    part_filter: _Filters | None = None,
-    name_filter: _Filters | None = None,
+    part_filter: Filter | None = None,
+    name_filter: Filter | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -179,8 +179,8 @@ def search_dirs(
 def search_dirs(
     root: StrPath,
     *,
-    part_filter: _Filters | None = None,
-    name_filter: _Filters | None = None,
+    part_filter: Filter | None = None,
+    name_filter: Filter | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -192,8 +192,8 @@ def search_dirs(
 def search_dirs(
     root: StrPath,
     *,
-    part_filter: _Filters | None = None,
-    name_filter: _Filters | None = None,
+    part_filter: Filter | None = None,
+    name_filter: Filter | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
