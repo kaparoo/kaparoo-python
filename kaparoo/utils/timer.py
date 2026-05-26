@@ -214,18 +214,13 @@ class LapTimer(BaseTimer):
     """A multi-lap timer recording named intermediate timings.
 
     Usable as a context manager or as a decorator. Inside the block, call
-    `lap(label)` to record a lap. On exit, an auto-recorded `final` lap
-    captures the time from the last user lap to the exit point.
+    `lap(label)` to record a lap.
 
     Attributes:
         on_same_label: The same-label handling policy (see `__init__`).
-        records: The list of user-supplied laps. Excludes the auto-`final`
-            record.
-        final: The auto-recorded terminating lap, or None before the first
-            exit. Its label is "End".
-        total_elapsed: The total measured duration, equal to
-            `final["total_time"]` once the timer has exited. Defaults to
-            0.0 until then.
+        records: The list of user-supplied laps.
+        total_elapsed: The total measured duration, from start to exit.
+            Defaults to 0.0 until the first exit.
 
     Example:
         with LapTimer("ms", ndigits=1) as lt:
@@ -236,8 +231,6 @@ class LapTimer(BaseTimer):
         # `lt.summary` is e.g. {"A": 12.3, "B": 8.7};
         # `lt.total_elapsed` is e.g. 21.0.
     """
-
-    _END_LABEL = "End"
 
     def __init__(
         self,
@@ -272,7 +265,6 @@ class LapTimer(BaseTimer):
 
         self.on_same_label = on_same_label
         self.records: list[LapRecord] = []
-        self.final: LapRecord | None = None
         self.total_elapsed: float = 0.0
 
         self._last_time: int = 0
@@ -318,7 +310,6 @@ class LapTimer(BaseTimer):
         """Clear per-`with`-block state so the timer can be reused safely."""
         self._last_time = self._start_time
         self.records.clear()
-        self.final = None
         self.total_elapsed = 0.0
         self._label_counts.clear()
 
@@ -378,6 +369,6 @@ class LapTimer(BaseTimer):
         self.records.append(self._make_record(self._resolve_label(label)))
 
     def _finalize(self) -> None:
-        """Record the terminating `final` lap and set `total_elapsed`."""
-        self.final = self._make_record(self._END_LABEL)
-        self.total_elapsed = self.final["total_time"]
+        """Set `total_elapsed` from start to current time."""
+        elapsed_ns = time.perf_counter_ns() - self._start_time
+        self.total_elapsed = self._format_time(elapsed_ns)

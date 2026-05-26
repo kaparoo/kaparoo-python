@@ -195,10 +195,6 @@ def test_lap_timer_basic(fake_clock):
     assert lt.records[1]["total_time"] == 250.0
     assert lt.records[2]["lap_time"] == 150.0
     assert lt.records[2]["total_time"] == 400.0
-    assert lt.final is not None
-    assert lt.final["label"] == "End"
-    assert lt.final["lap_time"] == 100.0
-    assert lt.final["total_time"] == 500.0
     assert lt.total_elapsed == 500.0
 
 
@@ -212,25 +208,14 @@ def test_lap_timer_summary_aggregates_duplicates(fake_clock):
     assert lt.summary == {"A": 200.0, "B": 150.0}
 
 
-def test_lap_timer_summary_excludes_final(fake_clock):
+def test_lap_timer_summary_excludes_trailing_time(fake_clock):
+    # The 400ms gap between the last lap and exit does NOT show up in summary
+    # (summary only aggregates explicit lap_time values).
     fake_clock(0, 100_000_000, 500_000_000)
     with LapTimer("ms") as lt:
         lt.lap("A")
     assert lt.summary == {"A": 100.0}
-    assert lt.final is not None
-    assert lt.final["lap_time"] == 400.0
-
-
-def test_lap_timer_summary_user_can_use_end_label(fake_clock):
-    # User's "End" lap is preserved in records AND summary (unlike `final`).
-    fake_clock(0, 100_000_000, 200_000_000, 300_000_000)
-    with LapTimer("ms") as lt:
-        lt.lap("A")
-        lt.lap("End")
-    assert [r["label"] for r in lt.records] == ["A", "End"]
-    assert lt.summary == {"A": 100.0, "End": 100.0}
-    assert lt.final is not None
-    assert lt.final["label"] == "End"
+    assert lt.total_elapsed == 500.0
 
 
 def test_lap_timer_summary_ndigits_rounds_sum(fake_clock):
@@ -282,15 +267,6 @@ def test_lap_timer_separate_suffix(fake_clock):
     assert [r["label"] for r in lt.records] == ["A", "A (2)", "A (3)"]
 
 
-def test_lap_timer_auto_end_bypasses_reject_policy(fake_clock):
-    # Even in reject mode, the auto-`final` record uses "End" without raising.
-    fake_clock(0, 100, 200)
-    with LapTimer(on_same_label="reject") as lt:
-        lt.lap("End")  # user's "End" — first occurrence, OK
-    assert lt.final is not None
-    assert lt.final["label"] == "End"
-
-
 def test_lap_timer_pause_resume_excludes_interval(fake_clock):
     # enter=0, A=100ms, pause=200ms, resume=400ms (pause_dur=200ms),
     # B=500ms, finalize=600ms
@@ -305,8 +281,6 @@ def test_lap_timer_pause_resume_excludes_interval(fake_clock):
     # B at 500: lap_time = 500-300 = 200, total = 500-200 = 300.
     assert lt.records[1]["lap_time"] == 200.0
     assert lt.records[1]["total_time"] == 300.0
-    assert lt.final is not None
-    assert lt.final["lap_time"] == 100.0  # 600 - 500
     assert lt.total_elapsed == 400.0  # 600 - 200
 
 
@@ -328,7 +302,6 @@ def test_lap_timer_reuse_resets_state(fake_clock):
     with lt:
         lt.lap("X")  # would raise if state weren't reset
     assert len(lt.records) == 1
-    assert lt.final is not None  # reset and re-populated
 
 
 def test_lap_timer_empty_run(fake_clock):
@@ -337,9 +310,6 @@ def test_lap_timer_empty_run(fake_clock):
         pass
     assert lt.records == []
     assert lt.summary == {}
-    assert lt.final is not None
-    assert lt.final["label"] == "End"
-    assert lt.final["lap_time"] == 100.0
     assert lt.total_elapsed == 100.0
 
 
@@ -350,15 +320,6 @@ def test_lap_timer_post_exit_lap_raises(fake_clock):
         pass
     with pytest.raises(RuntimeError, match="not been started"):
         lt.lap("X")
-
-
-def test_lap_timer_final_is_none_before_exit(fake_clock):
-    fake_clock(0, 100, 200)
-    lt = LapTimer()
-    with lt:
-        lt.lap("A")
-        assert lt.final is None
-    assert lt.final is not None
 
 
 def test_lap_record_typeddict_construction():
