@@ -39,8 +39,8 @@ class BaseFilter(ABC):
     include: bool = field(default=True, kw_only=True)
 
     @abstractmethod
-    def matches(self, s: str) -> bool:
-        """Test whether `s` satisfies this filter."""
+    def matches(self, target: str) -> bool:
+        """Test whether `target` satisfies this filter."""
 
 
 @dataclass(frozen=True)
@@ -62,19 +62,19 @@ class Filter(BaseFilter, ABC):
     pattern: str
     case_sensitive: bool = field(default=True, kw_only=True)
 
-    def _prepare(self, s: str) -> tuple[str, str]:
+    def _prepare(self, target: str) -> tuple[str, str]:
         """Return `(pattern, target)` normalized for `case_sensitive`."""
         if self.case_sensitive:
-            return self.pattern, s
-        return self.pattern.casefold(), s.casefold()
+            return self.pattern, target
+        return self.pattern.casefold(), target.casefold()
 
 
 @dataclass(frozen=True)
 class EqualsFilter(Filter):
     """Match strings that equal `pattern` exactly."""
 
-    def matches(self, s: str) -> bool:
-        pattern, target = self._prepare(s)
+    def matches(self, target: str) -> bool:
+        pattern, target = self._prepare(target)
         return target == pattern
 
 
@@ -82,8 +82,8 @@ class EqualsFilter(Filter):
 class StartsWithFilter(Filter):
     """Match strings that start with `pattern`."""
 
-    def matches(self, s: str) -> bool:
-        pattern, target = self._prepare(s)
+    def matches(self, target: str) -> bool:
+        pattern, target = self._prepare(target)
         return target.startswith(pattern)
 
 
@@ -91,8 +91,8 @@ class StartsWithFilter(Filter):
 class EndsWithFilter(Filter):
     """Match strings that end with `pattern`."""
 
-    def matches(self, s: str) -> bool:
-        pattern, target = self._prepare(s)
+    def matches(self, target: str) -> bool:
+        pattern, target = self._prepare(target)
         return target.endswith(pattern)
 
 
@@ -100,8 +100,8 @@ class EndsWithFilter(Filter):
 class ContainsFilter(Filter):
     """Match strings that contain `pattern` as a substring."""
 
-    def matches(self, s: str) -> bool:
-        pattern, target = self._prepare(s)
+    def matches(self, target: str) -> bool:
+        pattern, target = self._prepare(target)
         return pattern in target
 
 
@@ -125,9 +125,9 @@ class RegexFilter(Filter):
             msg = f"invalid regex pattern {self.pattern!r}: {e}"
             raise ValueError(msg) from e
 
-    def matches(self, s: str) -> bool:
+    def matches(self, target: str) -> bool:
         flags = 0 if self.case_sensitive else re.IGNORECASE
-        return bool(re.fullmatch(self.pattern, s, flags))
+        return bool(re.fullmatch(self.pattern, target, flags))
 
 
 @dataclass(frozen=True)
@@ -139,8 +139,8 @@ class GlobFilter(Filter):
     is not supported (that is a `pathlib.Path.rglob` concept).
     """
 
-    def matches(self, s: str) -> bool:
-        pattern, target = self._prepare(s)
+    def matches(self, target: str) -> bool:
+        pattern, target = self._prepare(target)
         return fnmatch.fnmatchcase(target, pattern)
 
 
@@ -173,13 +173,13 @@ class LogicalFilter(BaseFilter, ABC):
 class AndFilter(LogicalFilter):
     """Match strings that satisfy ALL of `children` (logical conjunction)."""
 
-    def matches(self, s: str) -> bool:
-        return all(child.matches(s) for child in self.children)
+    def matches(self, target: str) -> bool:
+        return all(child.matches(target) for child in self.children)
 
 
 @dataclass(frozen=True)
 class OrFilter(LogicalFilter):
     """Match strings that satisfy AT LEAST ONE of `children` (logical disjunction)."""
 
-    def matches(self, s: str) -> bool:
-        return any(child.matches(s) for child in self.children)
+    def matches(self, target: str) -> bool:
+        return any(child.matches(target) for child in self.children)
