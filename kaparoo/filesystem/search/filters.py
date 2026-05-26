@@ -4,15 +4,22 @@ __all__ = (
     "And",
     "AndFilter",
     "Contains",
+    "ContainsAny",
+    "ContainsAnyFilter",
     "ContainsFilter",
     "EndsWith",
+    "EndsWithAny",
+    "EndsWithAnyFilter",
     "EndsWithFilter",
     "Equals",
+    "EqualsAny",
+    "EqualsAnyFilter",
     "EqualsFilter",
     "Filter",
     "Glob",
     "GlobFilter",
     "LogicalFilter",
+    "MultiPatternFilter",
     "Not",
     "NotFilter",
     "Or",
@@ -21,6 +28,8 @@ __all__ = (
     "Regex",
     "RegexFilter",
     "StartsWith",
+    "StartsWithAny",
+    "StartsWithAnyFilter",
     "StartsWithFilter",
 )
 
@@ -155,6 +164,78 @@ class GlobFilter(PatternFilter):
 
 
 @dataclass(frozen=True)
+class MultiPatternFilter(Filter, ABC):
+    """Abstract base for matching rules with multiple patterns (any-of).
+
+    Concrete subclasses (`EqualsAnyFilter`, `StartsWithAnyFilter`,
+    `EndsWithAnyFilter`, `ContainsAnyFilter`, or user-defined) implement
+    `matches` to return True if the input satisfies ANY of `patterns`.
+    Polarity (`include`) is inherited from `Filter` and is not consulted
+    by `matches`.
+
+    Attributes:
+        patterns: The strings compared against the input. Must be non-empty.
+        case_sensitive: If False, matching is performed case-insensitively
+            via Unicode `casefold`. Defaults to True.
+
+    Raises:
+        ValueError: If `patterns` is empty.
+    """
+
+    patterns: tuple[str, ...]
+    case_sensitive: bool = field(default=True, kw_only=True)
+
+    def __post_init__(self) -> None:
+        if not self.patterns:
+            msg = f"{type(self).__name__} requires at least one pattern."
+            raise ValueError(msg)
+
+
+@dataclass(frozen=True)
+class EqualsAnyFilter(MultiPatternFilter):
+    """Match strings that equal ANY of `patterns`."""
+
+    def matches(self, target: str) -> bool:
+        if self.case_sensitive:
+            return target in self.patterns
+        t = target.casefold()
+        return any(t == p.casefold() for p in self.patterns)
+
+
+@dataclass(frozen=True)
+class StartsWithAnyFilter(MultiPatternFilter):
+    """Match strings that start with ANY of `patterns`."""
+
+    def matches(self, target: str) -> bool:
+        if self.case_sensitive:
+            return target.startswith(self.patterns)
+        t = target.casefold()
+        return t.startswith(tuple(p.casefold() for p in self.patterns))
+
+
+@dataclass(frozen=True)
+class EndsWithAnyFilter(MultiPatternFilter):
+    """Match strings that end with ANY of `patterns`."""
+
+    def matches(self, target: str) -> bool:
+        if self.case_sensitive:
+            return target.endswith(self.patterns)
+        t = target.casefold()
+        return t.endswith(tuple(p.casefold() for p in self.patterns))
+
+
+@dataclass(frozen=True)
+class ContainsAnyFilter(MultiPatternFilter):
+    """Match strings that contain ANY of `patterns` as a substring."""
+
+    def matches(self, target: str) -> bool:
+        if self.case_sensitive:
+            return any(p in target for p in self.patterns)
+        t = target.casefold()
+        return any(p.casefold() in t for p in self.patterns)
+
+
+@dataclass(frozen=True)
 class LogicalFilter(Filter, ABC):
     """Abstract base for composite filters built from other filters.
 
@@ -245,3 +326,8 @@ EndsWith = EndsWithFilter
 Contains = ContainsFilter
 Regex = RegexFilter
 Glob = GlobFilter
+
+EqualsAny = EqualsAnyFilter
+StartsWithAny = StartsWithAnyFilter
+EndsWithAny = EndsWithAnyFilter
+ContainsAny = ContainsAnyFilter
