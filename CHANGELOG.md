@@ -36,6 +36,7 @@ _No entries yet._
 
 ### Changed
 
+- **Minimum Python version raised to 3.14.**
 - Toolchain migrated to a copier-based template with `uv` + `ty` +
   `ruff` + `pytest`.
 - Adopted PEP 695 type parameters across the package.
