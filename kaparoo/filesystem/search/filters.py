@@ -3,7 +3,6 @@ from __future__ import annotations
 __all__ = (
     "And",
     "AndFilter",
-    "BaseFilter",
     "Contains",
     "ContainsFilter",
     "EndsWith",
@@ -18,6 +17,7 @@ __all__ = (
     "NotFilter",
     "Or",
     "OrFilter",
+    "PatternFilter",
     "Regex",
     "RegexFilter",
     "StartsWith",
@@ -31,12 +31,12 @@ from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
-class BaseFilter(ABC):
+class Filter(ABC):
     """Abstract base for any filter (pattern-based or logical composition).
 
     Two subclass families live under this base:
-        - `Filter` and its concretes: leaf rules that compare an input
-          string against a single `pattern`.
+        - `PatternFilter` and its concretes: leaf rules that compare an
+          input string against a single `pattern`.
         - `LogicalFilter` and its concretes: composite rules that combine
           the results of one or more child filters.
 
@@ -54,14 +54,14 @@ class BaseFilter(ABC):
 
 
 @dataclass(frozen=True)
-class Filter(BaseFilter, ABC):
+class PatternFilter(Filter, ABC):
     """Abstract base for string-pattern matching rules.
 
     Concrete subclasses (`EqualsFilter`, `StartsWithFilter`,
     `EndsWithFilter`, `ContainsFilter`, `RegexFilter`, `GlobFilter`, or
     user-defined) implement `matches` to compare the input against
-    `pattern`. Polarity (`include`) is inherited from `BaseFilter` and
-    is not consulted by `matches`.
+    `pattern`. Polarity (`include`) is inherited from `Filter` and is
+    not consulted by `matches`.
 
     Attributes:
         pattern: The string compared against the input.
@@ -80,7 +80,7 @@ class Filter(BaseFilter, ABC):
 
 
 @dataclass(frozen=True)
-class EqualsFilter(Filter):
+class EqualsFilter(PatternFilter):
     """Match strings that equal `pattern` exactly."""
 
     def matches(self, target: str) -> bool:
@@ -89,7 +89,7 @@ class EqualsFilter(Filter):
 
 
 @dataclass(frozen=True)
-class StartsWithFilter(Filter):
+class StartsWithFilter(PatternFilter):
     """Match strings that start with `pattern`."""
 
     def matches(self, target: str) -> bool:
@@ -98,7 +98,7 @@ class StartsWithFilter(Filter):
 
 
 @dataclass(frozen=True)
-class EndsWithFilter(Filter):
+class EndsWithFilter(PatternFilter):
     """Match strings that end with `pattern`."""
 
     def matches(self, target: str) -> bool:
@@ -107,7 +107,7 @@ class EndsWithFilter(Filter):
 
 
 @dataclass(frozen=True)
-class ContainsFilter(Filter):
+class ContainsFilter(PatternFilter):
     """Match strings that contain `pattern` as a substring."""
 
     def matches(self, target: str) -> bool:
@@ -116,7 +116,7 @@ class ContainsFilter(Filter):
 
 
 @dataclass(frozen=True)
-class RegexFilter(Filter):
+class RegexFilter(PatternFilter):
     """Match strings against a regular expression (full-string match).
 
     Uses `re.fullmatch` semantics: the entire string must match the
@@ -141,7 +141,7 @@ class RegexFilter(Filter):
 
 
 @dataclass(frozen=True)
-class GlobFilter(Filter):
+class GlobFilter(PatternFilter):
     """Match strings against a POSIX glob pattern via `fnmatch`.
 
     Supported wildcards: `*` (any sequence), `?` (single char),
@@ -155,17 +155,17 @@ class GlobFilter(Filter):
 
 
 @dataclass(frozen=True)
-class LogicalFilter(BaseFilter, ABC):
+class LogicalFilter(Filter, ABC):
     """Abstract base for composite filters built from other filters.
 
     Concrete subclasses define their own field shape:
-        - `AndFilter` and `OrFilter` take `children: tuple[BaseFilter, ...]`
+        - `AndFilter` and `OrFilter` take `children: tuple[Filter, ...]`
           and combine multiple results.
-        - `NotFilter` takes a single `child: BaseFilter` and inverts it.
+        - `NotFilter` takes a single `child: Filter` and inverts it.
 
-    Because children are typed as `BaseFilter`, logical filters can nest
+    Because children are typed as `Filter`, logical filters can nest
     arbitrarily -- e.g. `AndFilter((f1, NotFilter(OrFilter((f2, f3)))))`.
-    Polarity (`include`) is inherited from `BaseFilter`.
+    Polarity (`include`) is inherited from `Filter`.
     """
 
 
@@ -181,7 +181,7 @@ class AndFilter(LogicalFilter):
         ValueError: If `children` is empty.
     """
 
-    children: tuple[BaseFilter, ...]
+    children: tuple[Filter, ...]
 
     def __post_init__(self) -> None:
         if not self.children:
@@ -204,7 +204,7 @@ class OrFilter(LogicalFilter):
         ValueError: If `children` is empty.
     """
 
-    children: tuple[BaseFilter, ...]
+    children: tuple[Filter, ...]
 
     def __post_init__(self) -> None:
         if not self.children:
@@ -227,7 +227,7 @@ class NotFilter(LogicalFilter):
         child: The single component filter whose result is inverted.
     """
 
-    child: BaseFilter
+    child: Filter
 
     def matches(self, target: str) -> bool:
         return not self.child.matches(target)
