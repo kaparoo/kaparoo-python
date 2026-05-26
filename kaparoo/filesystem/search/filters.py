@@ -9,6 +9,7 @@ __all__ = (
     "Filter",
     "GlobFilter",
     "LogicalFilter",
+    "NotFilter",
     "OrFilter",
     "RegexFilter",
     "StartsWithFilter",
@@ -148,10 +149,20 @@ class GlobFilter(Filter):
 class LogicalFilter(BaseFilter, ABC):
     """Abstract base for composite filters built from other filters.
 
-    Concrete subclasses (`AndFilter`, `OrFilter`) implement `matches`
-    by combining the results of `children`. Because `children` is
-    `tuple[BaseFilter, ...]`, logical filters can nest arbitrarily --
-    e.g. `AndFilter((f1, OrFilter((f2, f3))))`.
+    Concrete subclasses define their own field shape:
+        - `AndFilter` and `OrFilter` take `children: tuple[BaseFilter, ...]`
+          and combine multiple results.
+        - `NotFilter` takes a single `child: BaseFilter` and inverts it.
+
+    Because children are typed as `BaseFilter`, logical filters can nest
+    arbitrarily -- e.g. `AndFilter((f1, NotFilter(OrFilter((f2, f3)))))`.
+    Polarity (`include`) is inherited from `BaseFilter`.
+    """
+
+
+@dataclass(frozen=True)
+class AndFilter(LogicalFilter):
+    """Match strings that satisfy ALL of `children` (logical conjunction).
 
     Attributes:
         children: The component filters. Always non-empty (validated at
@@ -168,18 +179,46 @@ class LogicalFilter(BaseFilter, ABC):
             msg = f"{type(self).__name__} requires at least one child filter."
             raise ValueError(msg)
 
-
-@dataclass(frozen=True)
-class AndFilter(LogicalFilter):
-    """Match strings that satisfy ALL of `children` (logical conjunction)."""
-
     def matches(self, target: str) -> bool:
         return all(child.matches(target) for child in self.children)
 
 
 @dataclass(frozen=True)
 class OrFilter(LogicalFilter):
-    """Match strings that satisfy AT LEAST ONE of `children` (logical disjunction)."""
+    """Match strings that satisfy AT LEAST ONE of `children` (logical disjunction).
+
+    Attributes:
+        children: The component filters. Always non-empty (validated at
+            construction).
+
+    Raises:
+        ValueError: If `children` is empty.
+    """
+
+    children: tuple[BaseFilter, ...]
+
+    def __post_init__(self) -> None:
+        if not self.children:
+            msg = f"{type(self).__name__} requires at least one child filter."
+            raise ValueError(msg)
 
     def matches(self, target: str) -> bool:
         return any(child.matches(target) for child in self.children)
+
+
+@dataclass(frozen=True)
+class NotFilter(LogicalFilter):
+    """Match strings that do NOT satisfy `child` (logical negation).
+
+    Distinct from `include=False`: the latter is composer metadata not
+    consulted by `matches`, while `NotFilter` inverts the actual
+    `matches` result of its child.
+
+    Attributes:
+        child: The single component filter whose result is inverted.
+    """
+
+    child: BaseFilter
+
+    def matches(self, target: str) -> bool:
+        return not self.child.matches(target)
