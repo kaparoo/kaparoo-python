@@ -9,7 +9,7 @@ __all__ = (
     "search_paths",
 )
 
-from kaparoo.filesystem.search._public import (
+from kaparoo.filesystem.search._wrappers import (
     search_dirs,
     search_files,
     search_paths,

@@ -4,18 +4,18 @@ __all__ = ("search_dirs", "search_files", "search_paths")
 
 from typing import TYPE_CHECKING, overload
 
-from kaparoo.filesystem.search._impl import DirSearch, FileSearch, PathSearch
+from kaparoo.filesystem.search._classes import DirSearch, FileSearch, PathSearch
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
     from pathlib import Path
     from typing import Literal
 
-    from kaparoo.filesystem.search._impl import _Filters
+    from kaparoo.filesystem.search._classes import _Filters
     from kaparoo.filesystem.types import StrPath
 
 
-# Thin wrappers over the `Search` subclasses in `_impl`. The classes are
+# Thin wrappers over the `Search` subclasses in `_classes`. The classes are
 # implementation details; users call these functions. Each wrapper
 # repeats the full signature and overloads so the help / IDE experience
 # reads as a plain function, not as a bound classmethod.
