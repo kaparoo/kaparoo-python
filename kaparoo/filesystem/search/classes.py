@@ -176,7 +176,7 @@ class Search(ABC):
                 results.extend(paths)
 
             if max_depth is not None and child_depth >= max_depth:
-                dirnames.clear()
+                dirnames.clear()  # prune deeper subtree; `Path.walk` honors in-place mutation
 
         if ordered:
             results.sort()
