@@ -29,47 +29,28 @@ pip install kaparoo-python
 
 `pathlib`-based filesystem helpers.
 
-- **`existence`** — single-path checks (`path_exists`, `file_exists`,
-  `dir_exists`) plus multi-path (`paths_exist`, `files_exist`,
-  `dirs_exist`) and `ensure_*` variants (`ensure_path_exists`,
-  `ensure_file_exists`, `ensure_dir_exists`, and their multi forms).
-- **`directory`** — `make_dir` / `make_dirs`, `dir_empty` / `dirs_empty`,
-  plus `_unsafe` versions that skip existence checks.
-- **`utils`** — `stringify_path` / `stringify_paths` (with optional
-  `after` / `before` trimming) and `wrap_path` / `wrap_paths` (with
-  `prepend` / `append`).
+- **`existence`** — existence checks (`*_exists`) and `ensure_*` validators.
+- **`directory`** — `make_dir(s)`, `dir_empty(s)` (with `_unsafe` variants).
+- **`utils`** — `stringify_path(s)`, `wrap_path(s)`.
 - **`exceptions`** — `DirectoryNotFoundError`, `NotAFileError`.
-- **`types`** — `StrPath`, `StrPaths` type aliases.
+- **`types`** — `StrPath`, `StrPaths`.
 
 ### `kaparoo.filesystem.search`
 
 Filesystem traversal with composable filters.
 
-- **Entry points** — `search_paths`, `search_files`, `search_dirs`. Each
-  walks a root directory and returns matching paths, accepting
-  `part_filter` / `name_filter` / `predicate` / `min_depth` /
-  `max_depth` / `ordered` / `stringify`.
+- **Entry points** — `search_paths`, `search_files`, `search_dirs`.
 - **Pattern filters** — `Equals`, `StartsWith`, `EndsWith`, `Contains`,
-  `Regex`, `Glob` (TitleCase aliases of the canonical `*Filter` classes).
-- **Multi-pattern filters** — `EqualsAny`, `StartsWithAny`,
-  `EndsWithAny`, `ContainsAny` for any-of matching against a tuple of
-  patterns.
-- **Logical filters** — `And`, `Or`, `Not` for arbitrary boolean
-  composition; nest freely with the pattern filters.
-- **Deprecated** — `get_paths`, `get_files`, `get_dirs`. Use `search_*`
-  instead; the legacy functions emit `DeprecationWarning`.
+  `Regex`, `Glob`.
+- **Multi-pattern filters** — `EqualsAny`, `StartsWithAny`, `EndsWithAny`,
+  `ContainsAny`.
+- **Logical filters** — `And`, `Or`, `Not`.
+- **Deprecated** — `get_paths`, `get_files`, `get_dirs` (use `search_*`).
 
 ### `kaparoo.utils`
 
-- **`timer`** — `Timer` (single-shot) and `LapTimer` (multi-lap)
-  context-manager / decorator timers, built on `time.perf_counter_ns`.
-  Both expose `.elapsed` once the block exits, plus `pause` / `resume`
-  / `suspend` for excluding time intervals from measurement. `LapTimer`
-  additionally records named `LapRecord`s via `.lap(label)` and exposes
-  per-label aggregation via `.summary`.
-- **`optional`** — `Optional[T]` unwrapping helpers: `replace_if_none`,
-  `factory_if_none`, and `unwrap_or_default` / `unwrap_or_factory`
-  (plus their multi variants `unwrap_or_defaults` / `unwrap_or_factories`).
+- **`timer`** — `Timer` and `LapTimer` context-manager / decorator timers.
+- **`optional`** — `replace_if_none`, `factory_if_none`, `unwrap_or_*`.
 
 ## 📋 TODO
 
