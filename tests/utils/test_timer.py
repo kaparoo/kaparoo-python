@@ -242,7 +242,7 @@ def test_lap_timer_summary_ndigits_rounds_sum(fake_clock):
     assert lt.summary == {"A": 200.22}
 
 
-def test_lap_timer_dup_mode_allow_keeps_label_as_is(fake_clock):
+def test_lap_timer_merge_keeps_label_as_is(fake_clock):
     fake_clock(0, 100, 200, 300)
     with LapTimer() as lt:
         lt.lap("A")
@@ -250,17 +250,17 @@ def test_lap_timer_dup_mode_allow_keeps_label_as_is(fake_clock):
     assert [r["label"] for r in lt.records] == ["A", "A"]
 
 
-def test_lap_timer_dup_mode_strict_raises(fake_clock):
+def test_lap_timer_reject_raises(fake_clock):
     fake_clock(0, 100, 200)
-    with LapTimer(dup_mode="strict") as lt:
+    with LapTimer(on_same_label="reject") as lt:
         lt.lap("A")
         with pytest.raises(ValueError, match="already used"):
             lt.lap("A")
 
 
-def test_lap_timer_dup_mode_strict_failed_lap_not_recorded(fake_clock):
+def test_lap_timer_reject_failed_lap_not_recorded(fake_clock):
     fake_clock(0, 100, 200)
-    with LapTimer(dup_mode="strict") as lt:
+    with LapTimer(on_same_label="reject") as lt:
         lt.lap("A")
         with pytest.raises(ValueError, match="already used"):
             lt.lap("A")  # raises before append
@@ -268,19 +268,19 @@ def test_lap_timer_dup_mode_strict_failed_lap_not_recorded(fake_clock):
     assert len(lt.records) == 1
 
 
-def test_lap_timer_dup_mode_number_suffix(fake_clock):
+def test_lap_timer_separate_suffix(fake_clock):
     fake_clock(0, 100, 200, 300, 400)
-    with LapTimer(dup_mode="number") as lt:
+    with LapTimer(on_same_label="separate") as lt:
         lt.lap("A")
         lt.lap("A")
         lt.lap("A")
     assert [r["label"] for r in lt.records] == ["A", "A (2)", "A (3)"]
 
 
-def test_lap_timer_auto_end_bypasses_strict_mode(fake_clock):
-    # Even in strict mode, the auto-`final` record uses "End" without raising.
+def test_lap_timer_auto_end_bypasses_reject_policy(fake_clock):
+    # Even in reject mode, the auto-`final` record uses "End" without raising.
     fake_clock(0, 100, 200)
-    with LapTimer(dup_mode="strict") as lt:
+    with LapTimer(on_same_label="reject") as lt:
         lt.lap("End")  # user's "End" — first occurrence, OK
     assert lt.final is not None
     assert lt.final["label"] == "End"
@@ -316,7 +316,7 @@ def test_lap_timer_lap_while_paused_raises(fake_clock):
 def test_lap_timer_reuse_resets_state(fake_clock):
     # First `with` uses 3 ticks (enter, lap, finalize); second uses the same.
     fake_clock(0, 100, 200, 300, 400, 500)
-    lt = LapTimer(dup_mode="strict")
+    lt = LapTimer(on_same_label="reject")
     with lt:
         lt.lap("X")
     assert len(lt.records) == 1

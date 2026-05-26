@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from typing import Literal, Self
 
     type TimeUnit = Literal["s", "ms", "us", "ns"]
-    type DupMode = Literal["allow", "number", "strict"]
+    type LabelPolicy = Literal["merge", "separate", "reject"]
 
 
 _SCALES: dict[str, float] = {"s": 1e-9, "ms": 1e-6, "us": 1e-3, "ns": 1.0}
@@ -25,7 +25,7 @@ class LapRecord(TypedDict):
 
     Attributes:
         label: The lap's name. May carry a " (N)" suffix when produced under
-            `dup_mode="number"`.
+            `on_same_label="separate"`.
         lap_time: Time elapsed since the previous lap (or the timer start),
             in the timer's `unit` and rounded by `ndigits` if given.
         total_time: Time elapsed since the timer started, in the timer's
@@ -210,7 +210,7 @@ class LapTimer(BaseTimer):
     captures the time from the last user lap to the exit point.
 
     Attributes:
-        dup_mode: The duplicate-label policy (see `__init__`).
+        on_same_label: The same-label handling policy (see `__init__`).
         records: The list of user-supplied laps. Excludes the auto-`final`
             record.
         final: The auto-recorded terminating lap, or None before the first
@@ -236,7 +236,7 @@ class LapTimer(BaseTimer):
         unit: TimeUnit = "s",
         *,
         ndigits: int | None = None,
-        dup_mode: DupMode = "allow",
+        on_same_label: LabelPolicy = "merge",
     ) -> None:
         """Initialize the lap timer.
 
@@ -245,16 +245,17 @@ class LapTimer(BaseTimer):
                 "ns". Defaults to "s".
             ndigits: The number of decimal places to round reported values
                 to. If None, no rounding is applied. Defaults to None.
-            dup_mode: Behavior when a label passed to `lap` has been used
-                before in the same `with` block. "allow" records duplicates
-                verbatim, "number" appends a " (N)" suffix to repeats,
-                "strict" raises `ValueError`. Defaults to "allow".
+            on_same_label: Behavior when a label passed to `lap` has been
+                used before in the same `with` block. "merge" records the
+                label verbatim so duplicates aggregate in `summary`,
+                "separate" appends a " (N)" suffix so repeats stay distinct,
+                "reject" raises `ValueError`. Defaults to "merge".
 
         Raises:
             ValueError: If `unit` is not one of the supported values.
         """
         super().__init__(unit=unit, ndigits=ndigits)
-        self.dup_mode = dup_mode
+        self.on_same_label = on_same_label
         self.records: list[LapRecord] = []
         self.final: LapRecord | None = None
         self.total_elapsed: float = 0.0
@@ -303,19 +304,19 @@ class LapTimer(BaseTimer):
         self._label_counts.clear()
 
     def _resolve_label(self, label: str) -> str:
-        """Apply `dup_mode` and return the actual label to record.
+        """Apply `on_same_label` and return the actual label to record.
 
         Increments the per-label counter only if the lap is accepted, so a
-        failed strict lap does not leave the counter inflated.
+        failed "reject" lap does not leave the counter inflated.
         """
         next_count = self._label_counts.get(label, 0) + 1
-        if next_count > 1 and self.dup_mode == "strict":
+        if next_count > 1 and self.on_same_label == "reject":
             msg = f"Label {label!r} is already used."
             raise ValueError(msg)
         self._label_counts[label] = next_count
         return (
             f"{label} ({next_count})"
-            if next_count > 1 and self.dup_mode == "number"
+            if next_count > 1 and self.on_same_label == "separate"
             else label
         )
 
@@ -343,8 +344,8 @@ class LapTimer(BaseTimer):
 
         Raises:
             RuntimeError: If the timer has not been started, or is paused.
-            ValueError: If `dup_mode` is "strict" and `label` has already
-                been used in this `with` block.
+            ValueError: If `on_same_label` is "reject" and `label` has
+                already been used in this `with` block.
         """
         self._ensure_started()
         if self._is_paused:
