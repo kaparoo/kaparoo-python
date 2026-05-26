@@ -1,17 +1,26 @@
 from __future__ import annotations
 
 __all__ = (
+    "And",
     "AndFilter",
     "BaseFilter",
+    "Contains",
     "ContainsFilter",
+    "EndsWith",
     "EndsWithFilter",
+    "Equals",
     "EqualsFilter",
     "Filter",
+    "Glob",
     "GlobFilter",
     "LogicalFilter",
+    "Not",
     "NotFilter",
+    "Or",
     "OrFilter",
+    "Regex",
     "RegexFilter",
+    "StartsWith",
     "StartsWithFilter",
 )
 
@@ -222,3 +231,17 @@ class NotFilter(LogicalFilter):
 
     def matches(self, target: str) -> bool:
         return not self.child.matches(target)
+
+
+# Short aliases. Prefer these in inline composition; prefer the
+# canonical `*Filter` names in type annotations and `isinstance` checks.
+And = AndFilter
+Or = OrFilter
+Not = NotFilter
+
+Equals = EqualsFilter
+StartsWith = StartsWithFilter
+EndsWith = EndsWithFilter
+Contains = ContainsFilter
+Regex = RegexFilter
+Glob = GlobFilter
