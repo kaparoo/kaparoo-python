@@ -242,6 +242,11 @@ def test_lap_timer_summary_ndigits_rounds_sum(fake_clock):
     assert lt.summary == {"A": 200.22}
 
 
+def test_lap_timer_invalid_on_same_label():
+    with pytest.raises(ValueError, match="on_same_label must be one of"):
+        LapTimer(on_same_label="invalid")  # ty: ignore[invalid-argument-type]
+
+
 def test_lap_timer_merge_keeps_label_as_is(fake_clock):
     fake_clock(0, 100, 200, 300)
     with LapTimer() as lt:

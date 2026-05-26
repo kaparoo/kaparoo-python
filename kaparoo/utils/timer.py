@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
 
 _SCALES: dict[str, float] = {"s": 1e-9, "ms": 1e-6, "us": 1e-3, "ns": 1.0}
+_LABEL_POLICIES: frozenset[str] = frozenset({"merge", "separate", "reject"})
 
 
 class LapRecord(TypedDict):
@@ -252,9 +253,14 @@ class LapTimer(BaseTimer):
                 "reject" raises `ValueError`. Defaults to "merge".
 
         Raises:
-            ValueError: If `unit` is not one of the supported values.
+            ValueError: If `unit` or `on_same_label` is not one of the
+                supported values.
         """
         super().__init__(unit=unit, ndigits=ndigits)
+        if on_same_label not in _LABEL_POLICIES:
+            msg = f"on_same_label must be one of {sorted(_LABEL_POLICIES)}"
+            msg += f" (got {on_same_label!r})."
+            raise ValueError(msg)
         self.on_same_label = on_same_label
         self.records: list[LapRecord] = []
         self.final: LapRecord | None = None
