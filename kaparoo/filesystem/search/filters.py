@@ -5,9 +5,13 @@ __all__ = (
     "EndsWithFilter",
     "EqualsFilter",
     "Filter",
+    "GlobFilter",
+    "RegexFilter",
     "StartsWithFilter",
 )
 
+import fnmatch
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
@@ -83,3 +87,42 @@ class ContainsFilter(Filter):
     def matches(self, s: str) -> bool:
         pattern, target = self._prepare(s)
         return pattern in target
+
+
+@dataclass(frozen=True)
+class RegexFilter(Filter):
+    """Match strings against a regular expression (full-string match).
+
+    Uses `re.fullmatch` semantics: the entire string must match the
+    pattern. For partial matches, anchor explicitly with `.*` in the
+    pattern. `case_sensitive=False` is wired via `re.IGNORECASE`.
+
+    Raises:
+        ValueError: If `pattern` is not a valid regular expression
+            (validated at construction).
+    """
+
+    def __post_init__(self) -> None:
+        try:
+            re.compile(self.pattern)
+        except re.error as e:
+            msg = f"invalid regex pattern {self.pattern!r}: {e}"
+            raise ValueError(msg) from e
+
+    def matches(self, s: str) -> bool:
+        flags = 0 if self.case_sensitive else re.IGNORECASE
+        return bool(re.fullmatch(self.pattern, s, flags))
+
+
+@dataclass(frozen=True)
+class GlobFilter(Filter):
+    """Match strings against a POSIX glob pattern via `fnmatch`.
+
+    Supported wildcards: `*` (any sequence), `?` (single char),
+    `[seq]` (any in seq), `[!seq]` (any not in seq). Recursive `**`
+    is not supported (that is a `pathlib.Path.rglob` concept).
+    """
+
+    def matches(self, s: str) -> bool:
+        pattern, target = self._prepare(s)
+        return fnmatch.fnmatchcase(target, pattern)
