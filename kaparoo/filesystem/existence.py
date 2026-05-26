@@ -378,12 +378,12 @@ def ensure_dirs_exist(
         The paths as Path objects or strings, depending on the value of `stringify`.
 
     Raises:
+        ValueError: If `make` is an int outside the range 0o1-0o7777.
         DirectoryNotFoundError: If `root` is provided and does not exist.
         DirectoryNotFoundError: If any of the paths do not exist and `make` is False.
         NotADirectoryError: If `root` is provided and is not a directory.
         NotADirectoryError: If any of the paths exist but are not directories.
         ValueError: If `root` is provided and any of the paths are absolute.
-        ValueError: If `make` is an int outside the range 0o1-0o7777.
     """
     if not isinstance(make, bool):
         _validate_mode(make)

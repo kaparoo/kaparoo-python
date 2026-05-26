@@ -174,7 +174,7 @@ def test_base_timer_is_abstract():
     from kaparoo.utils.timer import BaseTimer
 
     with pytest.raises(TypeError, match="abstract"):
-        BaseTimer()  # type: ignore[abstract]
+        BaseTimer()  # ty: ignore
 
 
 # --- LapTimer ---------------------------------------------------------------

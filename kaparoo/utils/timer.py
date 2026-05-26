@@ -184,9 +184,9 @@ class Timer(BaseTimer):
             0.0 until the first exit.
 
     Example:
-        >>> with Timer("ms", ndigits=2) as t:
-        ...     do_work()
-        >>> print(t.elapsed)  # e.g. 12.34
+        with Timer("ms", ndigits=2) as t:
+            do_work()
+        # `t.elapsed` is now the elapsed time, e.g. 12.34.
     """
 
     def __init__(self, unit: TimeUnit = "s", *, ndigits: int | None = None) -> None:
@@ -228,13 +228,13 @@ class LapTimer(BaseTimer):
             0.0 until then.
 
     Example:
-        >>> with LapTimer("ms", ndigits=1) as lt:
-        ...     step_a()
-        ...     lt.lap("A")
-        ...     step_b()
-        ...     lt.lap("B")
-        >>> lt.summary  # e.g. {"A": 12.3, "B": 8.7}
-        >>> lt.total_elapsed  # e.g. 21.0
+        with LapTimer("ms", ndigits=1) as lt:
+            step_a()
+            lt.lap("A")
+            step_b()
+            lt.lap("B")
+        # `lt.summary` is e.g. {"A": 12.3, "B": 8.7};
+        # `lt.total_elapsed` is e.g. 21.0.
     """
 
     _END_LABEL = "End"
@@ -282,8 +282,9 @@ class LapTimer(BaseTimer):
     def summary(self) -> dict[str, float]:
         """Per-label sum of `lap_time` across `records` (excludes `final`).
 
-        The per-label sums are rounded by `ndigits` (when set) after
-        summation, not per record.
+        Each record's `lap_time` is already rounded by `ndigits` (when
+        set); this property sums those rounded values and rounds the sum
+        once more.
 
         Returns:
             A mapping from label to total `lap_time` for that label, in the
