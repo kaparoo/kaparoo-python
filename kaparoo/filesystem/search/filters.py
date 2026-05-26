@@ -72,6 +72,12 @@ class PatternFilter(Filter, ABC):
     `pattern`. Polarity (`include`) is inherited from `Filter` and is
     not consulted by `matches`.
 
+    When `case_sensitive=False`, `pattern` is `casefold`-normalized
+    once in `__post_init__` so `matches` only has to normalize the
+    (per-call) target. Subclasses with non-`casefold` case-insensitivity
+    (e.g. `RegexFilter` via `re.IGNORECASE`) override `__post_init__`
+    to skip this step.
+
     Attributes:
         pattern: The string compared against the input.
         case_sensitive: If False, matching is performed case-insensitively
@@ -81,11 +87,13 @@ class PatternFilter(Filter, ABC):
     pattern: str
     case_sensitive: bool = field(default=True, kw_only=True)
 
-    def _prepare(self, target: str) -> tuple[str, str]:
-        """Return `(pattern, target)` normalized for `case_sensitive`."""
-        if self.case_sensitive:
-            return self.pattern, target
-        return self.pattern.casefold(), target.casefold()
+    def __post_init__(self) -> None:
+        if not self.case_sensitive:
+            object.__setattr__(self, "pattern", self.pattern.casefold())
+
+    def _prepare_target(self, target: str) -> str:
+        """Return `target` normalized for `case_sensitive`."""
+        return target if self.case_sensitive else target.casefold()
 
 
 @dataclass(frozen=True)
@@ -93,8 +101,7 @@ class EqualsFilter(PatternFilter):
     """Match strings that equal `pattern` exactly."""
 
     def matches(self, target: str) -> bool:
-        pattern, target = self._prepare(target)
-        return target == pattern
+        return self._prepare_target(target) == self.pattern
 
 
 @dataclass(frozen=True)
@@ -102,8 +109,7 @@ class StartsWithFilter(PatternFilter):
     """Match strings that start with `pattern`."""
 
     def matches(self, target: str) -> bool:
-        pattern, target = self._prepare(target)
-        return target.startswith(pattern)
+        return self._prepare_target(target).startswith(self.pattern)
 
 
 @dataclass(frozen=True)
@@ -111,8 +117,7 @@ class EndsWithFilter(PatternFilter):
     """Match strings that end with `pattern`."""
 
     def matches(self, target: str) -> bool:
-        pattern, target = self._prepare(target)
-        return target.endswith(pattern)
+        return self._prepare_target(target).endswith(self.pattern)
 
 
 @dataclass(frozen=True)
@@ -120,8 +125,7 @@ class ContainsFilter(PatternFilter):
     """Match strings that contain `pattern` as a substring."""
 
     def matches(self, target: str) -> bool:
-        pattern, target = self._prepare(target)
-        return pattern in target
+        return self.pattern in self._prepare_target(target)
 
 
 @dataclass(frozen=True)
@@ -138,6 +142,9 @@ class RegexFilter(PatternFilter):
     """
 
     def __post_init__(self) -> None:
+        # Intentionally skip `PatternFilter.__post_init__`: regex
+        # case-insensitivity uses `re.IGNORECASE`, and casefolding the
+        # pattern would corrupt constructs like `(?-i:[A-Z])`.
         try:
             re.compile(self.pattern)
         except re.error as e:
@@ -159,8 +166,7 @@ class GlobFilter(PatternFilter):
     """
 
     def matches(self, target: str) -> bool:
-        pattern, target = self._prepare(target)
-        return fnmatch.fnmatchcase(target, pattern)
+        return fnmatch.fnmatchcase(self._prepare_target(target), self.pattern)
 
 
 @dataclass(frozen=True)
@@ -172,6 +178,11 @@ class MultiPatternFilter(Filter, ABC):
     `matches` to return True if the input satisfies ANY of `patterns`.
     Polarity (`include`) is inherited from `Filter` and is not consulted
     by `matches`.
+
+    In `__post_init__`, `patterns` is `casefold`-normalized when
+    `case_sensitive=False` and then deduplicated while preserving
+    first-seen order, so `matches` operates on a minimal, ready-to-use
+    tuple.
 
     Attributes:
         patterns: The strings compared against the input. Must be non-empty.
@@ -189,6 +200,18 @@ class MultiPatternFilter(Filter, ABC):
         if not self.patterns:
             msg = f"{type(self).__name__} requires at least one pattern."
             raise ValueError(msg)
+        normalized = (
+            self.patterns
+            if self.case_sensitive
+            else tuple(p.casefold() for p in self.patterns)
+        )
+        deduped = tuple(dict.fromkeys(normalized))
+        if deduped != self.patterns:
+            object.__setattr__(self, "patterns", deduped)
+
+    def _prepare_target(self, target: str) -> str:
+        """Return `target` normalized for `case_sensitive`."""
+        return target if self.case_sensitive else target.casefold()
 
 
 @dataclass(frozen=True)
@@ -196,10 +219,7 @@ class EqualsAnyFilter(MultiPatternFilter):
     """Match strings that equal ANY of `patterns`."""
 
     def matches(self, target: str) -> bool:
-        if self.case_sensitive:
-            return target in self.patterns
-        t = target.casefold()
-        return any(t == p.casefold() for p in self.patterns)
+        return self._prepare_target(target) in self.patterns
 
 
 @dataclass(frozen=True)
@@ -207,10 +227,7 @@ class StartsWithAnyFilter(MultiPatternFilter):
     """Match strings that start with ANY of `patterns`."""
 
     def matches(self, target: str) -> bool:
-        if self.case_sensitive:
-            return target.startswith(self.patterns)
-        t = target.casefold()
-        return t.startswith(tuple(p.casefold() for p in self.patterns))
+        return self._prepare_target(target).startswith(self.patterns)
 
 
 @dataclass(frozen=True)
@@ -218,10 +235,7 @@ class EndsWithAnyFilter(MultiPatternFilter):
     """Match strings that end with ANY of `patterns`."""
 
     def matches(self, target: str) -> bool:
-        if self.case_sensitive:
-            return target.endswith(self.patterns)
-        t = target.casefold()
-        return t.endswith(tuple(p.casefold() for p in self.patterns))
+        return self._prepare_target(target).endswith(self.patterns)
 
 
 @dataclass(frozen=True)
@@ -229,10 +243,8 @@ class ContainsAnyFilter(MultiPatternFilter):
     """Match strings that contain ANY of `patterns` as a substring."""
 
     def matches(self, target: str) -> bool:
-        if self.case_sensitive:
-            return any(p in target for p in self.patterns)
-        t = target.casefold()
-        return any(p.casefold() in t for p in self.patterns)
+        t = self._prepare_target(target)
+        return any(p in t for p in self.patterns)
 
 
 @dataclass(frozen=True)
