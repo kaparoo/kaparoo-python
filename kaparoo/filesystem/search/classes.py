@@ -27,31 +27,28 @@ class Search(ABC):
     ) -> list[str]: ...
 
     @classmethod
-    def _filter_part(
-        cls,
-        part: str,  # noqa: ARG003
-        filter: Filter | None,  # noqa: A002, ARG003
-        /,
-    ) -> bool:
+    def _filter_part(cls, part: str, filter: Filter | None, /) -> bool:  # noqa: A002, ARG003
         return True  # TODO(filter)
 
     @classmethod
-    def _filter_name(
-        cls,
-        name: str,  # noqa: ARG003
-        filter: Filter | None,  # noqa: A002, ARG003
-        /,
-    ) -> bool:
+    def _filter_name(cls, name: str, filter: Filter | None, /) -> bool:  # noqa: A002, ARG003
         return True  # TODO(filter)
 
     @classmethod
-    def _filter_names(
-        cls,
-        names: Iterable[str],
-        filter: Filter | None,  # noqa: A002
-        /,
-    ) -> list[str]:
+    def _filter_names(cls, names: Iterable[str], filter: Filter | None, /) -> list[str]:  # noqa: A002
         return [name for name in names if cls._filter_name(name, filter)]
+
+    @classmethod
+    def _validate_depth_range(cls, min_depth: int, max_depth: int | None) -> None:
+        if min_depth < 1:
+            msg = f"min_depth must be positive (got {min_depth})"
+            raise ValueError(msg)
+        if max_depth is not None and max_depth < 1:
+            msg = f"max_depth must be positive or None (got {max_depth})"
+            raise ValueError(msg)
+        if max_depth is not None and min_depth > max_depth:
+            msg = f"min_depth ({min_depth}) cannot exceed max_depth ({max_depth})"
+            raise ValueError(msg)
 
     @overload
     @classmethod
@@ -120,15 +117,7 @@ class Search(ABC):
             DirectoryNotFoundError: `root` does not exist.
             NotADirectoryError: `root` is not a directory.
         """
-        if min_depth < 1:
-            msg = f"min_depth must be positive (got {min_depth})"
-            raise ValueError(msg)
-        if max_depth is not None and max_depth < 1:
-            msg = f"max_depth must be positive or None (got {max_depth})"
-            raise ValueError(msg)
-        if max_depth is not None and min_depth > max_depth:
-            msg = f"min_depth ({min_depth}) cannot exceed max_depth ({max_depth})"
-            raise ValueError(msg)
+        cls._validate_depth_range(min_depth, max_depth)
 
         root = ensure_dir_exists(root)
         root_depth = len(root.parts)
