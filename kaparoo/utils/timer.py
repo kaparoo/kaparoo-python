@@ -219,7 +219,7 @@ class LapTimer(BaseTimer):
     Attributes:
         on_same_label: The same-label handling policy (see `__init__`).
         records: The list of user-supplied laps.
-        total_elapsed: The total measured duration, from start to exit.
+        elapsed: The total measured duration, from start to exit.
             Defaults to 0.0 until the first exit.
 
     Example:
@@ -229,7 +229,7 @@ class LapTimer(BaseTimer):
             step_b()
             lt.lap("B")
         # `lt.summary` is e.g. {"A": 12.3, "B": 8.7};
-        # `lt.total_elapsed` is e.g. 21.0.
+        # `lt.elapsed` is e.g. 21.0.
     """
 
     def __init__(
@@ -265,7 +265,7 @@ class LapTimer(BaseTimer):
 
         self.on_same_label = on_same_label
         self.records: list[LapRecord] = []
-        self.total_elapsed: float = 0.0
+        self.elapsed: float = 0.0
 
         self._last_time: int = 0
         self._label_counts: dict[str, int] = {}
@@ -310,7 +310,7 @@ class LapTimer(BaseTimer):
         """Clear per-`with`-block state so the timer can be reused safely."""
         self._last_time = self._start_time
         self.records.clear()
-        self.total_elapsed = 0.0
+        self.elapsed = 0.0
         self._label_counts.clear()
 
     def _resolve_label(self, label: str) -> str:
@@ -369,6 +369,6 @@ class LapTimer(BaseTimer):
         self.records.append(self._make_record(self._resolve_label(label)))
 
     def _finalize(self) -> None:
-        """Set `total_elapsed` from start to current time."""
+        """Set `elapsed` from start to current time."""
         elapsed_ns = time.perf_counter_ns() - self._start_time
-        self.total_elapsed = self._format_time(elapsed_ns)
+        self.elapsed = self._format_time(elapsed_ns)

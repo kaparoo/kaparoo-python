@@ -195,7 +195,7 @@ def test_lap_timer_basic(fake_clock):
     assert lt.records[1]["total_time"] == 250.0
     assert lt.records[2]["lap_time"] == 150.0
     assert lt.records[2]["total_time"] == 400.0
-    assert lt.total_elapsed == 500.0
+    assert lt.elapsed == 500.0
 
 
 def test_lap_timer_summary_aggregates_duplicates(fake_clock):
@@ -215,7 +215,7 @@ def test_lap_timer_summary_excludes_trailing_time(fake_clock):
     with LapTimer("ms") as lt:
         lt.lap("A")
     assert lt.summary == {"A": 100.0}
-    assert lt.total_elapsed == 500.0
+    assert lt.elapsed == 500.0
 
 
 def test_lap_timer_summary_ndigits_rounds_sum(fake_clock):
@@ -281,7 +281,7 @@ def test_lap_timer_pause_resume_excludes_interval(fake_clock):
     # B at 500: lap_time = 500-300 = 200, total = 500-200 = 300.
     assert lt.records[1]["lap_time"] == 200.0
     assert lt.records[1]["total_time"] == 300.0
-    assert lt.total_elapsed == 400.0  # 600 - 200
+    assert lt.elapsed == 400.0  # 600 - 200
 
 
 def test_lap_timer_lap_while_paused_raises(fake_clock):
@@ -310,7 +310,7 @@ def test_lap_timer_empty_run(fake_clock):
         pass
     assert lt.records == []
     assert lt.summary == {}
-    assert lt.total_elapsed == 100.0
+    assert lt.elapsed == 100.0
 
 
 def test_lap_timer_post_exit_lap_raises(fake_clock):
