@@ -161,7 +161,7 @@ class RegexFilter(PatternFilter):
         object.__setattr__(self, "_compiled", compiled)
 
     def matches(self, target: str) -> bool:
-        return bool(self._compiled.fullmatch(target))
+        return self._compiled.fullmatch(target) is not None
 
 
 @dataclass(frozen=True)
