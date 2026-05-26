@@ -15,8 +15,9 @@ if TYPE_CHECKING:
 
     from kaparoo.filesystem.types import StrPath
 
-    # TODO(filter): placeholder for the `part` / `name` filter inputs;
-    # replace `object` with the real `Filter` type once it is designed.
+    # TODO(filter): placeholder for the `part_filter` / `name_filter`
+    # inputs; replace `object` with the real `Filter` type once it is
+    # designed.
     type _Filters = Sequence[object]
 
 
@@ -25,9 +26,9 @@ if TYPE_CHECKING:
 # class hierarchy below is internal -- it exists to share the walk
 # logic, not as a user-facing API. This is a skeleton: the `Path.walk`
 # traversal, depth limiting, collection and `stringify` handling are
-# implemented; the `part` / `name` filter methods (`_accept_part` /
-# `_accept_name`) are stubs and subtree pruning is not done (search for
-# "TODO(filter)").
+# implemented; the `part_filter` / `name_filter` methods
+# (`_accept_part` / `_accept_name`) are stubs and subtree pruning is
+# not done (search for "TODO(filter)").
 
 
 class Search(ABC):
@@ -56,7 +57,7 @@ class Search(ABC):
 
         `part` is the directory's path relative to the search root.
         """
-        # TODO(filter): apply the `part` filters.
+        # TODO(filter): apply `part_filter`.
         return True
 
     @classmethod
@@ -67,7 +68,7 @@ class Search(ABC):
         /,
     ) -> bool:
         """Whether an entry with this basename is included."""
-        # TODO(filter): apply the `name` filters.
+        # TODO(filter): apply `name_filter`.
         return True
 
     @overload
@@ -76,9 +77,9 @@ class Search(ABC):
         cls,
         root: StrPath,
         *,
-        part: _Filters | None = None,
-        name: _Filters | None = None,
-        condition: Callable[[Path], bool] | None = None,
+        part_filter: _Filters | None = None,
+        name_filter: _Filters | None = None,
+        predicate: Callable[[Path], bool] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
         ordered: bool = True,
@@ -91,9 +92,9 @@ class Search(ABC):
         cls,
         root: StrPath,
         *,
-        part: _Filters | None = None,
-        name: _Filters | None = None,
-        condition: Callable[[Path], bool] | None = None,
+        part_filter: _Filters | None = None,
+        name_filter: _Filters | None = None,
+        predicate: Callable[[Path], bool] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
         ordered: bool = True,
@@ -106,9 +107,9 @@ class Search(ABC):
         cls,
         root: StrPath,
         *,
-        part: _Filters | None = None,
-        name: _Filters | None = None,
-        condition: Callable[[Path], bool] | None = None,
+        part_filter: _Filters | None = None,
+        name_filter: _Filters | None = None,
+        predicate: Callable[[Path], bool] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
         ordered: bool = True,
@@ -120,9 +121,9 @@ class Search(ABC):
         cls,
         root: StrPath,
         *,
-        part: _Filters | None = None,
-        name: _Filters | None = None,
-        condition: Callable[[Path], bool] | None = None,
+        part_filter: _Filters | None = None,
+        name_filter: _Filters | None = None,
+        predicate: Callable[[Path], bool] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
         ordered: bool = True,
@@ -133,8 +134,8 @@ class Search(ABC):
         A direct child of `root` has depth 1; `max_depth` of None means
         unlimited.
 
-        Work in progress: the `part` / `name` filtering is not implemented
-        yet -- see TODO(filter).
+        Work in progress: `part_filter` / `name_filter` are not
+        implemented yet -- see TODO(filter).
 
         Raises:
             ValueError: If `min_depth` or `max_depth` is not a positive int
@@ -172,16 +173,18 @@ class Search(ABC):
             # `max_depth` is enforced by the prune below (the walk never
             # descends past it), so collection only needs the `min_depth`
             # lower bound.
-            if child_depth >= min_depth and cls._accept_part(part_str, part):
+            if child_depth >= min_depth and cls._accept_part(part_str, part_filter):
                 names = cls._select(dirnames, filenames)
-                results.extend(dirpath / n for n in names if cls._accept_name(n, name))
+                results.extend(
+                    dirpath / n for n in names if cls._accept_name(n, name_filter)
+                )
 
             # Stop descending once the next level down would exceed `max_depth`.
             if max_depth is not None and child_depth >= max_depth:
                 dirnames.clear()
 
-        if callable(condition):
-            results = [p for p in results if condition(p)]
+        if callable(predicate):
+            results = [p for p in results if predicate(p)]
 
         if ordered:
             results.sort()
