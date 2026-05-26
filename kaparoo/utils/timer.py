@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
 
 _SCALES: dict[str, float] = {"s": 1e-9, "ms": 1e-6, "us": 1e-3, "ns": 1.0}
+
 _LABEL_POLICIES: frozenset[str] = frozenset({"merge", "separate", "reject"})
 
 
@@ -64,9 +65,11 @@ class BaseTimer(ContextDecorator, ABC):
         if unit not in _SCALES:
             msg = f"unit must be one of {sorted(_SCALES)} (got {unit!r})."
             raise ValueError(msg)
+
         self.unit = unit
         self.scale = _SCALES[unit]
         self.ndigits = ndigits
+
         self._start_time: int = 0
         self._started: bool = False
         self._is_paused: bool = False
@@ -107,6 +110,7 @@ class BaseTimer(ContextDecorator, ABC):
         if self._is_paused:
             msg = "Timer is already paused."
             raise RuntimeError(msg)
+
         self._pause_start = time.perf_counter_ns()
         self._is_paused = True
 
@@ -126,9 +130,11 @@ class BaseTimer(ContextDecorator, ABC):
         if not self._is_paused:
             msg = "Timer is not paused."
             raise RuntimeError(msg)
+
         pause_duration = time.perf_counter_ns() - self._pause_start
         self._start_time += pause_duration
         self._is_paused = False
+
         return pause_duration
 
     @contextmanager
@@ -161,6 +167,7 @@ class BaseTimer(ContextDecorator, ABC):
     ) -> None:
         if self._is_paused:
             self.resume()
+
         self._finalize()
         self._started = False
 
@@ -257,14 +264,17 @@ class LapTimer(BaseTimer):
                 supported values.
         """
         super().__init__(unit=unit, ndigits=ndigits)
+
         if on_same_label not in _LABEL_POLICIES:
             msg = f"on_same_label must be one of {sorted(_LABEL_POLICIES)}"
             msg += f" (got {on_same_label!r})."
             raise ValueError(msg)
+
         self.on_same_label = on_same_label
         self.records: list[LapRecord] = []
         self.final: LapRecord | None = None
         self.total_elapsed: float = 0.0
+
         self._last_time: int = 0
         self._label_counts: dict[str, int] = {}
 
@@ -282,6 +292,7 @@ class LapTimer(BaseTimer):
         grouped: dict[str, float] = defaultdict(float)
         for record in self.records:
             grouped[record["label"]] += record["lap_time"]
+
         return {label: self._apply_ndigits(total) for label, total in grouped.items()}
 
     def resume(self) -> int:
@@ -299,6 +310,7 @@ class LapTimer(BaseTimer):
         """
         pause_duration = super().resume()
         self._last_time += pause_duration
+
         return pause_duration
 
     def _reset(self) -> None:
@@ -319,7 +331,9 @@ class LapTimer(BaseTimer):
         if next_count > 1 and self.on_same_label == "reject":
             msg = f"Label {label!r} is already used."
             raise ValueError(msg)
+
         self._label_counts[label] = next_count
+
         return (
             f"{label} ({next_count})"
             if next_count > 1 and self.on_same_label == "separate"
@@ -329,12 +343,14 @@ class LapTimer(BaseTimer):
     def _make_record(self, label: str) -> LapRecord:
         """Build a record stamped with the current time and advance `_last_time`."""
         current_time = time.perf_counter_ns()
+
         record: LapRecord = {
             "label": label,
             "lap_time": self._format_time(current_time - self._last_time),
             "total_time": self._format_time(current_time - self._start_time),
         }
         self._last_time = current_time
+
         return record
 
     def lap(self, label: str = "Lap") -> None:
@@ -357,6 +373,7 @@ class LapTimer(BaseTimer):
         if self._is_paused:
             msg = "Cannot record a lap while paused."
             raise RuntimeError(msg)
+
         self.records.append(self._make_record(self._resolve_label(label)))
 
     def _finalize(self) -> None:
