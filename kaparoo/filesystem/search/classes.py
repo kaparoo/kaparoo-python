@@ -22,9 +22,8 @@ class Search(ABC):
 
     @classmethod
     @abstractmethod
-    def _select_names(
-        cls, dirnames: list[str], filenames: list[str], /
-    ) -> list[str]: ...
+    def _select_names(cls, dirnames: list[str], filenames: list[str], /) -> list[str]:
+        raise NotImplementedError
 
     @classmethod
     def _filter_part(cls, part: str, filter: Filter | None, /) -> bool:  # noqa: A002
@@ -132,13 +131,15 @@ class Search(ABC):
             if child_depth >= min_depth and cls._filter_part(part, part_filter):
                 names = cls._select_names(dirnames, filenames)
                 names = cls._filter_names(names, name_filter)
-                results.extend(dirpath / name for name in names)
+
+                paths = (dirpath / name for name in names)
+                if callable(predicate):
+                    paths = (path for path in paths if predicate(path))
+
+                results.extend(paths)
 
             if max_depth is not None and child_depth >= max_depth:
                 dirnames.clear()
-
-        if callable(predicate):
-            results = [p for p in results if predicate(p)]
 
         if ordered:
             results.sort()
