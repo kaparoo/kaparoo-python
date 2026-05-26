@@ -55,6 +55,18 @@ module-root = ""
 # See the following documentation for more information
 # https://docs.astral.sh/uv/concepts/build-backend/
 
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple/"
+publish-url = "https://upload.pypi.org/legacy/"
+default = true
+
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true
+
 [tool.ty.environment]
 python-version = "3.14"
 
