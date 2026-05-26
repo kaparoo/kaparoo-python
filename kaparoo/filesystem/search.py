@@ -351,21 +351,39 @@ class Search(ABC):
 
     @overload
     def run(
-        self, root: StrPath, *, stringify: Literal[False] = False
+        self,
+        root: StrPath,
+        *,
+        ordered: bool = True,
+        stringify: Literal[False] = False,
     ) -> Sequence[Path]: ...
 
     @overload
-    def run(self, root: StrPath, *, stringify: Literal[True]) -> Sequence[str]: ...
+    def run(
+        self,
+        root: StrPath,
+        *,
+        ordered: bool = True,
+        stringify: Literal[True],
+    ) -> Sequence[str]: ...
 
     @overload
     def run(
-        self, root: StrPath, *, stringify: bool
+        self,
+        root: StrPath,
+        *,
+        ordered: bool = True,
+        stringify: bool,
     ) -> Sequence[Path] | Sequence[str]: ...
 
     def run(
-        self, root: StrPath, *, stringify: bool = False
+        self,
+        root: StrPath,
+        *,
+        ordered: bool = True,
+        stringify: bool = False,
     ) -> Sequence[Path] | Sequence[str]:
-        """Walk `root` and return the matching paths, sorted.
+        """Walk `root` and return the matching paths.
 
         Work in progress: the `part` / `name` filtering is not implemented
         yet -- see TODO(filter).
@@ -409,7 +427,8 @@ class Search(ABC):
         if callable(condition):
             results = [path for path in results if condition(path)]
 
-        results.sort()
+        if ordered:
+            results.sort()
 
         return stringify_paths(results) if stringify else results
 
