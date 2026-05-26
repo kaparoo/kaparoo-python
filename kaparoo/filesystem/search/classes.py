@@ -9,7 +9,7 @@ from kaparoo.filesystem.existence import ensure_dir_exists
 from kaparoo.filesystem.utils import stringify_path, stringify_paths
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable, Iterable, Sequence
     from pathlib import Path
     from typing import Literal
 
@@ -23,10 +23,12 @@ class Search(ABC):
 
     @classmethod
     @abstractmethod
-    def _select(cls, dirnames: list[str], filenames: list[str], /) -> list[str]: ...
+    def _select_names(
+        cls, dirnames: list[str], filenames: list[str], /
+    ) -> list[str]: ...
 
     @classmethod
-    def _accept_part(
+    def _filter_part(
         cls,
         part: str,  # noqa: ARG003
         filter: _Filters | None,  # noqa: A002, ARG003
@@ -35,13 +37,22 @@ class Search(ABC):
         return True  # TODO(filter)
 
     @classmethod
-    def _accept_name(
+    def _filter_name(
         cls,
         name: str,  # noqa: ARG003
         filter: _Filters | None,  # noqa: A002, ARG003
         /,
     ) -> bool:
         return True  # TODO(filter)
+
+    @classmethod
+    def _filter_names(
+        cls,
+        names: Iterable[str],
+        filter: _Filters | None,  # noqa: A002
+        /,
+    ) -> list[str]:
+        return [name for name in names if cls._filter_name(name, filter)]
 
     @overload
     @classmethod
@@ -128,9 +139,9 @@ class Search(ABC):
             child_depth = len(dirpath.parts) - root_depth + 1
             part = stringify_path(dirpath.relative_to(root))
 
-            if child_depth >= min_depth and cls._accept_part(part, part_filter):
-                names = cls._select(dirnames, filenames)
-                names = (name for name in names if cls._accept_name(name, name_filter))
+            if child_depth >= min_depth and cls._filter_part(part, part_filter):
+                names = cls._select_names(dirnames, filenames)
+                names = cls._filter_names(names, name_filter)
                 results.extend(dirpath / name for name in names)
 
             if max_depth is not None and child_depth >= max_depth:
@@ -145,17 +156,17 @@ class Search(ABC):
 
 class PathSearch(Search):
     @classmethod
-    def _select(cls, dirnames: list[str], filenames: list[str], /) -> list[str]:
+    def _select_names(cls, dirnames: list[str], filenames: list[str], /) -> list[str]:
         return [*dirnames, *filenames]
 
 
 class FileSearch(Search):
     @classmethod
-    def _select(cls, _dirnames: list[str], filenames: list[str], /) -> list[str]:
+    def _select_names(cls, _dirnames: list[str], filenames: list[str], /) -> list[str]:
         return list(filenames)
 
 
 class DirSearch(Search):
     @classmethod
-    def _select(cls, dirnames: list[str], _filenames: list[str], /) -> list[str]:
+    def _select_names(cls, dirnames: list[str], _filenames: list[str], /) -> list[str]:
         return list(dirnames)
