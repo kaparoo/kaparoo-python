@@ -27,12 +27,12 @@ class Search(ABC):
     ) -> list[str]: ...
 
     @classmethod
-    def _filter_part(cls, part: str, filter: Filter | None, /) -> bool:  # noqa: A002, ARG003
-        return True  # TODO(filter)
+    def _filter_part(cls, part: str, filter: Filter | None, /) -> bool:  # noqa: A002
+        return True if filter is None else filter.matches(part)
 
     @classmethod
-    def _filter_name(cls, name: str, filter: Filter | None, /) -> bool:  # noqa: A002, ARG003
-        return True  # TODO(filter)
+    def _filter_name(cls, name: str, filter: Filter | None, /) -> bool:  # noqa: A002
+        return True if filter is None else filter.matches(name)
 
     @classmethod
     def _filter_names(cls, names: Iterable[str], filter: Filter | None, /) -> list[str]:  # noqa: A002
