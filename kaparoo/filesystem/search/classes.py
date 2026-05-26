@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     type _Filters = Sequence[object]
 
 
-# `search_paths` / `search_files` / `search_dirs` (in `_wrappers`) will
+# `search_paths` / `search_files` / `search_dirs` (in `wrappers`) will
 # replace `get_paths` / `get_files` / `get_dirs` (in `deprecated`). The
 # class hierarchy below is internal -- it exists to share the walk
 # logic, not as a user-facing API. This is a skeleton: the `Path.walk`
