@@ -64,12 +64,6 @@ class PatternFilter(Filter, ABC):
     user-defined) implement `matches` to compare the input against
     `pattern`.
 
-    When `case_sensitive=False`, `pattern` is `casefold`-normalized
-    once in `__post_init__` so `matches` only has to normalize the
-    (per-call) target. Subclasses with non-`casefold` case-insensitivity
-    (e.g. `RegexFilter` via `re.IGNORECASE`) override `__post_init__`
-    to skip this step.
-
     Attributes:
         pattern: The string compared against the input.
         case_sensitive: If False, matching is performed case-insensitively
@@ -128,11 +122,6 @@ class RegexFilter(PatternFilter):
     pattern. For partial matches, anchor explicitly with `.*` in the
     pattern. `case_sensitive=False` is wired via `re.IGNORECASE`.
 
-    The pattern is compiled with the appropriate flags once at
-    construction and stored in `_compiled`, so `matches` is a single
-    `re.Pattern.fullmatch` call -- no per-call flag computation, and
-    `re`'s internal pattern cache is bypassed entirely.
-
     Raises:
         ValueError: If `pattern` is not a valid regular expression
             (validated at construction).
@@ -176,11 +165,6 @@ class MultiPatternFilter(Filter, ABC):
     Concrete subclasses (`EqualsAnyFilter`, `StartsWithAnyFilter`,
     `EndsWithAnyFilter`, `ContainsAnyFilter`, or user-defined) implement
     `matches` to return True if the input satisfies ANY of `patterns`.
-
-    In `__post_init__`, `patterns` is `casefold`-normalized when
-    `case_sensitive=False` and then deduplicated while preserving
-    first-seen order, so `matches` operates on a minimal, ready-to-use
-    tuple.
 
     Attributes:
         patterns: The strings compared against the input. Must be non-empty.

@@ -111,11 +111,8 @@ class Search(ABC):
     ) -> Sequence[Path] | Sequence[str]:
         """Walk `root` and return matching paths.
 
-        Performs a depth-first traversal via `Path.walk`. At each visited
-        directory, candidate entries (the set selected by the subclass --
-        `PathSearch` yields both files and directories, `FileSearch` yields
-        files only, `DirSearch` yields directories only) pass through three
-        filters in order:
+        At each visited directory, candidate entries (the set selected by
+        the subclass) pass through three filters in order:
 
             1. `part_filter` -- applied to the visited directory's relative
                path string. Directories that don't pass yield no entries,
