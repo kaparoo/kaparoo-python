@@ -289,8 +289,8 @@ def get_dirs(
 # stubs and subtree pruning is not done (search for "TODO(filter)").
 
 
-class _Search(ABC):
-    """Private base for `PathSearch` / `FileSearch` / `DirSearch`.
+class Search(ABC):
+    """Abstract base for `PathSearch` / `FileSearch` / `DirSearch`.
 
     Holds the search configuration and implements the walk in `run`.
     Subclasses implement `_select` to choose which entry kinds to collect.
@@ -414,21 +414,21 @@ class _Search(ABC):
         return stringify_paths(results) if stringify else results
 
 
-class PathSearch(_Search):
+class PathSearch(Search):
     """Search for both directories and files."""
 
     def _select(self, dirnames: list[str], filenames: list[str], /) -> list[str]:
         return [*dirnames, *filenames]
 
 
-class FileSearch(_Search):
+class FileSearch(Search):
     """Search for files."""
 
     def _select(self, _dirnames: list[str], filenames: list[str], /) -> list[str]:
         return list(filenames)
 
 
-class DirSearch(_Search):
+class DirSearch(Search):
     """Search for directories."""
 
     def _select(self, dirnames: list[str], _filenames: list[str], /) -> list[str]:
