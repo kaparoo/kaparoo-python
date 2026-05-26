@@ -2,6 +2,7 @@ from __future__ import annotations
 
 __all__ = ("get_dirs", "get_files", "get_paths")
 
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, overload
 
@@ -83,6 +84,12 @@ def get_paths(
         DirectoryNotFoundError: If the root directory does not exist.
         NotADirectoryError: If the root directory is not a directory.
     """
+    warnings.warn(
+        "`get_paths()` is deprecated; use `search_paths()` instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
     root = ensure_dir_exists(root)
 
     paths = list(root.rglob(pattern) if recursive else root.glob(pattern))
@@ -168,19 +175,27 @@ def get_files(
         DirectoryNotFoundError: If the root directory does not exist.
         NotADirectoryError: If the root directory is not a directory.
     """
+    warnings.warn(
+        "`get_files()` is deprecated; use `search_files()` instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
     if callable(condition):
         file_condition = lambda path: file_exists(path) and condition(path)  # noqa: E731
     else:
         file_condition = file_exists
 
-    return get_paths(
-        root,
-        pattern=pattern,
-        excludes=excludes,
-        condition=file_condition,
-        recursive=recursive,
-        stringify=stringify,
-    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        return get_paths(
+            root,
+            pattern=pattern,
+            excludes=excludes,
+            condition=file_condition,
+            recursive=recursive,
+            stringify=stringify,
+        )
 
 
 @overload
@@ -251,16 +266,24 @@ def get_dirs(
         DirectoryNotFoundError: If the root directory does not exist.
         NotADirectoryError: If the root directory is not a directory.
     """
+    warnings.warn(
+        "`get_dirs()` is deprecated; use `search_dirs()` instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
     if callable(condition):
         dir_condition = lambda path: dir_exists(path) and condition(path)  # noqa: E731
     else:
         dir_condition = dir_exists
 
-    return get_paths(
-        root,
-        pattern=pattern,
-        excludes=excludes,
-        condition=dir_condition,
-        recursive=recursive,
-        stringify=stringify,
-    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        return get_paths(
+            root,
+            pattern=pattern,
+            excludes=excludes,
+            condition=dir_condition,
+            recursive=recursive,
+            stringify=stringify,
+        )
