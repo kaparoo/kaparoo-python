@@ -73,8 +73,7 @@ Filesystem traversal with composable filters.
 
 ## 📋 TODO
 
-See [TODO.md](./TODO.md) for tracked open items (data module design,
-CI workflow, coverage tooling, etc.).
+See [TODO.md](./TODO.md) for tracked open items.
 
 ## 📜 Changelog
 
