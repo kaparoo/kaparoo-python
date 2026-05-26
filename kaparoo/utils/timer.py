@@ -21,13 +21,45 @@ _SCALES: dict[str, float] = {"s": 1e-9, "ms": 1e-6, "us": 1e-3, "ns": 1.0}
 
 
 class LapRecord(TypedDict):
+    """A single timing record produced by `LapTimer`.
+
+    Attributes:
+        label: The lap's name. May carry a " (N)" suffix when produced under
+            `dup_mode="number"`.
+        lap_time: Time elapsed since the previous lap (or the timer start),
+            in the timer's `unit` and rounded by `ndigits` if given.
+        total_time: Time elapsed since the timer started, in the timer's
+            `unit` and rounded by `ndigits` if given.
+    """
+
     label: str
     lap_time: float
     total_time: float
 
 
 class BaseTimer(ContextDecorator, ABC):
+    """Abstract base for `Timer` and `LapTimer`.
+
+    Provides the shared timing machinery: unit/precision formatting,
+    `pause`/`resume`/`suspend`, and a context-manager protocol that
+    auto-resumes a paused timer on exit. Subclasses implement `_finalize`
+    to record their final result, and may override the `_reset` hook to
+    clear per-`with`-block state. Not part of the public API -- prefer
+    `Timer` or `LapTimer`.
+    """
+
     def __init__(self, unit: TimeUnit = "s", *, ndigits: int | None = None) -> None:
+        """Initialize the timer with a reporting unit and optional precision.
+
+        Args:
+            unit: The time unit for reported values. One of "s", "ms", "us",
+                "ns". Defaults to "s".
+            ndigits: The number of decimal places to round reported values to.
+                If None, no rounding is applied. Defaults to None.
+
+        Raises:
+            ValueError: If `unit` is not one of the supported values.
+        """
         if unit not in _SCALES:
             msg = f"unit must be one of {sorted(_SCALES)} (got {unit!r})."
             raise ValueError(msg)
@@ -40,12 +72,15 @@ class BaseTimer(ContextDecorator, ABC):
         self._pause_start: int = 0
 
     def _apply_ndigits(self, value: float) -> float:
+        """Round `value` to `ndigits` decimal places, or return it unchanged."""
         return value if self.ndigits is None else round(value, self.ndigits)
 
     def _format_time(self, elapsed_ns: int) -> float:
+        """Convert a nanosecond delta to the timer's reporting unit."""
         return self._apply_ndigits(elapsed_ns * self.scale)
 
     def _ensure_started(self) -> None:
+        """Raise if the timer has not entered a `with` block (or has exited)."""
         if not self._started:
             msg = "Timer has not been started."
             raise RuntimeError(msg)
@@ -58,6 +93,15 @@ class BaseTimer(ContextDecorator, ABC):
         """Compute the final result. Called from `__exit__` after auto-resume."""
 
     def pause(self) -> None:
+        """Pause the timer, excluding subsequent time from measurement.
+
+        Subsequent time is excluded until `resume` is called (or until
+        `__exit__` auto-resumes a still-paused timer).
+
+        Raises:
+            RuntimeError: If the timer has not been started, or is already
+                paused.
+        """
         self._ensure_started()
         if self._is_paused:
             msg = "Timer is already paused."
@@ -66,6 +110,17 @@ class BaseTimer(ContextDecorator, ABC):
         self._is_paused = True
 
     def resume(self) -> int:
+        """Resume the timer after a `pause` call.
+
+        The just-elapsed pause interval is added to the internal start time
+        so that subsequent measurements correctly exclude it.
+
+        Returns:
+            The duration of the just-finished pause, in nanoseconds.
+
+        Raises:
+            RuntimeError: If the timer has not been started, or is not paused.
+        """
         self._ensure_started()
         if not self._is_paused:
             msg = "Timer is not paused."
@@ -77,6 +132,12 @@ class BaseTimer(ContextDecorator, ABC):
 
     @contextmanager
     def suspend(self) -> Iterator[None]:
+        """Pause the timer for the duration of the `with` block.
+
+        Equivalent to calling `pause` on entry and `resume` on exit. The
+        resume on exit is skipped if the user manually called `resume`
+        inside the block, so paired pause/resume calls work safely.
+        """
         self.pause()
         try:
             yield
@@ -104,16 +165,70 @@ class BaseTimer(ContextDecorator, ABC):
 
 
 class Timer(BaseTimer):
+    """A single-shot timer measuring one elapsed duration.
+
+    Usable as a context manager or as a decorator. The measured duration
+    is stored in `elapsed` once the `with` block exits or the decorated
+    function returns.
+
+    Attributes:
+        elapsed: The measured duration, in the timer's `unit`. Defaults to
+            0.0 until the first exit.
+
+    Example:
+        >>> with Timer("ms", ndigits=2) as t:
+        ...     do_work()
+        >>> print(t.elapsed)  # e.g. 12.34
+    """
+
     def __init__(self, unit: TimeUnit = "s", *, ndigits: int | None = None) -> None:
+        """Initialize the timer.
+
+        Args:
+            unit: The time unit for reported values. One of "s", "ms", "us",
+                "ns". Defaults to "s".
+            ndigits: The number of decimal places to round `elapsed` to.
+                If None, no rounding is applied. Defaults to None.
+
+        Raises:
+            ValueError: If `unit` is not one of the supported values.
+        """
         super().__init__(unit=unit, ndigits=ndigits)
         self.elapsed: float = 0.0
 
     def _finalize(self) -> None:
+        """Store the elapsed time in `elapsed`."""
         elapsed_ns = time.perf_counter_ns() - self._start_time
         self.elapsed = self._format_time(elapsed_ns)
 
 
 class LapTimer(BaseTimer):
+    """A multi-lap timer recording named intermediate timings.
+
+    Usable as a context manager or as a decorator. Inside the block, call
+    `lap(label)` to record a lap. On exit, an auto-recorded `final` lap
+    captures the time from the last user lap to the exit point.
+
+    Attributes:
+        dup_mode: The duplicate-label policy (see `__init__`).
+        records: The list of user-supplied laps. Excludes the auto-`final`
+            record.
+        final: The auto-recorded terminating lap, or None before the first
+            exit. Its label is "End".
+        total_elapsed: The total measured duration, equal to
+            `final["total_time"]` once the timer has exited. Defaults to
+            0.0 until then.
+
+    Example:
+        >>> with LapTimer("ms", ndigits=1) as lt:
+        ...     step_a()
+        ...     lt.lap("A")
+        ...     step_b()
+        ...     lt.lap("B")
+        >>> lt.summary  # e.g. {"A": 12.3, "B": 8.7}
+        >>> lt.total_elapsed  # e.g. 21.0
+    """
+
     _END_LABEL = "End"
 
     def __init__(
@@ -123,6 +238,21 @@ class LapTimer(BaseTimer):
         ndigits: int | None = None,
         dup_mode: DupMode = "allow",
     ) -> None:
+        """Initialize the lap timer.
+
+        Args:
+            unit: The time unit for reported values. One of "s", "ms", "us",
+                "ns". Defaults to "s".
+            ndigits: The number of decimal places to round reported values
+                to. If None, no rounding is applied. Defaults to None.
+            dup_mode: Behavior when a label passed to `lap` has been used
+                before in the same `with` block. "allow" records duplicates
+                verbatim, "number" appends a " (N)" suffix to repeats,
+                "strict" raises `ValueError`. Defaults to "allow".
+
+        Raises:
+            ValueError: If `unit` is not one of the supported values.
+        """
         super().__init__(unit=unit, ndigits=ndigits)
         self.dup_mode = dup_mode
         self.records: list[LapRecord] = []
@@ -133,18 +263,39 @@ class LapTimer(BaseTimer):
 
     @property
     def summary(self) -> dict[str, float]:
-        """Sum `lap_time` per label across `records` (excludes `final`)."""
+        """Per-label sum of `lap_time` across `records` (excludes `final`).
+
+        The per-label sums are rounded by `ndigits` (when set) after
+        summation, not per record.
+
+        Returns:
+            A mapping from label to total `lap_time` for that label, in the
+            timer's `unit`.
+        """
         grouped: dict[str, float] = defaultdict(float)
         for record in self.records:
             grouped[record["label"]] += record["lap_time"]
         return {label: self._apply_ndigits(total) for label, total in grouped.items()}
 
     def resume(self) -> int:
+        """Resume the timer and advance the lap baseline.
+
+        Extends `BaseTimer.resume` by also adding the pause duration to
+        `_last_time` so that the next lap's `lap_time` excludes the pause
+        interval.
+
+        Returns:
+            The duration of the just-finished pause, in nanoseconds.
+
+        Raises:
+            RuntimeError: If the timer has not been started, or is not paused.
+        """
         pause_duration = super().resume()
         self._last_time += pause_duration
         return pause_duration
 
     def _reset(self) -> None:
+        """Clear per-`with`-block state so the timer can be reused safely."""
         self._last_time = self._start_time
         self.records.clear()
         self.final = None
@@ -152,6 +303,11 @@ class LapTimer(BaseTimer):
         self._label_counts.clear()
 
     def _resolve_label(self, label: str) -> str:
+        """Apply `dup_mode` and return the actual label to record.
+
+        Increments the per-label counter only if the lap is accepted, so a
+        failed strict lap does not leave the counter inflated.
+        """
         next_count = self._label_counts.get(label, 0) + 1
         if next_count > 1 and self.dup_mode == "strict":
             msg = f"Label {label!r} is already used."
@@ -164,7 +320,7 @@ class LapTimer(BaseTimer):
         )
 
     def _make_record(self, label: str) -> LapRecord:
-        """Build a record stamped with the current time."""
+        """Build a record stamped with the current time and advance `_last_time`."""
         current_time = time.perf_counter_ns()
         record: LapRecord = {
             "label": label,
@@ -175,6 +331,21 @@ class LapTimer(BaseTimer):
         return record
 
     def lap(self, label: str = "Lap") -> None:
+        """Record a lap with the given label.
+
+        The lap's `lap_time` is the time since the previous `lap` call (or
+        the start of the `with` block), excluding any pause intervals. The
+        lap's `total_time` is the time since the start, also excluding
+        pauses.
+
+        Args:
+            label: The lap's name. Defaults to "Lap".
+
+        Raises:
+            RuntimeError: If the timer has not been started, or is paused.
+            ValueError: If `dup_mode` is "strict" and `label` has already
+                been used in this `with` block.
+        """
         self._ensure_started()
         if self._is_paused:
             msg = "Cannot record a lap while paused."
@@ -182,5 +353,6 @@ class LapTimer(BaseTimer):
         self.records.append(self._make_record(self._resolve_label(label)))
 
     def _finalize(self) -> None:
+        """Record the terminating `final` lap and set `total_elapsed`."""
         self.final = self._make_record(self._END_LABEL)
         self.total_elapsed = self.final["total_time"]
