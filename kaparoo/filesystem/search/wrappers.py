@@ -68,7 +68,39 @@ def search_paths(
     ordered: bool = True,
     stringify: bool = False,
 ) -> Sequence[Path] | Sequence[str]:
-    """Walk `root` and return both directory and file paths that match."""
+    """Walk `root` and return file and directory paths that match.
+
+    Performs a depth-first traversal. Entries (files and sub-directories)
+    are returned if they pass `part_filter` (on the visited directory's
+    relative path), `name_filter` (on the entry's leaf name), `predicate`
+    (on the entry's full `Path`), and lie within `[min_depth, max_depth]`.
+
+    Args:
+        root: The directory to walk.
+        part_filter: Filter on each visited directory's relative path
+            string. None (default) accepts all directories.
+        name_filter: Filter on each entry's leaf name. None (default)
+            accepts all names.
+        predicate: Callable on each entry's full `Path` for a final check.
+            None (default) accepts all paths.
+        min_depth: Minimum inclusion depth (>= 1, direct children of
+            `root` are at depth 1). Defaults to 1.
+        max_depth: Maximum inclusion depth (>= `min_depth`), or None for
+            unlimited. Defaults to None.
+        ordered: Sort results lexicographically. Defaults to True.
+        stringify: Return paths as strings instead of `Path`. Defaults to
+            False.
+
+    Returns:
+        A sequence of `Path` (or `str` if `stringify=True`) including
+        both files and directories that pass every filter.
+
+    Raises:
+        ValueError: Invalid depth bounds (`min_depth < 1`, `max_depth < 1`,
+            or `min_depth > max_depth`).
+        DirectoryNotFoundError: `root` does not exist.
+        NotADirectoryError: `root` exists but is not a directory.
+    """
     return PathSearch.run(
         root,
         part_filter=part_filter,
@@ -134,7 +166,40 @@ def search_files(
     ordered: bool = True,
     stringify: bool = False,
 ) -> Sequence[Path] | Sequence[str]:
-    """Walk `root` and return the file paths that match."""
+    """Walk `root` and return file paths that match.
+
+    Performs a depth-first traversal. Files are returned if they pass
+    `part_filter` (on the visited directory's relative path),
+    `name_filter` (on the file's leaf name), `predicate` (on the file's
+    full `Path`), and lie within `[min_depth, max_depth]`. Sub-directories
+    are walked into but never themselves returned.
+
+    Args:
+        root: The directory to walk.
+        part_filter: Filter on each visited directory's relative path
+            string. None (default) accepts all directories.
+        name_filter: Filter on each file's leaf name. None (default)
+            accepts all names.
+        predicate: Callable on each file's full `Path` for a final check.
+            None (default) accepts all paths.
+        min_depth: Minimum inclusion depth (>= 1, direct children of
+            `root` are at depth 1). Defaults to 1.
+        max_depth: Maximum inclusion depth (>= `min_depth`), or None for
+            unlimited. Defaults to None.
+        ordered: Sort results lexicographically. Defaults to True.
+        stringify: Return paths as strings instead of `Path`. Defaults to
+            False.
+
+    Returns:
+        A sequence of `Path` (or `str` if `stringify=True`) of files
+        that pass every filter.
+
+    Raises:
+        ValueError: Invalid depth bounds (`min_depth < 1`, `max_depth < 1`,
+            or `min_depth > max_depth`).
+        DirectoryNotFoundError: `root` does not exist.
+        NotADirectoryError: `root` exists but is not a directory.
+    """
     return FileSearch.run(
         root,
         part_filter=part_filter,
@@ -200,7 +265,40 @@ def search_dirs(
     ordered: bool = True,
     stringify: bool = False,
 ) -> Sequence[Path] | Sequence[str]:
-    """Walk `root` and return the directory paths that match."""
+    """Walk `root` and return directory paths that match.
+
+    Performs a depth-first traversal. Sub-directories are returned if
+    they pass `part_filter` (on the visited *parent* directory's relative
+    path), `name_filter` (on the sub-directory's leaf name), `predicate`
+    (on its full `Path`), and lie within `[min_depth, max_depth]`. Files
+    are never returned. `root` itself is not included.
+
+    Args:
+        root: The directory to walk.
+        part_filter: Filter on each visited directory's relative path
+            string. None (default) accepts all directories.
+        name_filter: Filter on each sub-directory's leaf name. None
+            (default) accepts all names.
+        predicate: Callable on each sub-directory's full `Path` for a
+            final check. None (default) accepts all paths.
+        min_depth: Minimum inclusion depth (>= 1, direct sub-directories
+            of `root` are at depth 1). Defaults to 1.
+        max_depth: Maximum inclusion depth (>= `min_depth`), or None for
+            unlimited. Defaults to None.
+        ordered: Sort results lexicographically. Defaults to True.
+        stringify: Return paths as strings instead of `Path`. Defaults to
+            False.
+
+    Returns:
+        A sequence of `Path` (or `str` if `stringify=True`) of
+        sub-directories that pass every filter.
+
+    Raises:
+        ValueError: Invalid depth bounds (`min_depth < 1`, `max_depth < 1`,
+            or `min_depth > max_depth`).
+        DirectoryNotFoundError: `root` does not exist.
+        NotADirectoryError: `root` exists but is not a directory.
+    """
     return DirSearch.run(
         root,
         part_filter=part_filter,
