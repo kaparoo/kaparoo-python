@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 __all__ = (
-    "DirSearch",
-    "FileSearch",
-    "PathSearch",
     "get_dirs",
     "get_files",
     "get_paths",
+    "search_dirs",
+    "search_files",
+    "search_paths",
 )
 
 from abc import ABC, abstractmethod
@@ -280,21 +280,24 @@ def get_dirs(
 
 # New search API (work in progress).
 #
-# `PathSearch` / `FileSearch` / `DirSearch` will replace
-# `get_paths` / `get_dirs` / `get_files`. Each is a configured, reusable
-# search object: construct it with the search criteria, then call
-# `run(root)`. This is a skeleton -- the `Path.walk` traversal, depth
-# limiting, collection and `stringify` handling are implemented; the
-# `part` / `name` filter methods (`_accept_part` / `_accept_name`) are
-# stubs and subtree pruning is not done (search for "TODO(filter)").
+# `search_paths` / `search_files` / `search_dirs` will replace
+# `get_paths` / `get_files` / `get_dirs`. The public surface is the three
+# functions; the `Search` / `PathSearch` / `FileSearch` / `DirSearch`
+# classes below are internal -- the inheritance hierarchy exists to share
+# the walk logic, not as a user-facing API. This is a skeleton: the
+# `Path.walk` traversal, depth limiting, collection and `stringify`
+# handling are implemented; the `part` / `name` filter methods
+# (`_accept_part` / `_accept_name`) are stubs and subtree pruning is not
+# done (search for "TODO(filter)").
 
 
 class Search(ABC):
-    """Abstract base for `PathSearch` / `FileSearch` / `DirSearch`.
+    """Internal base class shared by the `search_*` functions.
 
     Stateless: subclasses are namespaces with no instance state.
     `_select` chooses which entry kinds to collect; `run` implements the
-    walk and is the only public entry point.
+    walk. Not part of the public API -- prefer `search_paths`,
+    `search_files`, `search_dirs`.
     """
 
     @classmethod
@@ -469,3 +472,208 @@ class DirSearch(Search):
     @classmethod
     def _select(cls, dirnames: list[str], _filenames: list[str], /) -> list[str]:
         return list(dirnames)
+
+
+# Public wrappers ------------------------------------------------------------
+#
+# The classes above are implementation details; users call these functions.
+# Each wrapper repeats the full signature and overloads so the help / IDE
+# experience reads as a plain function, not as a bound classmethod.
+
+
+@overload
+def search_paths(
+    root: StrPath,
+    *,
+    part: _Filters | None = None,
+    name: _Filters | None = None,
+    condition: Callable[[Path], bool] | None = None,
+    min_depth: int = 1,
+    max_depth: int | None = None,
+    ordered: bool = True,
+    stringify: Literal[False] = False,
+) -> Sequence[Path]: ...
+
+
+@overload
+def search_paths(
+    root: StrPath,
+    *,
+    part: _Filters | None = None,
+    name: _Filters | None = None,
+    condition: Callable[[Path], bool] | None = None,
+    min_depth: int = 1,
+    max_depth: int | None = None,
+    ordered: bool = True,
+    stringify: Literal[True],
+) -> Sequence[str]: ...
+
+
+@overload
+def search_paths(
+    root: StrPath,
+    *,
+    part: _Filters | None = None,
+    name: _Filters | None = None,
+    condition: Callable[[Path], bool] | None = None,
+    min_depth: int = 1,
+    max_depth: int | None = None,
+    ordered: bool = True,
+    stringify: bool,
+) -> Sequence[Path] | Sequence[str]: ...
+
+
+def search_paths(
+    root: StrPath,
+    *,
+    part: _Filters | None = None,
+    name: _Filters | None = None,
+    condition: Callable[[Path], bool] | None = None,
+    min_depth: int = 1,
+    max_depth: int | None = None,
+    ordered: bool = True,
+    stringify: bool = False,
+) -> Sequence[Path] | Sequence[str]:
+    """Walk `root` and return both directory and file paths that match."""
+    return PathSearch.run(
+        root,
+        part=part,
+        name=name,
+        condition=condition,
+        min_depth=min_depth,
+        max_depth=max_depth,
+        ordered=ordered,
+        stringify=stringify,
+    )
+
+
+@overload
+def search_files(
+    root: StrPath,
+    *,
+    part: _Filters | None = None,
+    name: _Filters | None = None,
+    condition: Callable[[Path], bool] | None = None,
+    min_depth: int = 1,
+    max_depth: int | None = None,
+    ordered: bool = True,
+    stringify: Literal[False] = False,
+) -> Sequence[Path]: ...
+
+
+@overload
+def search_files(
+    root: StrPath,
+    *,
+    part: _Filters | None = None,
+    name: _Filters | None = None,
+    condition: Callable[[Path], bool] | None = None,
+    min_depth: int = 1,
+    max_depth: int | None = None,
+    ordered: bool = True,
+    stringify: Literal[True],
+) -> Sequence[str]: ...
+
+
+@overload
+def search_files(
+    root: StrPath,
+    *,
+    part: _Filters | None = None,
+    name: _Filters | None = None,
+    condition: Callable[[Path], bool] | None = None,
+    min_depth: int = 1,
+    max_depth: int | None = None,
+    ordered: bool = True,
+    stringify: bool,
+) -> Sequence[Path] | Sequence[str]: ...
+
+
+def search_files(
+    root: StrPath,
+    *,
+    part: _Filters | None = None,
+    name: _Filters | None = None,
+    condition: Callable[[Path], bool] | None = None,
+    min_depth: int = 1,
+    max_depth: int | None = None,
+    ordered: bool = True,
+    stringify: bool = False,
+) -> Sequence[Path] | Sequence[str]:
+    """Walk `root` and return the file paths that match."""
+    return FileSearch.run(
+        root,
+        part=part,
+        name=name,
+        condition=condition,
+        min_depth=min_depth,
+        max_depth=max_depth,
+        ordered=ordered,
+        stringify=stringify,
+    )
+
+
+@overload
+def search_dirs(
+    root: StrPath,
+    *,
+    part: _Filters | None = None,
+    name: _Filters | None = None,
+    condition: Callable[[Path], bool] | None = None,
+    min_depth: int = 1,
+    max_depth: int | None = None,
+    ordered: bool = True,
+    stringify: Literal[False] = False,
+) -> Sequence[Path]: ...
+
+
+@overload
+def search_dirs(
+    root: StrPath,
+    *,
+    part: _Filters | None = None,
+    name: _Filters | None = None,
+    condition: Callable[[Path], bool] | None = None,
+    min_depth: int = 1,
+    max_depth: int | None = None,
+    ordered: bool = True,
+    stringify: Literal[True],
+) -> Sequence[str]: ...
+
+
+@overload
+def search_dirs(
+    root: StrPath,
+    *,
+    part: _Filters | None = None,
+    name: _Filters | None = None,
+    condition: Callable[[Path], bool] | None = None,
+    min_depth: int = 1,
+    max_depth: int | None = None,
+    ordered: bool = True,
+    stringify: bool,
+) -> Sequence[Path] | Sequence[str]: ...
+
+
+def search_dirs(
+    root: StrPath,
+    *,
+    part: _Filters | None = None,
+    name: _Filters | None = None,
+    condition: Callable[[Path], bool] | None = None,
+    min_depth: int = 1,
+    max_depth: int | None = None,
+    ordered: bool = True,
+    stringify: bool = False,
+) -> Sequence[Path] | Sequence[str]:
+    """Walk `root` and return the directory paths that match."""
+    return DirSearch.run(
+        root,
+        part=part,
+        name=name,
+        condition=condition,
+        min_depth=min_depth,
+        max_depth=max_depth,
+        ordered=ordered,
+        stringify=stringify,
+    )
