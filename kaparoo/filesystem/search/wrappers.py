@@ -15,12 +15,6 @@ if TYPE_CHECKING:
     from kaparoo.filesystem.types import StrPath
 
 
-# Thin wrappers over the `Search` subclasses in `classes`. The classes are
-# implementation details; users call these functions. Each wrapper
-# repeats the full signature and overloads so the help / IDE experience
-# reads as a plain function, not as a bound classmethod.
-
-
 @overload
 def search_paths(
     root: StrPath,
