@@ -25,8 +25,12 @@ uv sync --group dev      # create/refresh the environment
 uv run ruff check .      # lint
 uv run ruff format .     # format
 uv run ty check          # type-check
-uv run pytest            # run tests
+uv run pytest            # run tests (coverage included by default)
+uv run pytest --no-cov   # skip coverage for quick iteration
 ```
+
+Coverage is measured by `pytest-cov` against `kaparoo/` with branch
+tracking; a `fail_under` gate is configured in `pyproject.toml`.
 
 ## Conventions
 

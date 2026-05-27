@@ -45,6 +45,7 @@ Issues = "https://www.github.com/kaparoo/kaparoo-python/issues"
 [dependency-groups]
 dev = [
     "pytest>=9.0.3",
+    "pytest-cov>=7.1",
     "ruff>=0.15.13",
     "ty>=0.0.37",
 ]
@@ -52,6 +53,10 @@ dev = [
 [tool.uv.build-backend]
 module-name = "kaparoo"
 module-root = ""
+# Submodule READMEs are useful in the source tree (GitHub directory views,
+# downstream packagers via sdist) but not at runtime, so keep them out of
+# the wheel.
+wheel-exclude = ["**/README.md"]
 # See the following documentation for more information
 # https://docs.astral.sh/uv/concepts/build-backend/
 
@@ -83,10 +88,41 @@ error-on-warning = true
 minversion = "9.0"
 cache_dir = "./.cache/pytest"
 testpaths = ["tests"]
-addopts = ["-ra", "--strict-markers", "--strict-config", "--import-mode=importlib"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--import-mode=importlib",
+    "--cov",
+    "--cov-report=term-missing",
+]
 # See the following documentation for more information
 # https://docs.pytest.org/en/stable/reference/customize.html
 # https://docs.pytest.org/en/stable/reference/reference.html#configuration-options
+
+[tool.coverage.run]
+source = ["kaparoo"]
+branch = true
+data_file = ".cache/coverage/.coverage"
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+# 5%p below the baseline (93.11% on 2026-05-27) to absorb normal variation.
+# `kaparoo.data` and `kaparoo.filesystem.types` are uncovered by design
+# (see TODO.md); raise the gate once those modules contribute test coverage.
+fail_under = 88
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "\\.\\.\\.",
+    "@overload",
+]
+
+[tool.coverage.html]
+directory = ".cache/coverage/htmlcov"
 
 [tool.ruff]
 required-version = ">=0.15.13"
