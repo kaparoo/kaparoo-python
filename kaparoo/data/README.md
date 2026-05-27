@@ -12,7 +12,8 @@ small set of composers, and ready-to-subclass file-backed templates.
   `SingleFileSequence`
 - [`sequence/utils`](./sequence/utils.py) — `generate_batches`
 
-All public symbols are re-exported from `kaparoo.data.sequence`.
+All public symbols are re-exported from both `kaparoo.data` and
+`kaparoo.data.sequence`.
 
 ## DataSequence
 
