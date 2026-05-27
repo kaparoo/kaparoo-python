@@ -12,50 +12,36 @@ from typing import NotRequired, TypedDict
 
 
 class FilterDict(TypedDict):
-    """Base TypedDict for any filter serialization; requires `kind`.
+    """Base filter dict shape; requires only the `kind` discriminator.
 
-    All built-in family TypedDicts (`PatternFilterDict`,
-    `MultiPatternFilterDict`, `LogicalChildrenFilterDict`,
-    `LogicalChildFilterDict`) inherit from this base, adding their
-    family-specific fields. User-defined filter dict types should
-    likewise extend `FilterDict` to integrate type-safely with
-    `Filter.parse` and the `search_*` wrappers.
+    Family subclasses add their own fields; user-defined filter dicts
+    should likewise extend this base to type-check against `Filter.parse`.
     """
 
     kind: str
 
 
 class PatternFilterDict(FilterDict):
-    """Dict shape for `PatternFilter` subclasses (single string pattern).
-
-    Mirrors the constructor signature of `EqualsFilter` and friends:
-    a literal `pattern` plus an optional `case_sensitive` flag.
-    """
+    """Single-pattern filter dict (`PatternFilter` family)."""
 
     pattern: str
     case_sensitive: NotRequired[bool]
 
 
 class MultiPatternFilterDict(FilterDict):
-    """Dict shape for `MultiPatternFilter` subclasses (any-of patterns).
-
-    Mirrors the constructor of `EqualsAnyFilter` and friends: a
-    non-empty list of `patterns` plus an optional `case_sensitive`
-    flag. Lists are JSON-friendly; the runtime `from_dict` converts
-    them to `tuple` to match the dataclass field.
-    """
+    """Multi-pattern (any-of) filter dict (`MultiPatternFilter` family)."""
 
     patterns: list[str]
     case_sensitive: NotRequired[bool]
 
 
 class LogicalChildrenFilterDict(FilterDict):
-    """Dict shape for `AndFilter` / `OrFilter` (multiple children)."""
+    """Multi-child logical filter dict (`AndFilter` / `OrFilter`)."""
 
     children: list[FilterDict]
 
 
 class LogicalChildFilterDict(FilterDict):
-    """Dict shape for `NotFilter` (a single child)."""
+    """Single-child logical filter dict (`NotFilter`)."""
 
     child: FilterDict

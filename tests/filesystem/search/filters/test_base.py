@@ -11,8 +11,10 @@ from kaparoo.filesystem.search.filters import (
     EqualsFilter,
     Filter,
     GlobFilter,
+    LogicalChildrenFilterDict,
     NotFilter,
     OrFilter,
+    PatternFilterDict,
     RegexFilter,
 )
 
@@ -113,26 +115,20 @@ def test_parse_passes_through_filter_instance():
     assert Filter.parse(f) is f
 
 
-def test_parse_passes_through_none():
-    assert Filter.parse(None) is None
+def test_parse_deserializes_filter_dict():
+    spec: PatternFilterDict = {"kind": "equals", "pattern": "foo"}
+    assert Filter.parse(spec) == EqualsFilter("foo")
 
 
-def test_parse_deserializes_mapping():
-    spec = {"kind": "equals", "pattern": "foo"}
-    result = Filter.parse(spec)
-    assert result == EqualsFilter("foo")
-
-
-def test_parse_deserializes_nested_logical_mapping():
-    spec = {
+def test_parse_deserializes_nested_logical_dict():
+    spec: LogicalChildrenFilterDict = {
         "kind": "and",
         "children": [
             {"kind": "glob", "pattern": "*.py"},
             {"kind": "not", "child": {"kind": "equals", "pattern": "__init__.py"}},
         ],
     }
-    result = Filter.parse(spec)
-    assert result == AndFilter(
+    assert Filter.parse(spec) == AndFilter(
         (
             GlobFilter("*.py"),
             NotFilter(EqualsFilter("__init__.py")),
@@ -140,9 +136,9 @@ def test_parse_deserializes_nested_logical_mapping():
     )
 
 
-def test_parse_invalid_mapping_raises():
+def test_parse_invalid_dict_raises():
     with pytest.raises(ValueError, match="missing 'kind'"):
-        Filter.parse({"pattern": "foo"})
+        Filter.parse({"pattern": "foo"})  # ty: ignore[invalid-argument-type]
 
 
 def test_parse_unknown_kind_raises():

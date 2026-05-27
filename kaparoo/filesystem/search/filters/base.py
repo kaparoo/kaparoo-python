@@ -76,28 +76,17 @@ class Filter(ABC):
         return target.from_dict(data)
 
     @classmethod
-    def parse(
-        cls, value: Filter | FilterDict | Mapping[str, Any] | None
-    ) -> Filter | None:
-        """Normalize `value` into a `Filter | None`.
+    def parse(cls, value: Filter | FilterDict) -> Filter:
+        """Normalize `value` into a `Filter`.
 
-        Accepts:
-            - A `Filter` instance (returned as-is).
-            - A `FilterDict` (or subclass) -- the type-safe form for
-              static typing; deserialized via `Filter.from_dict`.
-            - A plain `Mapping` (e.g. `dict` from JSON/YAML) -- the
-              dynamic escape hatch; also deserialized via
-              `Filter.from_dict`.
-            - `None` (returned as-is).
-
-        Useful at API boundaries that wish to accept filter specs in
-        dict form alongside `Filter` instances. `Filter.from_dict` does
-        the actual dispatch by `"kind"`.
+        Passes through a `Filter` instance, or deserializes a
+        `FilterDict` via `Filter.from_dict`. Callers needing to accept
+        optional input should guard `None` themselves.
 
         Raises:
-            ValueError: If `value` is a mapping but cannot be deserialized
-                (missing or unknown `"kind"`).
+            ValueError: If `value` is a dict but lacks `"kind"` or the
+                kind is not registered.
         """
-        if value is None or isinstance(value, Filter):
+        if isinstance(value, Filter):
             return value
         return cls.from_dict(value)
