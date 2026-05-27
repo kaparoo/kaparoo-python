@@ -115,7 +115,8 @@ def test_file_folder_recursive_via_subclass_option(tmp_dir: Path):
 
 
 def test_file_folder_directories_excluded(tmp_dir: Path):
-    # `search_files` skips directories; only actual files appear.
+    # The BytesFolder `list_files` filters by `is_file()` -- subdirectories
+    # under `root` are not surfaced as items.
     (tmp_dir / "a.txt").write_text("a")
     (tmp_dir / "subdir").mkdir()
     folder = BytesFolder(tmp_dir)

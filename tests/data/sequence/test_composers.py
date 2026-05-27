@@ -7,7 +7,11 @@ from kaparoo.data.sequence import (
     SlicedSequence,
     WindowedSequence,
 )
-from tests.data.helpers import AllMetasWindow, FirstMetaWindow, ListDataSequence
+from tests.data.sequence.helpers import (
+    AllMetasWindow,
+    FirstMetaWindow,
+    ListDataSequence,
+)
 
 # --- shared fixtures --------------------------------------------------------
 
