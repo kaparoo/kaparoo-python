@@ -8,7 +8,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-_No entries yet._
+### Added
+
+- Filter serialization: `Filter.to_dict()` / `Filter.from_dict()` with
+  a `"kind"`-discriminated polymorphic dispatcher. Each concrete
+  filter round-trips through a JSON-compatible dict.
+- `register_filter(kind)` decorator for registering custom `Filter`
+  subclasses with the polymorphic dispatcher.
+- `Filter.parse(value)` — normalizes either a `Filter` instance
+  (passed through) or a `FilterDict` into a `Filter`.
+- `FilterDict` TypedDict family at
+  `kaparoo.filesystem.search.filters.types`: `FilterDict` (base,
+  `kind`-only), `PatternFilterDict`, `MultiPatternFilterDict`,
+  `LogicalChildrenFilterDict`, `LogicalChildFilterDict`. User-defined
+  filter dicts extend these to type-check against `Filter.parse`.
+- `Search.run` / `search_paths` / `search_files` / `search_dirs`
+  accept a `FilterDict` for `part_filter` and `name_filter` in
+  addition to a `Filter` instance.
 
 ## [0.2.0] - 2026-05-27
 

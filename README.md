@@ -45,6 +45,11 @@ Filesystem traversal with composable filters.
 - **Multi-pattern filters** — `EqualsAny`, `StartsWithAny`, `EndsWithAny`,
   `ContainsAny`.
 - **Logical filters** — `And`, `Or`, `Not`.
+- **Serialization** — `Filter.to_dict()` / `Filter.from_dict()` round-trip
+  via a `"kind"` discriminator; `Filter.parse()` accepts a `Filter` or a
+  `FilterDict`; `register_filter(kind)` extends the dispatcher with
+  custom subclasses. `FilterDict` family lives at
+  `kaparoo.filesystem.search.filters.types`.
 - **Deprecated** — `get_paths`, `get_files`, `get_dirs` (use `search_*`).
 
 ### `kaparoo.utils`
