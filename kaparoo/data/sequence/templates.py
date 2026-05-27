@@ -94,7 +94,7 @@ class FileFolderSequence[T, M = Path](DataSequence[T, M]):
 
     def __init__(self, root: StrPath) -> None:
         self._root = ensure_dir_exists(root)
-        self._files: list[str] = list(
+        self._files = list(
             stringify_paths(self.list_files(self._root), after=self._root)
         )
 
