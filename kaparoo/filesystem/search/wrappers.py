@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any, Literal
 
-    from kaparoo.filesystem.search.filters import Filter
+    from kaparoo.filesystem.search.filters import Filter, FilterDict
     from kaparoo.filesystem.types import StrPath
 
 
@@ -19,8 +19,8 @@ if TYPE_CHECKING:
 def search_paths(
     root: StrPath,
     *,
-    part_filter: Filter | Mapping[str, Any] | None = None,
-    name_filter: Filter | Mapping[str, Any] | None = None,
+    part_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
+    name_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -33,8 +33,8 @@ def search_paths(
 def search_paths(
     root: StrPath,
     *,
-    part_filter: Filter | Mapping[str, Any] | None = None,
-    name_filter: Filter | Mapping[str, Any] | None = None,
+    part_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
+    name_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -47,8 +47,8 @@ def search_paths(
 def search_paths(
     root: StrPath,
     *,
-    part_filter: Filter | Mapping[str, Any] | None = None,
-    name_filter: Filter | Mapping[str, Any] | None = None,
+    part_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
+    name_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -60,8 +60,8 @@ def search_paths(
 def search_paths(
     root: StrPath,
     *,
-    part_filter: Filter | Mapping[str, Any] | None = None,
-    name_filter: Filter | Mapping[str, Any] | None = None,
+    part_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
+    name_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -78,12 +78,12 @@ def search_paths(
     Args:
         root: The directory to walk.
         part_filter: Filter on each visited directory's relative path
-            string. Accepts a `Filter`, a mapping deserializable via
-            `Filter.from_dict`, or `None`. None (default) accepts all
-            directories.
+            string. Accepts a `Filter`, a `FilterDict`, any mapping
+            deserializable via `Filter.from_dict`, or `None`. None
+            (default) accepts all directories.
         name_filter: Filter on each entry's leaf name. Accepts a `Filter`,
-            a mapping deserializable via `Filter.from_dict`, or `None`.
-            None (default) accepts all names.
+            a `FilterDict`, any mapping deserializable via
+            `Filter.from_dict`, or `None`. None (default) accepts all names.
         predicate: Callable on each entry's full `Path` for a final check.
             None (default) accepts all paths.
         min_depth: Minimum inclusion depth (>= 1, direct children of
@@ -121,8 +121,8 @@ def search_paths(
 def search_files(
     root: StrPath,
     *,
-    part_filter: Filter | Mapping[str, Any] | None = None,
-    name_filter: Filter | Mapping[str, Any] | None = None,
+    part_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
+    name_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -135,8 +135,8 @@ def search_files(
 def search_files(
     root: StrPath,
     *,
-    part_filter: Filter | Mapping[str, Any] | None = None,
-    name_filter: Filter | Mapping[str, Any] | None = None,
+    part_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
+    name_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -149,8 +149,8 @@ def search_files(
 def search_files(
     root: StrPath,
     *,
-    part_filter: Filter | Mapping[str, Any] | None = None,
-    name_filter: Filter | Mapping[str, Any] | None = None,
+    part_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
+    name_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -162,8 +162,8 @@ def search_files(
 def search_files(
     root: StrPath,
     *,
-    part_filter: Filter | Mapping[str, Any] | None = None,
-    name_filter: Filter | Mapping[str, Any] | None = None,
+    part_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
+    name_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -181,12 +181,12 @@ def search_files(
     Args:
         root: The directory to walk.
         part_filter: Filter on each visited directory's relative path
-            string. Accepts a `Filter`, a mapping deserializable via
-            `Filter.from_dict`, or `None`. None (default) accepts all
-            directories.
+            string. Accepts a `Filter`, a `FilterDict`, any mapping
+            deserializable via `Filter.from_dict`, or `None`. None
+            (default) accepts all directories.
         name_filter: Filter on each file's leaf name. Accepts a `Filter`,
-            a mapping deserializable via `Filter.from_dict`, or `None`.
-            None (default) accepts all names.
+            a `FilterDict`, any mapping deserializable via
+            `Filter.from_dict`, or `None`. None (default) accepts all names.
         predicate: Callable on each file's full `Path` for a final check.
             None (default) accepts all paths.
         min_depth: Minimum inclusion depth (>= 1, direct children of
@@ -224,8 +224,8 @@ def search_files(
 def search_dirs(
     root: StrPath,
     *,
-    part_filter: Filter | Mapping[str, Any] | None = None,
-    name_filter: Filter | Mapping[str, Any] | None = None,
+    part_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
+    name_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -238,8 +238,8 @@ def search_dirs(
 def search_dirs(
     root: StrPath,
     *,
-    part_filter: Filter | Mapping[str, Any] | None = None,
-    name_filter: Filter | Mapping[str, Any] | None = None,
+    part_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
+    name_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -252,8 +252,8 @@ def search_dirs(
 def search_dirs(
     root: StrPath,
     *,
-    part_filter: Filter | Mapping[str, Any] | None = None,
-    name_filter: Filter | Mapping[str, Any] | None = None,
+    part_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
+    name_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -265,8 +265,8 @@ def search_dirs(
 def search_dirs(
     root: StrPath,
     *,
-    part_filter: Filter | Mapping[str, Any] | None = None,
-    name_filter: Filter | Mapping[str, Any] | None = None,
+    part_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
+    name_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
     predicate: Callable[[Path], bool] | None = None,
     min_depth: int = 1,
     max_depth: int | None = None,
@@ -284,12 +284,12 @@ def search_dirs(
     Args:
         root: The directory to walk.
         part_filter: Filter on each visited directory's relative path
-            string. Accepts a `Filter`, a mapping deserializable via
-            `Filter.from_dict`, or `None`. None (default) accepts all
-            directories.
+            string. Accepts a `Filter`, a `FilterDict`, any mapping
+            deserializable via `Filter.from_dict`, or `None`. None
+            (default) accepts all directories.
         name_filter: Filter on each sub-directory's leaf name. Accepts a
-            `Filter`, a mapping deserializable via `Filter.from_dict`,
-            or `None`. None (default) accepts all names.
+            `Filter`, a `FilterDict`, any mapping deserializable via
+            `Filter.from_dict`, or `None`. None (default) accepts all names.
         predicate: Callable on each sub-directory's full `Path` for a
             final check. None (default) accepts all paths.
         min_depth: Minimum inclusion depth (>= 1, direct sub-directories

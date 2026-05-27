@@ -105,25 +105,25 @@ def test_dispatcher_returns_correct_subclass_instance():
     assert type(restored) is EqualsFilter
 
 
-# --- Filter.coerce ---------------------------------------------------------
+# --- Filter.parse ----------------------------------------------------------
 
 
-def test_coerce_passes_through_filter_instance():
+def test_parse_passes_through_filter_instance():
     f = EqualsFilter("foo")
-    assert Filter.coerce(f) is f
+    assert Filter.parse(f) is f
 
 
-def test_coerce_passes_through_none():
-    assert Filter.coerce(None) is None
+def test_parse_passes_through_none():
+    assert Filter.parse(None) is None
 
 
-def test_coerce_deserializes_mapping():
+def test_parse_deserializes_mapping():
     spec = {"kind": "equals", "pattern": "foo"}
-    result = Filter.coerce(spec)
+    result = Filter.parse(spec)
     assert result == EqualsFilter("foo")
 
 
-def test_coerce_deserializes_nested_logical_mapping():
+def test_parse_deserializes_nested_logical_mapping():
     spec = {
         "kind": "and",
         "children": [
@@ -131,7 +131,7 @@ def test_coerce_deserializes_nested_logical_mapping():
             {"kind": "not", "child": {"kind": "equals", "pattern": "__init__.py"}},
         ],
     }
-    result = Filter.coerce(spec)
+    result = Filter.parse(spec)
     assert result == AndFilter(
         (
             GlobFilter("*.py"),
@@ -140,11 +140,11 @@ def test_coerce_deserializes_nested_logical_mapping():
     )
 
 
-def test_coerce_invalid_mapping_raises():
+def test_parse_invalid_mapping_raises():
     with pytest.raises(ValueError, match="missing 'kind'"):
-        Filter.coerce({"pattern": "foo"})
+        Filter.parse({"pattern": "foo"})
 
 
-def test_coerce_unknown_kind_raises():
+def test_parse_unknown_kind_raises():
     with pytest.raises(ValueError, match="unknown filter kind"):
-        Filter.coerce({"kind": "nope"})
+        Filter.parse({"kind": "nope"})

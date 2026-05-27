@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any, Literal
 
+    from kaparoo.filesystem.search.filters import FilterDict
     from kaparoo.filesystem.types import StrPath
 
 
@@ -57,8 +58,8 @@ class Search(ABC):
         cls,
         root: StrPath,
         *,
-        part_filter: Filter | Mapping[str, Any] | None = None,
-        name_filter: Filter | Mapping[str, Any] | None = None,
+        part_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
+        name_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
         predicate: Callable[[Path], bool] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
@@ -72,8 +73,8 @@ class Search(ABC):
         cls,
         root: StrPath,
         *,
-        part_filter: Filter | Mapping[str, Any] | None = None,
-        name_filter: Filter | Mapping[str, Any] | None = None,
+        part_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
+        name_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
         predicate: Callable[[Path], bool] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
@@ -87,8 +88,8 @@ class Search(ABC):
         cls,
         root: StrPath,
         *,
-        part_filter: Filter | Mapping[str, Any] | None = None,
-        name_filter: Filter | Mapping[str, Any] | None = None,
+        part_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
+        name_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
         predicate: Callable[[Path], bool] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
@@ -101,8 +102,8 @@ class Search(ABC):
         cls,
         root: StrPath,
         *,
-        part_filter: Filter | Mapping[str, Any] | None = None,
-        name_filter: Filter | Mapping[str, Any] | None = None,
+        part_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
+        name_filter: Filter | FilterDict | Mapping[str, Any] | None = None,
         predicate: Callable[[Path], bool] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
@@ -129,13 +130,13 @@ class Search(ABC):
         Args:
             root: The directory to walk.
             part_filter: Filter applied to each visited directory's relative
-                path string. Accepts a `Filter`, a mapping deserializable
-                via `Filter.from_dict`, or `None`. None (default) accepts
-                all directories.
+                path string. Accepts a `Filter`, a `FilterDict`, any
+                mapping deserializable via `Filter.from_dict`, or `None`.
+                None (default) accepts all directories.
             name_filter: Filter applied to each candidate entry's leaf name.
-                Accepts a `Filter`, a mapping deserializable via
-                `Filter.from_dict`, or `None`. None (default) accepts
-                all names.
+                Accepts a `Filter`, a `FilterDict`, any mapping
+                deserializable via `Filter.from_dict`, or `None`. None
+                (default) accepts all names.
             predicate: Callable applied to each surviving `Path` for a final
                 boolean check. None (default) accepts all paths.
             min_depth: Minimum inclusion depth (must be >= 1). Defaults to 1.
@@ -159,8 +160,8 @@ class Search(ABC):
         """
         cls._validate_depth_range(min_depth, max_depth)
 
-        part_filter = Filter.coerce(part_filter)
-        name_filter = Filter.coerce(name_filter)
+        part_filter = Filter.parse(part_filter)
+        name_filter = Filter.parse(name_filter)
 
         root = ensure_dir_exists(root)
         root_depth = len(root.parts)

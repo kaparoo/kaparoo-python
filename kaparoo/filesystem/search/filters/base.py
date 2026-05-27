@@ -12,6 +12,8 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from typing import Any
 
+    from kaparoo.filesystem.search.filters.typed import FilterDict
+
 
 @dataclass(frozen=True)
 class Filter(ABC):
@@ -74,13 +76,23 @@ class Filter(ABC):
         return target.from_dict(data)
 
     @classmethod
-    def coerce(cls, value: Filter | Mapping[str, Any] | None) -> Filter | None:
+    def parse(
+        cls, value: Filter | FilterDict | Mapping[str, Any] | None
+    ) -> Filter | None:
         """Normalize `value` into a `Filter | None`.
 
-        Accepts a `Filter` (returned as-is), a `Mapping` (deserialized
-        via `Filter.from_dict`), or `None` (returned as-is). Useful at
-        API boundaries that wish to accept filter specs in dict form
-        alongside `Filter` instances.
+        Accepts:
+            - A `Filter` instance (returned as-is).
+            - A `FilterDict` (or subclass) -- the type-safe form for
+              static typing; deserialized via `Filter.from_dict`.
+            - A plain `Mapping` (e.g. `dict` from JSON/YAML) -- the
+              dynamic escape hatch; also deserialized via
+              `Filter.from_dict`.
+            - `None` (returned as-is).
+
+        Useful at API boundaries that wish to accept filter specs in
+        dict form alongside `Filter` instances. `Filter.from_dict` does
+        the actual dispatch by `"kind"`.
 
         Raises:
             ValueError: If `value` is a mapping but cannot be deserialized
