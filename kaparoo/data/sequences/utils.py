@@ -4,8 +4,6 @@ __all__ = ("generate_batches",)
 
 from typing import TYPE_CHECKING
 
-from kaparoo.utils.optional import replace_if_none
-
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
 
@@ -62,7 +60,7 @@ def generate_batches[T](
         raise ValueError(msg)
 
     length = len(sequence)
-    stop = replace_if_none(stop, length)
+    stop = stop if stop is not None else length
     if not 0 <= start <= stop <= length:
         msg = f"invalid range [{start}, {stop}) for sequence of length {length}"
         raise ValueError(msg)
