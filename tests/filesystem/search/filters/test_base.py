@@ -11,15 +11,18 @@ from kaparoo.filesystem.search.filters import (
     EqualsFilter,
     Filter,
     GlobFilter,
-    LogicalChildrenFilterDict,
     NotFilter,
     OrFilter,
-    PatternFilterDict,
     RegexFilter,
 )
 
 if TYPE_CHECKING:
     from typing import Any
+
+    from kaparoo.filesystem.search.filters.types import (
+        LogicalChildrenFilterDict,
+        PatternFilterDict,
+    )
 
 
 # --- abstract base ---------------------------------------------------------

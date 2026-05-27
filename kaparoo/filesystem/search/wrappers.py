@@ -11,7 +11,8 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Literal
 
-    from kaparoo.filesystem.search.filters import Filter, FilterDict
+    from kaparoo.filesystem.search.filters import Filter
+    from kaparoo.filesystem.search.filters.types import FilterDict
     from kaparoo.filesystem.types import StrPath
 
 

@@ -8,20 +8,23 @@ from kaparoo.filesystem.search.filters import (
     EqualsAnyFilter,
     EqualsFilter,
     Filter,
-    FilterDict,
     GlobFilter,
-    LogicalChildFilterDict,
-    LogicalChildrenFilterDict,
-    MultiPatternFilterDict,
     NotFilter,
     OrFilter,
-    PatternFilterDict,
     register_filter,
 )
+from kaparoo.filesystem.search.filters.types import FilterDict
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from typing import Any, Self
+
+    from kaparoo.filesystem.search.filters.types import (
+        LogicalChildFilterDict,
+        LogicalChildrenFilterDict,
+        MultiPatternFilterDict,
+        PatternFilterDict,
+    )
 
 
 # --- FilterDict inheritance ------------------------------------------------

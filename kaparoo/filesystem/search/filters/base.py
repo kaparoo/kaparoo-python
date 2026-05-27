@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from typing import Any
 
-    from kaparoo.filesystem.search.filters.typed import FilterDict
+    from kaparoo.filesystem.search.filters.types import FilterDict
 
 
 @dataclass(frozen=True)
@@ -36,6 +36,7 @@ class Filter(ABC):
     @abstractmethod
     def matches(self, target: str) -> bool:
         """Test whether `target` satisfies this filter."""
+        raise NotImplementedError
 
     @abstractmethod
     def to_dict(self) -> dict[str, Any]:
@@ -45,6 +46,7 @@ class Filter(ABC):
         may be omitted from the output for compactness; `from_dict`
         supplies them via `data.get(..., DEFAULT)`.
         """
+        raise NotImplementedError
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Filter:
@@ -64,15 +66,15 @@ class Filter(ABC):
         if cls is not Filter:
             msg = f"{cls.__name__}.from_dict() must be overridden by subclasses."
             raise NotImplementedError(msg)
-        try:
-            kind = data["kind"]
-        except KeyError:
+
+        if (kind := data.get("kind")) is None:
             msg = "filter dict missing 'kind' discriminator."
-            raise ValueError(msg) from None
-        target = _FILTER_REGISTRY.get(kind)
-        if target is None:
+            raise ValueError(msg)
+
+        if (target := _FILTER_REGISTRY.get(kind)) is None:
             msg = f"unknown filter kind: {kind!r}"
             raise ValueError(msg)
+
         return target.from_dict(data)
 
     @classmethod
@@ -87,6 +89,4 @@ class Filter(ABC):
             ValueError: If `value` is a dict but lacks `"kind"` or the
                 kind is not registered.
         """
-        if isinstance(value, Filter):
-            return value
-        return cls.from_dict(value)
+        return value if isinstance(value, Filter) else cls.from_dict(value)

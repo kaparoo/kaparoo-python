@@ -11,9 +11,7 @@ from kaparoo.filesystem.search.filters import (
     EndsWithAny,
     Equals,
     Glob,
-    LogicalChildrenFilterDict,
     Not,
-    PatternFilterDict,
     StartsWith,
 )
 from kaparoo.filesystem.search.wrappers import search_dirs, search_files, search_paths
@@ -21,6 +19,11 @@ from tests.filesystem.helpers import _stringify
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from kaparoo.filesystem.search.filters.types import (
+        LogicalChildrenFilterDict,
+        PatternFilterDict,
+    )
 
 
 _SEARCH_FNS = (search_paths, search_files, search_dirs)

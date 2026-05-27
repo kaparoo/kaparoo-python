@@ -16,20 +16,15 @@ __all__ = (
     "EqualsAnyFilter",
     "EqualsFilter",
     "Filter",
-    "FilterDict",
     "Glob",
     "GlobFilter",
-    "LogicalChildFilterDict",
-    "LogicalChildrenFilterDict",
     "LogicalFilter",
     "MultiPatternFilter",
-    "MultiPatternFilterDict",
     "Not",
     "NotFilter",
     "Or",
     "OrFilter",
     "PatternFilter",
-    "PatternFilterDict",
     "Regex",
     "RegexFilter",
     "StartsWith",
@@ -74,12 +69,5 @@ from kaparoo.filesystem.search.filters.pattern import (
     RegexFilter,
     StartsWith,
     StartsWithFilter,
-)
-from kaparoo.filesystem.search.filters.typed import (
-    FilterDict,
-    LogicalChildFilterDict,
-    LogicalChildrenFilterDict,
-    MultiPatternFilterDict,
-    PatternFilterDict,
 )
 from kaparoo.filesystem.search.filters.utils import register_filter
