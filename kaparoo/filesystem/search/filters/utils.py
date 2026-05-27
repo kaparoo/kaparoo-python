@@ -19,7 +19,7 @@ Treated as private -- mutate only through `register_filter`.
 """
 
 
-def register_filter(kind: str) -> Callable[[type[Filter]], type[Filter]]:
+def register_filter[F: Filter](kind: str) -> Callable[[type[F]], type[F]]:
     """Register a `Filter` subclass under `kind` (decorator).
 
     The registered class becomes discoverable by `Filter.from_dict`
@@ -37,7 +37,7 @@ def register_filter(kind: str) -> Callable[[type[Filter]], type[Filter]]:
         ValueError: If `kind` is already registered to another class.
     """
 
-    def decorator(cls: type[Filter]) -> type[Filter]:
+    def decorator(cls: type[F]) -> type[F]:
         existing = _FILTER_REGISTRY.get(kind)
         if existing is not None and existing is not cls:
             msg = (
