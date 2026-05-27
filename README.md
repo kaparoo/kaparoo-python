@@ -25,37 +25,45 @@ pip install kaparoo-python
 
 ## 🧩 Modules
 
-### `kaparoo.filesystem`
+Each submodule ships its own README with focused examples.
 
-`pathlib`-based filesystem helpers.
+### [`kaparoo.filesystem`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/filesystem)
 
-- **`existence`** — existence checks (`*_exists`) and `ensure_*` validators.
-- **`directory`** — `make_dir(s)`, `dir_empty(s)` (with `_unsafe` variants).
-- **`utils`** — `stringify_path(s)`, `wrap_path(s)`.
-- **`exceptions`** — `DirectoryNotFoundError`, `NotAFileError`.
-- **`types`** — `StrPath`, `StrPaths`.
+`pathlib`-based filesystem helpers: existence checks (`*_exists`),
+`ensure_*` validators, `make_dir(s)`, `dir_empty(s)`, path
+stringification, and a small exception hierarchy.
 
-### `kaparoo.filesystem.search`
+### [`kaparoo.filesystem.search`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/filesystem/search)
 
-Filesystem traversal with composable filters.
+Filesystem traversal with composable filters. Includes `search_paths` /
+`search_files` / `search_dirs`, a `Filter` family (pattern, multi-pattern,
+logical) that round-trips through JSON-friendly dicts, and an extension
+hook for custom filter kinds.
 
-- **Entry points** — `search_paths`, `search_files`, `search_dirs`.
-- **Pattern filters** — `Equals`, `StartsWith`, `EndsWith`, `Contains`,
-  `Regex`, `Glob`.
-- **Multi-pattern filters** — `EqualsAny`, `StartsWithAny`, `EndsWithAny`,
-  `ContainsAny`.
-- **Logical filters** — `And`, `Or`, `Not`.
-- **Serialization** — `Filter.to_dict()` / `Filter.from_dict()` round-trip
-  via a `"kind"` discriminator; `Filter.parse()` accepts a `Filter` or a
-  `FilterDict`; `register_filter(kind)` extends the dispatcher with
-  custom subclasses. `FilterDict` family lives at
-  `kaparoo.filesystem.search.filters.types`.
-- **Deprecated** — `get_paths`, `get_files`, `get_dirs` (use `search_*`).
+### [`kaparoo.utils`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/utils)
 
-### `kaparoo.utils`
+`Timer` / `LapTimer` context-manager-and-decorator timers, plus a small
+family of helpers for working with `Optional[T]` values
+(`replace_if_none`, `unwrap_or_default`, ...).
 
-- **`timer`** — `Timer` and `LapTimer` context-manager / decorator timers.
-- **`optional`** — `replace_if_none`, `factory_if_none`, `unwrap_or_*`.
+### `kaparoo.data` *(under development)*
+
+Placeholder for dataset-handling utilities. See [TODO.md](./TODO.md).
+
+## 🎯 Quick example
+
+```python
+from kaparoo.filesystem import search_files
+from kaparoo.filesystem.search.filters import And, EndsWith, Equals, Not
+
+# All .py files except __init__.py
+py_files = search_files(
+    "src",
+    name_filter=And((EndsWith(".py"), Not(Equals("__init__.py")))),
+)
+```
+
+See each submodule's README for more.
 
 ## 📋 TODO
 

@@ -41,6 +41,11 @@ tracking; a `fail_under` gate is configured in `pyproject.toml`.
   waived there).
 - `ty` has no plugin system; rely on standard typing (PEP 681
   `dataclass_transform`, `.pyi` stubs), not type-checker plugins.
+- **Submodule READMEs own the usage examples.** The root `README.md` is
+  a hub: brief module overview + links to each submodule's `README.md`.
+  When documenting a new public API, add the example to the nearest
+  submodule README (e.g. `kaparoo/filesystem/search/README.md`) rather
+  than the root.
 
 ## Python style
 
