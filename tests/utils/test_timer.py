@@ -101,6 +101,16 @@ def test_timer_suspend_excludes_block(fake_clock):
     assert t.elapsed == 300.0
 
 
+def test_timer_suspend_skips_auto_resume_after_manual_resume(fake_clock):
+    # enter=0, suspend's pause=100ms, manual resume=300ms (pause_dur=200ms),
+    # finalize=500ms. The `finally` in suspend() must observe `_is_paused`
+    # is False and skip the auto-resume -- a second `resume()` would raise.
+    fake_clock(0, 100_000_000, 300_000_000, 500_000_000)
+    with Timer("ms") as t, t.suspend():
+        t.resume()
+    assert t.elapsed == 300.0
+
+
 def test_timer_auto_resumes_on_exit_while_paused(fake_clock):
     # enter=0, pause=100ms, (no manual resume),
     # __exit__: resume at 300ms -> _start_time=200ms, finalize at 500ms -> elapsed=300ms
@@ -175,6 +185,11 @@ def test_base_timer_is_abstract():
 
     with pytest.raises(TypeError, match="abstract"):
         BaseTimer()  # ty: ignore
+
+
+def test_timer_elapsed_default_is_zero():
+    # `elapsed` is documented as 0.0 until the first exit.
+    assert Timer().elapsed == 0.0
 
 
 # --- LapTimer ---------------------------------------------------------------
@@ -325,3 +340,11 @@ def test_lap_timer_post_exit_lap_raises(fake_clock):
 def test_lap_record_typeddict_construction():
     record: LapRecord = {"label": "test", "lap_time": 1.0, "total_time": 2.0}
     assert record == {"label": "test", "lap_time": 1.0, "total_time": 2.0}
+
+
+def test_lap_timer_defaults_are_empty():
+    # Documented defaults before the first `__enter__`.
+    lt = LapTimer()
+    assert lt.elapsed == 0.0
+    assert lt.records == []
+    assert lt.summary == {}

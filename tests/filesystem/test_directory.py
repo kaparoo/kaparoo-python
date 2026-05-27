@@ -16,68 +16,77 @@ from kaparoo.filesystem.directory import (
 
 from .helpers import _stringify
 
+# --- make_dir --------------------------------------------------------------
 
-def test_make_dir(tmp_path: Path, tmp_file: Path):
+
+def test_make_dir_creates_and_stringifies(tmp_path: Path):
+    # Default returns a Path; `stringify=True` returns the string form.
     created = make_dir(tmp_path / "new")
     assert isinstance(created, Path)
     assert created.is_dir()
 
-    # `exist_ok` controls the behavior when the directory already exists.
-    make_dir(created, exist_ok=True)
-    with pytest.raises(FileExistsError):
-        make_dir(created)
-
-    # `stringify` returns the created path as a string.
-    str_target = tmp_path / "str_dir"
-    result = make_dir(str_target, stringify=True)
+    target = tmp_path / "str_dir"
+    result = make_dir(target, stringify=True)
     assert isinstance(result, str)
-    assert result == _stringify(str_target)
+    assert result == _stringify(target)
 
-    # An existing non-directory path raises `NotADirectoryError`.
+
+def test_make_dir_exist_ok(tmp_path: Path):
+    created = make_dir(tmp_path / "new")
+    make_dir(created, exist_ok=True)  # idempotent
+    with pytest.raises(FileExistsError):
+        make_dir(created)  # exist_ok defaults to False
+
+
+def test_make_dir_raises_when_not_directory(tmp_file: Path):
     with pytest.raises(NotADirectoryError):
         make_dir(tmp_file)
 
 
-def test_make_dirs(tmp_path: Path, tmp_dirs: list[Path]):
-    # Test creating a single directory
-    dir1, *_ = make_dirs([tmp_path / "new_dir1"])
-    assert dir1.is_dir()
-    dir1.rmdir()
+def test_make_dir_invalid_mode(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    # `make_dir` calls `_validate_mode` on the same range as `make_dirs`.
+    monkeypatch.setattr("kaparoo.filesystem.existence.platform.system", lambda: "Linux")
+    for bad_mode in (0, -1, 0o77777):
+        with pytest.raises(ValueError, match="invalid directory mode"):
+            make_dir(tmp_path / "new", mode=bad_mode)
 
-    # Test creating multiple directories
-    dir2, dir3, *_ = make_dirs([tmp_path / "new_dir2", tmp_path / "new_dir3"])
-    assert dir2.is_dir()
-    assert dir3.is_dir()
-    dir2.rmdir()
-    dir3.rmdir()
 
-    # Test creating directories with a common root path
-    subdir1, subdir2, *_ = make_dirs(["subdir1", "subdir2"], root=tmp_path)
+# --- make_dirs -------------------------------------------------------------
+
+
+def test_make_dirs_creates_paths(tmp_path: Path):
+    # Single and multiple inputs share the same code path; verify both.
+    (one,) = make_dirs([tmp_path / "one"])
+    two, three = make_dirs([tmp_path / "two", tmp_path / "three"])
+    assert all(d.is_dir() for d in (one, two, three))
+
+
+def test_make_dirs_with_root(tmp_path: Path):
+    subdir1, subdir2 = make_dirs(["subdir1", "subdir2"], root=tmp_path)
     assert subdir1.is_dir()
     assert subdir2.is_dir()
-    subdir1.rmdir()
-    subdir2.rmdir()
 
-    # Test that string inputs are normalized to Path objects in the result
-    norm_dir, *_ = make_dirs([str(tmp_path / "norm_dir")])
-    assert isinstance(norm_dir, Path)
-    assert norm_dir.is_dir()
-    norm_dir.rmdir()
 
-    # Test that `stringify` returns the created paths as strings
-    str_target = tmp_path / "str_dir"
-    str_dir, *_ = make_dirs([str_target], stringify=True)
-    assert isinstance(str_dir, str)
-    assert str_dir == _stringify(str_target)
-    str_target.rmdir()
+def test_make_dirs_normalizes_str_input_to_path(tmp_path: Path):
+    (result,) = make_dirs([str(tmp_path / "norm_dir")])
+    assert isinstance(result, Path)
+    assert result.is_dir()
 
-    # Test creating directories with exist_ok=True for existing directories
+
+def test_make_dirs_stringify(tmp_path: Path):
+    target = tmp_path / "str_dir"
+    (result,) = make_dirs([target], stringify=True)
+    assert isinstance(result, str)
+    assert result == _stringify(target)
+
+
+def test_make_dirs_exist_ok_branches(tmp_dirs: list[Path]):
+    # exist_ok=True is idempotent for existing dirs; default raises.
     make_dirs(tmp_dirs, exist_ok=True)
-    assert all(tmp_dir.is_dir() for tmp_dir in tmp_dirs)
+    assert all(d.is_dir() for d in tmp_dirs)
 
-    # Test creating directories with exist_ok=False for existing directories
     with pytest.raises(FileExistsError):
-        make_dirs(tmp_dirs)  # `exist_ok` is False
+        make_dirs(tmp_dirs)
 
 
 @pytest.mark.skipif(
@@ -86,61 +95,68 @@ def test_make_dirs(tmp_path: Path, tmp_dirs: list[Path]):
 )
 def test_make_dirs_custom_mode(tmp_path: Path):
     custom_mode = 0o755
-    custom_mode_dir, *_ = make_dirs([tmp_path / "custom_mode_dir"], mode=custom_mode)
-    assert custom_mode_dir.is_dir()
-    assert custom_mode_dir.stat().st_mode & custom_mode == custom_mode
-    custom_mode_dir.rmdir()
+    (created,) = make_dirs([tmp_path / "custom_mode_dir"], mode=custom_mode)
+    assert created.is_dir()
+    assert created.stat().st_mode & custom_mode == custom_mode
+
+
+# --- dir_empty / dir_empty_unsafe ------------------------------------------
 
 
 def test_dir_empty(tmp_dir: Path):
-    # Test an empty directory
     assert dir_empty(tmp_dir) is True
-
-    # Test a non-empty directory
-    (file := tmp_dir / "file.txt").touch()
+    (tmp_dir / "file.txt").touch()
     assert dir_empty(tmp_dir) is False
-    file.unlink()
 
 
-def test_dir_empty_unsafe(tmp_dir: Path):
-    # An empty directory; both Path and str inputs are accepted.
+def test_dir_empty_unsafe_accepts_str_and_path(tmp_dir: Path):
+    # `dir_empty_unsafe` skips validation; check both input types and both
+    # outcomes in a single test.
     assert dir_empty_unsafe(tmp_dir) is True
     assert dir_empty_unsafe(str(tmp_dir)) is True
-
-    # A non-empty directory.
-    (file := tmp_dir / "file.txt").touch()
+    (tmp_dir / "file.txt").touch()
     assert dir_empty_unsafe(tmp_dir) is False
-    file.unlink()
 
 
-def test_dirs_empty(tmp_path: Path, tmp_dirs: list[Path], tmp_dirnames: list[str]):
-    # Test multiple empty directories
+def test_dir_empty_matches_unsafe_on_valid_input(tmp_dir: Path):
+    # The two APIs are documented to differ only in pre-validation; on
+    # inputs that pass `ensure_dir_exists` they must agree.
+    assert dir_empty(tmp_dir) == dir_empty_unsafe(tmp_dir)
+    (tmp_dir / "file.txt").touch()
+    assert dir_empty(tmp_dir) == dir_empty_unsafe(tmp_dir)
+
+
+# --- dirs_empty / dirs_empty_unsafe ----------------------------------------
+
+
+def test_dirs_empty(tmp_path: Path, tmp_dirs: list[Path]):
     assert dirs_empty(tmp_dirs) is True
 
-    # Test a mix of empty and non-empty directories
-    (dir4 := tmp_path / "dir4").mkdir()
-    (file := dir4 / "file.txt").touch()
-    mixed_dirs = [*tmp_dirs, dir4]
-    assert dirs_empty(mixed_dirs) is False
-    file.unlink()
-    dir4.rmdir()
-
-    # Test with a common root path
-    assert dirs_empty(tmp_dirnames, root=tmp_path) is True
+    (extra := tmp_path / "extra").mkdir()
+    (extra / "file.txt").touch()
+    assert dirs_empty([*tmp_dirs, extra]) is False
 
 
-def test_dirs_empty_unsafe(
-    tmp_path: Path, tmp_dirs: list[Path], tmp_dirnames: list[str]
-):
-    # Multiple empty directories.
+def test_dirs_empty_unsafe(tmp_path: Path, tmp_dirs: list[Path]):
     assert dirs_empty_unsafe(tmp_dirs) is True
 
-    # A mix of empty and non-empty directories.
-    (dir4 := tmp_path / "dir4").mkdir()
-    (file := dir4 / "file.txt").touch()
-    assert dirs_empty_unsafe([*tmp_dirs, dir4]) is False
-    file.unlink()
-    dir4.rmdir()
+    (extra := tmp_path / "extra").mkdir()
+    (extra / "file.txt").touch()
+    assert dirs_empty_unsafe([*tmp_dirs, extra]) is False
 
-    # `root` is prepended to each path.
+
+@pytest.mark.usefixtures("tmp_dirs")
+def test_dirs_empty_with_root(tmp_path: Path, tmp_dirnames: list[str]):
+    # `tmp_dirs` materializes the directories that `tmp_dirnames` names;
+    # both APIs treat `root` identically.
+    assert dirs_empty(tmp_dirnames, root=tmp_path) is True
     assert dirs_empty_unsafe(tmp_dirnames, root=tmp_path) is True
+
+
+def test_dirs_empty_matches_unsafe_on_valid_input(tmp_path: Path, tmp_dirs: list[Path]):
+    assert dirs_empty(tmp_dirs) == dirs_empty_unsafe(tmp_dirs)
+
+    (extra := tmp_path / "extra").mkdir()
+    (extra / "file.txt").touch()
+    mixed = [*tmp_dirs, extra]
+    assert dirs_empty(mixed) == dirs_empty_unsafe(mixed)

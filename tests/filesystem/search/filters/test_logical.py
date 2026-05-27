@@ -166,13 +166,7 @@ def test_not_to_dict_uses_kind_child():
 # --- aliases ---------------------------------------------------------------
 
 
-@pytest.mark.parametrize(
-    ("alias", "canonical"),
-    (
-        (And, AndFilter),
-        (Or, OrFilter),
-        (Not, NotFilter),
-    ),
-)
-def test_logical_alias_is_canonical_class(alias: type, canonical: type):
-    assert alias is canonical
+def test_logical_aliases_are_canonical_classes():
+    assert And is AndFilter
+    assert Or is OrFilter
+    assert Not is NotFilter

@@ -3,42 +3,99 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 
-from kaparoo.filesystem.search import get_paths
+import pytest
+
+from kaparoo.filesystem.search import get_dirs, get_files, get_paths
 from kaparoo.filesystem.utils import stringify_paths
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    from tests.fixtures.filesystem import TmpFilesystem
 
 
-def test_get_paths(tmp_filesystem: list[Path]):
-    root_dir, file1, file2, file3, sub_dir, sub_file = tmp_filesystem
+def _deprecation_match(name: str) -> str:
+    return rf"`{name}\(\)` is deprecated"
+
+
+# --- get_paths --------------------------------------------------------------
+
+
+def test_get_paths(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    match = _deprecation_match("get_paths")
 
     # default
-    result1 = get_paths(root_dir)
-    expected1 = [file1, file2, file3, sub_dir]
+    with pytest.warns(DeprecationWarning, match=match):
+        result1 = get_paths(fs.root)
+    expected1 = [fs.file1, fs.file2, fs.file3, fs.sub_dir]
     assert sorted(result1) == sorted(expected1)
 
     # recursive
-    result2 = get_paths(root_dir, recursive=True)
-    expected2 = [file1, file2, file3, sub_dir, sub_file]
+    with pytest.warns(DeprecationWarning, match=match):
+        result2 = get_paths(fs.root, recursive=True)
+    expected2 = [fs.file1, fs.file2, fs.file3, fs.sub_dir, fs.sub_file]
     assert sorted(result2) == sorted(expected2)
 
     # stringify
-    result3 = get_paths(root_dir, recursive=True, stringify=True)
+    with pytest.warns(DeprecationWarning, match=match):
+        result3 = get_paths(fs.root, recursive=True, stringify=True)
     expected3 = stringify_paths(expected2)
     assert sorted(result3) == sorted(expected3)
 
     # pattern
-    result4 = get_paths(root_dir, pattern="*.txt", recursive=True)
-    expected4 = [file1, file2, sub_file]
+    with pytest.warns(DeprecationWarning, match=match):
+        result4 = get_paths(fs.root, pattern="*.txt", recursive=True)
+    expected4 = [fs.file1, fs.file2, fs.sub_file]
     assert sorted(result4) == sorted(expected4)
 
     # excludes
-    result5 = get_paths(root_dir, excludes=[file2, sub_dir], recursive=True)
-    expected5 = [file1, file3, sub_file]
+    with pytest.warns(DeprecationWarning, match=match):
+        result5 = get_paths(fs.root, excludes=[fs.file2, fs.sub_dir], recursive=True)
+    expected5 = [fs.file1, fs.file3, fs.sub_file]
     assert sorted(result5) == sorted(expected5)
 
     # condition
-    result6 = get_paths(root_dir, condition=os.path.isfile, recursive=True)
-    expected6 = [file1, file2, file3, sub_file]
+    with pytest.warns(DeprecationWarning, match=match):
+        result6 = get_paths(fs.root, condition=os.path.isfile, recursive=True)
+    expected6 = [fs.file1, fs.file2, fs.file3, fs.sub_file]
     assert sorted(result6) == sorted(expected6)
+
+
+# --- get_files --------------------------------------------------------------
+
+
+def test_get_files(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    match = _deprecation_match("get_files")
+
+    # default: emits the warning and returns only files (the wrapper applies
+    # `file_exists` as its built-in condition).
+    with pytest.warns(DeprecationWarning, match=match):
+        result1 = get_files(fs.root, recursive=True)
+    assert sorted(result1) == sorted([fs.file1, fs.file2, fs.file3, fs.sub_file])
+
+    # callable `condition` is ANDed with the built-in file check.
+    with pytest.warns(DeprecationWarning, match=match):
+        result2 = get_files(
+            fs.root, recursive=True, condition=lambda p: p.suffix == ".txt"
+        )
+    assert sorted(result2) == sorted([fs.file1, fs.file2, fs.sub_file])
+
+
+# --- get_dirs ---------------------------------------------------------------
+
+
+def test_get_dirs(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    match = _deprecation_match("get_dirs")
+
+    # default: warns and returns only directories.
+    with pytest.warns(DeprecationWarning, match=match):
+        result1 = get_dirs(fs.root, recursive=True)
+    assert sorted(result1) == sorted([fs.sub_dir])
+
+    # callable `condition` is ANDed with the built-in directory check.
+    with pytest.warns(DeprecationWarning, match=match):
+        result2 = get_dirs(
+            fs.root, recursive=True, condition=lambda p: p.name == "sub_dir"
+        )
+    assert sorted(result2) == sorted([fs.sub_dir])

@@ -176,17 +176,11 @@ def test_multi_pattern_to_dict_omits_default_case_sensitive():
 # --- aliases ---------------------------------------------------------------
 
 
-@pytest.mark.parametrize(
-    ("alias", "canonical"),
-    (
-        (EqualsAny, EqualsAnyFilter),
-        (StartsWithAny, StartsWithAnyFilter),
-        (EndsWithAny, EndsWithAnyFilter),
-        (ContainsAny, ContainsAnyFilter),
-    ),
-)
-def test_multi_pattern_alias_is_canonical_class(alias: type, canonical: type):
-    assert alias is canonical
+def test_multi_pattern_aliases_are_canonical_classes():
+    assert EqualsAny is EqualsAnyFilter
+    assert StartsWithAny is StartsWithAnyFilter
+    assert EndsWithAny is EndsWithAnyFilter
+    assert ContainsAny is ContainsAnyFilter
 
 
 # --- shared base context (used by serialization recursion) -----------------

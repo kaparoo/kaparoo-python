@@ -220,25 +220,17 @@ def test_pattern_filter_round_trip(filter_: PatternFilter, expected_kind: str):
     assert restored == filter_
 
 
-def test_to_dict_omits_default_case_sensitive():
-    d = EqualsFilter("foo").to_dict()
-    assert "case_sensitive" not in d
-
-
-def test_to_dict_includes_non_default_case_sensitive():
-    d = EqualsFilter("FOO", case_sensitive=False).to_dict()
-    assert d["case_sensitive"] is False
-
-
-def test_from_dict_defaults_case_sensitive_when_missing():
-    f = EqualsFilter.from_dict({"kind": "equals", "pattern": "foo"})
-    assert f.case_sensitive is True
-
-
-def test_case_insensitive_pattern_is_casefolded_in_dict():
-    # Construction casefolds; to_dict records the casefolded form.
-    f = EqualsFilter("FOO", case_sensitive=False)
-    assert f.to_dict() == {"kind": "equals", "pattern": "foo", "case_sensitive": False}
+def test_case_sensitive_serialization():
+    # `case_sensitive=True` is the default and is omitted from `to_dict`;
+    # construction casefolds the pattern when `False` and records the
+    # casefolded form. `from_dict` defaults to True when the key is missing.
+    assert "case_sensitive" not in EqualsFilter("foo").to_dict()
+    assert EqualsFilter("FOO", case_sensitive=False).to_dict() == {
+        "kind": "equals",
+        "pattern": "foo",
+        "case_sensitive": False,
+    }
+    assert EqualsFilter.from_dict({"kind": "equals", "pattern": "foo"}).case_sensitive
 
 
 def test_round_trip_preserves_matching_semantics():
@@ -249,19 +241,32 @@ def test_round_trip_preserves_matching_semantics():
     assert original == restored
 
 
+def test_regex_round_trip_preserves_matching_behavior():
+    # `RegexFilter` excludes its compiled-pattern cache from __eq__/__repr__,
+    # so the per-kind round-trip above passes on equality alone even if
+    # `from_dict` skips recompilation. Drive `matches()` on the restored
+    # instance to pin the behavioral contract (both case-sensitive and not).
+    original = RegexFilter(r"[a-z]+\d{2}")
+    restored = Filter.from_dict(original.to_dict())
+    assert isinstance(restored, RegexFilter)
+    assert restored.matches("abc12") is True
+    assert restored.matches("abc1") is False
+    assert restored.matches("ABC12") is False
+
+    ci_original = RegexFilter(r"[a-z]+", case_sensitive=False)
+    ci_restored = Filter.from_dict(ci_original.to_dict())
+    assert isinstance(ci_restored, RegexFilter)
+    assert ci_restored.matches("abc") is True
+    assert ci_restored.matches("ABC") is True
+
+
 # --- aliases ---------------------------------------------------------------
 
 
-@pytest.mark.parametrize(
-    ("alias", "canonical"),
-    (
-        (Equals, EqualsFilter),
-        (StartsWith, StartsWithFilter),
-        (EndsWith, EndsWithFilter),
-        (Contains, ContainsFilter),
-        (Regex, RegexFilter),
-        (Glob, GlobFilter),
-    ),
-)
-def test_pattern_alias_is_canonical_class(alias: type, canonical: type):
-    assert alias is canonical
+def test_pattern_aliases_are_canonical_classes():
+    assert Equals is EqualsFilter
+    assert StartsWith is StartsWithFilter
+    assert EndsWith is EndsWithFilter
+    assert Contains is ContainsFilter
+    assert Regex is RegexFilter
+    assert Glob is GlobFilter

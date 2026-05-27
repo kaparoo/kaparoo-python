@@ -24,6 +24,7 @@ if TYPE_CHECKING:
         LogicalChildrenFilterDict,
         PatternFilterDict,
     )
+    from tests.fixtures.filesystem import TmpFilesystem
 
 
 _SEARCH_FNS = (search_paths, search_files, search_dirs)
@@ -32,115 +33,120 @@ _SEARCH_FNS = (search_paths, search_files, search_dirs)
 # --- search_paths -----------------------------------------------------------
 
 
-def test_search_paths_returns_all_entries(tmp_filesystem: tuple[Path, ...]):
-    root_dir, file1, file2, file3, sub_dir, sub_file = tmp_filesystem
-    result = search_paths(root_dir)
-    assert set(result) == {file1, file2, file3, sub_dir, sub_file}
+def test_search_paths_returns_all_entries(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    result = search_paths(fs.root)
+    assert set(result) == {fs.file1, fs.file2, fs.file3, fs.sub_dir, fs.sub_file}
 
 
-def test_search_paths_ordered_default(tmp_filesystem: tuple[Path, ...]):
-    root_dir, *_ = tmp_filesystem
-    result = search_paths(root_dir)
-    assert list(result) == sorted(result)
-
-
-def test_search_paths_unordered_same_set(tmp_filesystem: tuple[Path, ...]):
-    root_dir, *_ = tmp_filesystem
-    ordered = set(search_paths(root_dir, ordered=True))
-    unordered = set(search_paths(root_dir, ordered=False))
+def test_search_paths_unordered_same_set(tmp_filesystem: TmpFilesystem):
+    ordered = set(search_paths(tmp_filesystem.root, ordered=True))
+    unordered = set(search_paths(tmp_filesystem.root, ordered=False))
     assert ordered == unordered
 
 
-def test_search_paths_stringify(tmp_filesystem: tuple[Path, ...]):
-    root_dir, file1, file2, file3, sub_dir, sub_file = tmp_filesystem
-    result = search_paths(root_dir, stringify=True)
-    expected = {_stringify(p) for p in (file1, file2, file3, sub_dir, sub_file)}
+def test_search_paths_stringify(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    result = search_paths(fs.root, stringify=True)
+    expected = {
+        _stringify(p) for p in (fs.file1, fs.file2, fs.file3, fs.sub_dir, fs.sub_file)
+    }
     assert set(result) == expected
 
 
-def test_search_paths_name_filter(tmp_filesystem: tuple[Path, ...]):
-    root_dir, file1, file2, _, _, sub_file = tmp_filesystem
-    result = search_paths(root_dir, name_filter=EndsWith(".txt"))
-    assert set(result) == {file1, file2, sub_file}
+def test_search_paths_name_filter(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    result = search_paths(fs.root, name_filter=EndsWith(".txt"))
+    assert set(result) == {fs.file1, fs.file2, fs.sub_file}
 
 
-def test_search_paths_part_filter(tmp_filesystem: tuple[Path, ...]):
-    root_dir, _, _, _, _, sub_file = tmp_filesystem
+def test_search_paths_part_filter(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
     # `part_filter` matches the visited directory's relative path. Only
     # entries inside a directory whose path starts with "sub_" come through.
-    result = search_paths(root_dir, part_filter=StartsWith("sub_"))
-    assert set(result) == {sub_file}
+    result = search_paths(fs.root, part_filter=StartsWith("sub_"))
+    assert set(result) == {fs.sub_file}
 
 
-def test_search_paths_predicate(tmp_filesystem: tuple[Path, ...]):
-    root_dir, file1, file2, _, _, sub_file = tmp_filesystem
-    result = search_paths(
-        root_dir, predicate=lambda p: p.is_file() and p.suffix == ".txt"
-    )
-    assert set(result) == {file1, file2, sub_file}
+def test_search_paths_part_filter_root_is_dot(tmp_filesystem: TmpFilesystem):
+    # `relative_to(root)` is `Path(".")` at the root itself: `Equals(".")`
+    # picks up top-level only; `Not(Equals("."))` is the mirror.
+    fs = tmp_filesystem
+    top_level = {fs.file1, fs.file2, fs.file3, fs.sub_dir}
+    assert set(search_paths(fs.root, part_filter=Equals("."))) == top_level
+    assert set(search_paths(fs.root, part_filter=Not(Equals(".")))) == {fs.sub_file}
 
 
-def test_search_paths_min_depth(tmp_filesystem: tuple[Path, ...]):
-    root_dir, _, _, _, _, sub_file = tmp_filesystem
-    # Direct children of root are at depth 1; sub_file (inside sub_dir) is depth 2.
-    result = search_paths(root_dir, min_depth=2)
-    assert set(result) == {sub_file}
+def test_search_paths_min_and_max_depth(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    top_level = {fs.file1, fs.file2, fs.file3, fs.sub_dir}
+    # min_depth excludes shallower levels; max_depth prunes deeper subtrees.
+    assert set(search_paths(fs.root, min_depth=2)) == {fs.sub_file}
+    assert set(search_paths(fs.root, max_depth=1)) == top_level
+    # min_depth == max_depth yields exactly that level.
+    assert set(search_paths(fs.root, min_depth=1, max_depth=1)) == top_level
+    assert set(search_paths(fs.root, min_depth=2, max_depth=2)) == {fs.sub_file}
 
 
-def test_search_paths_max_depth(tmp_filesystem: tuple[Path, ...]):
-    root_dir, file1, file2, file3, sub_dir, _ = tmp_filesystem
-    # max_depth=1 includes depth-1 entries but does not descend into sub_dir.
-    result = search_paths(root_dir, max_depth=1)
-    assert set(result) == {file1, file2, file3, sub_dir}
+# --- predicate (cross-wrapper) ---------------------------------------------
 
 
-# --- search_files -----------------------------------------------------------
+def test_search_predicate_applies_per_wrapper(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    # search_paths: keep only .txt files (predicate runs after wrapper-level filtering).
+    assert set(
+        search_paths(fs.root, predicate=lambda p: p.is_file() and p.suffix == ".txt")
+    ) == {fs.file1, fs.file2, fs.sub_file}
+    # search_files: already restricted to files; predicate narrows by name.
+    assert set(search_files(fs.root, predicate=lambda p: p.name == "sub_file.txt")) == {
+        fs.sub_file
+    }
+    # search_dirs: predicate narrows among surviving dirs.
+    assert set(search_dirs(fs.root, predicate=lambda p: p.name.startswith("sub_"))) == {
+        fs.sub_dir
+    }
 
 
-def test_search_files_excludes_directories(tmp_filesystem: tuple[Path, ...]):
-    root_dir, file1, file2, file3, _, sub_file = tmp_filesystem
-    result = search_files(root_dir)
-    assert set(result) == {file1, file2, file3, sub_file}
+@pytest.mark.parametrize("search_fn", _SEARCH_FNS)
+def test_search_predicate_rejecting_all_returns_empty(
+    search_fn, tmp_filesystem: TmpFilesystem
+):
+    assert list(search_fn(tmp_filesystem.root, predicate=lambda _: False)) == []
 
 
-def test_search_files_glob_name_filter(tmp_filesystem: tuple[Path, ...]):
-    root_dir, _, _, file3, _, _ = tmp_filesystem
-    result = search_files(root_dir, name_filter=Glob("*.png"))
-    assert set(result) == {file3}
+# --- search_files / search_dirs (wrapper-specific behavior) ----------------
+
+
+def test_search_files_excludes_directories(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    assert set(search_files(fs.root)) == {fs.file1, fs.file2, fs.file3, fs.sub_file}
+
+
+def test_search_files_glob_name_filter(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    assert set(search_files(fs.root, name_filter=Glob("*.png"))) == {fs.file3}
 
 
 def test_search_files_descends_through_non_matching_dirs(
-    tmp_filesystem: tuple[Path, ...],
+    tmp_filesystem: TmpFilesystem,
 ):
     # `sub_dir` itself is not a file -- but `search_files` must still descend
     # into it to find `sub_file`.
-    root_dir, _, _, _, _, sub_file = tmp_filesystem
-    result = search_files(root_dir, name_filter=Equals("sub_file.txt"))
-    assert set(result) == {sub_file}
+    fs = tmp_filesystem
+    result = search_files(fs.root, name_filter=Equals("sub_file.txt"))
+    assert set(result) == {fs.sub_file}
 
 
-# --- search_dirs ------------------------------------------------------------
+def test_search_dirs_excludes_files_and_root(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    result = search_dirs(fs.root)
+    assert set(result) == {fs.sub_dir}
+    assert fs.root not in result
 
 
-def test_search_dirs_excludes_files(tmp_filesystem: tuple[Path, ...]):
-    root_dir, _, _, _, sub_dir, _ = tmp_filesystem
-    result = search_dirs(root_dir)
-    assert set(result) == {sub_dir}
-
-
-def test_search_dirs_root_not_included(tmp_filesystem: tuple[Path, ...]):
-    root_dir, *_ = tmp_filesystem
-    result = search_dirs(root_dir)
-    assert root_dir not in result
-
-
-def test_search_dirs_empty_when_no_subdirs_at_depth(
-    tmp_filesystem: tuple[Path, ...],
-):
-    root_dir, *_ = tmp_filesystem
+def test_search_dirs_empty_when_no_subdirs_at_depth(tmp_filesystem: TmpFilesystem):
     # No sub-directories at depth 2 in the fixture.
-    result = search_dirs(root_dir, min_depth=2)
-    assert list(result) == []
+    assert list(search_dirs(tmp_filesystem.root, min_depth=2)) == []
 
 
 # --- Cross-cutting: error cases ---------------------------------------------
@@ -159,57 +165,40 @@ def test_file_root_raises(search_fn, tmp_file: Path):
 
 
 @pytest.mark.parametrize("search_fn", _SEARCH_FNS)
-def test_invalid_min_depth_raises(search_fn, tmp_filesystem: tuple[Path, ...]):
-    root_dir, *_ = tmp_filesystem
+def test_invalid_depth_raises(search_fn, tmp_filesystem: TmpFilesystem):
+    root = tmp_filesystem.root
     with pytest.raises(ValueError, match="min_depth"):
-        search_fn(root_dir, min_depth=0)
-
-
-@pytest.mark.parametrize("search_fn", _SEARCH_FNS)
-def test_invalid_max_depth_raises(search_fn, tmp_filesystem: tuple[Path, ...]):
-    root_dir, *_ = tmp_filesystem
+        search_fn(root, min_depth=0)
     with pytest.raises(ValueError, match="max_depth"):
-        search_fn(root_dir, max_depth=0)
-
-
-@pytest.mark.parametrize("search_fn", _SEARCH_FNS)
-def test_min_gt_max_raises(search_fn, tmp_filesystem: tuple[Path, ...]):
-    root_dir, *_ = tmp_filesystem
+        search_fn(root, max_depth=0)
     with pytest.raises(ValueError, match="cannot exceed"):
-        search_fn(root_dir, min_depth=2, max_depth=1)
+        search_fn(root, min_depth=2, max_depth=1)
 
 
 # --- Filter composition -----------------------------------------------------
 
 
-def test_compose_and_not(tmp_filesystem: tuple[Path, ...]):
-    root_dir, _, file2, _, _, sub_file = tmp_filesystem
+def test_compose_and_not(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
     # .txt files but not file1.txt
     result = search_files(
-        root_dir,
+        fs.root,
         name_filter=And((EndsWith(".txt"), Not(Equals("file1.txt")))),
     )
-    assert set(result) == {file2, sub_file}
+    assert set(result) == {fs.file2, fs.sub_file}
 
 
-def test_compose_endswith_any(tmp_filesystem: tuple[Path, ...]):
-    root_dir, file1, file2, file3, _, sub_file = tmp_filesystem
-    result = search_files(root_dir, name_filter=EndsWithAny((".txt", ".png")))
-    assert set(result) == {file1, file2, file3, sub_file}
+def test_compose_endswith_any(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    result = search_files(fs.root, name_filter=EndsWithAny((".txt", ".png")))
+    assert set(result) == {fs.file1, fs.file2, fs.file3, fs.sub_file}
 
 
 # --- dict-form filters ------------------------------------------------------
 
 
-def test_name_filter_accepts_dict(tmp_filesystem: tuple[Path, ...]):
-    root_dir, file1, file2, _file3, _, sub_file = tmp_filesystem
-    spec: PatternFilterDict = {"kind": "ends_with", "pattern": ".txt"}
-    result = search_files(root_dir, name_filter=spec)
-    assert set(result) == {file1, file2, sub_file}
-
-
-def test_name_filter_accepts_nested_logical_dict(tmp_filesystem: tuple[Path, ...]):
-    root_dir, _, file2, _, _, sub_file = tmp_filesystem
+def test_name_filter_accepts_nested_logical_dict(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
     # Equivalent to: EndsWith(".txt") and not Equals("file1.txt")
     spec: LogicalChildrenFilterDict = {
         "kind": "and",
@@ -218,48 +207,79 @@ def test_name_filter_accepts_nested_logical_dict(tmp_filesystem: tuple[Path, ...
             {"kind": "not", "child": {"kind": "equals", "pattern": "file1.txt"}},
         ],
     }
-    result = search_files(root_dir, name_filter=spec)
-    assert set(result) == {file2, sub_file}
+    assert set(search_files(fs.root, name_filter=spec)) == {fs.file2, fs.sub_file}
 
 
-def test_part_filter_accepts_dict(tmp_filesystem: tuple[Path, ...]):
-    root_dir, _, _, _, _, sub_file = tmp_filesystem
-    # Only collect from the "sub_dir" subdirectory (matched by `part`,
-    # which is the dirpath relative to `root`).
+def test_part_filter_accepts_dict(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    # Only collect from "sub_dir" (matched by `part`, which is the dirpath
+    # relative to `root`).
     spec: PatternFilterDict = {"kind": "equals", "pattern": "sub_dir"}
-    result = search_files(root_dir, part_filter=spec)
-    assert set(result) == {sub_file}
+    assert set(search_files(fs.root, part_filter=spec)) == {fs.sub_file}
 
 
-def test_dict_filter_matches_instance_filter(tmp_filesystem: tuple[Path, ...]):
-    root_dir, *_ = tmp_filesystem
+def test_dict_filter_equivalent_to_instance(tmp_filesystem: TmpFilesystem):
     instance = And((EndsWith(".txt"), Not(Equals("file1.txt"))))
-    dict_form = instance.to_dict()
-    a = search_files(root_dir, name_filter=instance)
-    b = search_files(root_dir, name_filter=dict_form)
+    a = search_files(tmp_filesystem.root, name_filter=instance)
+    b = search_files(tmp_filesystem.root, name_filter=instance.to_dict())
     assert set(a) == set(b)
 
 
 @pytest.mark.parametrize("search_fn", _SEARCH_FNS)
-def test_dict_filter_works_across_all_wrappers(search_fn, tmp_filesystem):
-    root_dir, *_ = tmp_filesystem
-    # Just verifying no errors; result content is wrapper-specific.
+def test_dict_filter_works_across_all_wrappers(
+    search_fn, tmp_filesystem: TmpFilesystem
+):
     spec: PatternFilterDict = {"kind": "ends_with", "pattern": ".txt"}
-    search_fn(root_dir, name_filter=spec)
+    search_fn(tmp_filesystem.root, name_filter=spec)
 
 
-def test_invalid_dict_filter_raises(tmp_filesystem: tuple[Path, ...]):
-    root_dir, *_ = tmp_filesystem
+def test_dict_filter_invalid_raises(tmp_filesystem: TmpFilesystem):
+    root = tmp_filesystem.root
     with pytest.raises(ValueError, match="missing 'kind'"):
         # Intentionally malformed (no `kind`); bypasses the type system.
         search_files(
-            root_dir,
+            root,
             name_filter={"pattern": ".txt"},  # ty: ignore[invalid-argument-type]
         )
-
-
-def test_unknown_kind_dict_filter_raises(tmp_filesystem: tuple[Path, ...]):
-    root_dir, *_ = tmp_filesystem
-    spec: PatternFilterDict = {"kind": "nope", "pattern": "x"}
+    unknown_kind: PatternFilterDict = {"kind": "nope", "pattern": "x"}
     with pytest.raises(ValueError, match="unknown filter kind"):
-        search_files(root_dir, name_filter=spec)
+        search_files(root, name_filter=unknown_kind)
+
+
+# --- ordering ---------------------------------------------------------------
+
+
+def test_search_paths_ordered_is_path_lex_sorted(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    # `ordered=True` sorts by `Path` tuple lex order, so a directory comes
+    # before its own children (("sub_dir",) < ("sub_dir", "sub_file.txt")).
+    # `stringify=True` must respect that ordering, not re-sort on the str form.
+    result = search_paths(fs.root, ordered=True)
+    expected = [fs.file1, fs.file2, fs.file3, fs.sub_dir, fs.sub_file]
+    assert list(result) == expected
+
+    result_str = search_paths(fs.root, ordered=True, stringify=True)
+    assert list(result_str) == [_stringify(p) for p in expected]
+
+
+def test_search_ordered_sort_key_is_full_path_not_leaf_name(tmp_path: Path):
+    # Distinguish "sort by full Path" from "sort by leaf name". Layout:
+    #   root/sub/a.txt   (leaf "a.txt", path ("sub", "a.txt"))
+    #   root/b.txt       (leaf "b.txt", path ("b.txt",))
+    # Full-path lex sort: "sub/a.txt" > "b.txt" -> [b.txt, sub/a.txt]
+    # Leaf-name lex sort: "a.txt"     < "b.txt" -> [sub/a.txt, b.txt]
+    root = tmp_path / "root"
+    root.mkdir()
+    sub = root / "sub"
+    sub.mkdir()
+    (a_in_sub := sub / "a.txt").touch()
+    (b_at_root := root / "b.txt").touch()
+
+    assert list(search_files(root, ordered=True)) == [b_at_root, a_in_sub]
+
+
+@pytest.mark.parametrize("search_fn", _SEARCH_FNS)
+def test_search_ordered_stable_across_calls(search_fn, tmp_filesystem: TmpFilesystem):
+    first = list(search_fn(tmp_filesystem.root, ordered=True))
+    second = list(search_fn(tmp_filesystem.root, ordered=True))
+    assert first == second
