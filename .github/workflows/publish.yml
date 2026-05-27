@@ -4,6 +4,11 @@ on:
   push:
     tags: ['v*.*.*']
 
+env:
+  # Force JavaScript actions onto Node.js 24 ahead of Node.js 20 removal
+  # (GitHub default flip: 2026-06-02; Node.js 20 removal: 2026-09-16).
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   ci:
     name: Verify
