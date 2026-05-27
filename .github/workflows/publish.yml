@@ -4,11 +4,6 @@ on:
   push:
     tags: ['v*.*.*']
 
-env:
-  # Force JavaScript actions onto Node.js 24 ahead of Node.js 20 removal
-  # (GitHub default flip: 2026-06-02; Node.js 20 removal: 2026-09-16).
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 jobs:
   ci:
     name: Verify
@@ -19,10 +14,10 @@ jobs:
     needs: ci
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
 
@@ -33,7 +28,7 @@ jobs:
         run: uvx twine check dist/*
 
       - name: Upload distributions
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: distributions
           path: dist/
@@ -47,7 +42,7 @@ jobs:
       id-token: write
     steps:
       - name: Download distributions
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: distributions
           path: dist/
@@ -70,7 +65,7 @@ jobs:
       id-token: write
     steps:
       - name: Download distributions
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: distributions
           path: dist/
