@@ -8,7 +8,46 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-_No entries yet._
+### Added
+
+- `kaparoo.data.sequence` subpackage: a `Sequence`-based foundation for
+  dataset code.
+  - `DataSequence[T, M]` ABC with abstract `get_item` / `get_meta` and
+    default `get_items` / `get_metas` / `get_pair` / `get_pairs`.
+    `__getitem__` returns the item only.
+  - Composers: `SlicedSequence` (stable-length view at given indices,
+    duplicates allowed and order preserved); `ConcatSequence`
+    (O(log N) lookup over multiple sources via cumulative lengths +
+    `bisect_right`); `WindowedSequence[T, M_in, M_out]` (abstract
+    sliding window with `size` / `step` / `skip`; `get_item` is
+    implemented, `get_meta` is left abstract).
+  - Templates: `FileFolderSequence` (folder-rooted, one file per item;
+    subclasses implement `list_files` / `load_file` / `get_meta`;
+    supports the "set state BEFORE `super().__init__()`" pattern for
+    parameterized subclasses); `SingleFileSequence` (thin ABC for
+    "one file, many records" formats).
+
+### Changed
+
+- `generate_batches`: `step`, `skip`, `start`, `stop`, and `drop_last`
+  are now keyword-only. Empty ranges (`start == stop`) are accepted
+  and yield no batches. Docstring expanded.
+
+### Fixed
+
+- `register_filter` decorator now preserves the decorated subclass's
+  type. Previously it widened to `type[Filter]`, so static checkers
+  rejected subclass-specific constructor calls at decorated classes.
+- `generate_batches` with `drop_last=False`: the final partial window
+  no longer extends past `stop` when `stop < len(sequence)`.
+
+### Removed
+
+- `kaparoo.data.sequence` (single module) and `kaparoo.data.utils` —
+  replaced by the `kaparoo.data.sequence` subpackage. The previous
+  `DataSequence.by_index` / `by_indices` API was a placeholder and
+  has been superseded by `get_item` / `get_items` / `get_meta` /
+  `get_metas` / `get_pair` / `get_pairs`.
 
 ## [0.2.1] - 2026-05-27
 

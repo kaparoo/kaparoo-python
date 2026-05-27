@@ -46,9 +46,12 @@ hook for custom filter kinds.
 family of helpers for working with `Optional[T]` values
 (`replace_if_none`, `unwrap_or_default`, ...).
 
-### `kaparoo.data` *(under development)*
+### [`kaparoo.data`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/data)
 
-Placeholder for dataset-handling utilities. See [TODO.md](./TODO.md).
+Building blocks for dataset code: `DataSequence[T, M]` ABC (item +
+metadata), composers (`SlicedSequence`, `ConcatSequence`,
+`WindowedSequence`), file-backed templates (`FileFolderSequence`,
+`SingleFileSequence`), and `generate_batches`.
 
 ## 🎯 Quick example
 
