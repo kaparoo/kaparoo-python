@@ -10,14 +10,14 @@ __all__ = (
     "generate_batches",
 )
 
-from kaparoo.data.sequence.base import DataSequence
-from kaparoo.data.sequence.composers import (
+from kaparoo.data.sequences.base import DataSequence
+from kaparoo.data.sequences.composers import (
     ConcatSequence,
     SlicedSequence,
     WindowedSequence,
 )
-from kaparoo.data.sequence.templates import (
+from kaparoo.data.sequences.templates import (
     FileFolderSequence,
     SingleFileSequence,
 )
-from kaparoo.data.sequence.utils import generate_batches
+from kaparoo.data.sequences.utils import generate_batches

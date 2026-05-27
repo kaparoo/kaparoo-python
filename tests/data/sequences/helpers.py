@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from kaparoo.data.sequence import DataSequence, WindowedSequence
+from kaparoo.data.sequences import DataSequence, WindowedSequence
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

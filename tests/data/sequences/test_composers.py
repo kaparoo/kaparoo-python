@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from kaparoo.data.sequence import (
+from kaparoo.data.sequences import (
     ConcatSequence,
     SlicedSequence,
     WindowedSequence,
 )
-from tests.data.sequence.helpers import (
+from tests.data.sequences.helpers import (
     AllMetasWindow,
     FirstMetaWindow,
     ListDataSequence,

@@ -8,7 +8,7 @@ __all__ = (
     "generate_batches",
 )
 
-from kaparoo.data.sequence import (
+from kaparoo.data.sequences import (
     ConcatSequence,
     DataSequence,
     FileFolderSequence,

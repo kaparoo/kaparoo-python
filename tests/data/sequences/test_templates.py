@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from kaparoo.data.sequence import FileFolderSequence, SingleFileSequence
+from kaparoo.data.sequences import FileFolderSequence, SingleFileSequence
 from kaparoo.filesystem.exceptions import DirectoryNotFoundError, NotAFileError
 
 if TYPE_CHECKING:

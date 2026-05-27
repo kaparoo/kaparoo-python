@@ -10,7 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- `kaparoo.data.sequence` subpackage: a `Sequence`-based foundation for
+- `kaparoo.data.sequences` subpackage: a `Sequence`-based foundation for
   dataset code.
   - `DataSequence[T, M]` ABC with abstract `get_item` / `get_meta` and
     default `get_items` / `get_metas` / `get_pair` / `get_pairs`.
@@ -44,7 +44,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 
 - `kaparoo.data.sequence` (single module) and `kaparoo.data.utils` —
-  replaced by the `kaparoo.data.sequence` subpackage. The previous
+  replaced by the `kaparoo.data.sequences` subpackage. The previous
   `DataSequence.by_index` / `by_indices` API was a placeholder and
   has been superseded by `get_item` / `get_items` / `get_meta` /
   `get_metas` / `get_pair` / `get_pairs`.

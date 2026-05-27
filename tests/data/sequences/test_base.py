@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from kaparoo.data.sequence import DataSequence
-from tests.data.sequence.helpers import ListDataSequence
+from kaparoo.data.sequences import DataSequence
+from tests.data.sequences.helpers import ListDataSequence
 
 # --- shared fixture --------------------------------------------------------
 

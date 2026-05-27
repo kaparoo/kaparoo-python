@@ -6,7 +6,7 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from kaparoo.data.sequence.base import DataSequence
+from kaparoo.data.sequences.base import DataSequence
 from kaparoo.filesystem.existence import ensure_dir_exists, ensure_file_exists
 from kaparoo.filesystem.utils import stringify_paths, wrap_path
 

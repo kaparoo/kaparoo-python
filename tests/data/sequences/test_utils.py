@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from kaparoo.data.sequence import generate_batches
+from kaparoo.data.sequences import generate_batches
 
 # --- happy path ------------------------------------------------------------
 

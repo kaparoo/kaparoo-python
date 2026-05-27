@@ -5,15 +5,15 @@ small set of composers, and ready-to-subclass file-backed templates.
 
 ## Modules
 
-- [`sequence/base`](./sequence/base.py) — `DataSequence[T, M]` abstract base
-- [`sequence/composers`](./sequence/composers.py) — `SlicedSequence`,
+- [`sequences/base`](./sequences/base.py) — `DataSequence[T, M]` abstract base
+- [`sequences/composers`](./sequences/composers.py) — `SlicedSequence`,
   `ConcatSequence`, `WindowedSequence`
-- [`sequence/templates`](./sequence/templates.py) — `FileFolderSequence`,
+- [`sequences/templates`](./sequences/templates.py) — `FileFolderSequence`,
   `SingleFileSequence`
-- [`sequence/utils`](./sequence/utils.py) — `generate_batches`
+- [`sequences/utils`](./sequences/utils.py) — `generate_batches`
 
 All public symbols are re-exported from both `kaparoo.data` and
-`kaparoo.data.sequence`.
+`kaparoo.data.sequences`.
 
 ## DataSequence
 
@@ -32,7 +32,7 @@ defaults to `None`; set it explicitly when items carry meaningful
 metadata (paths, labels, line numbers, ...).
 
 ```python
-from kaparoo.data.sequence import DataSequence
+from kaparoo.data.sequences import DataSequence
 
 class Labeled(DataSequence[bytes, str]):
     def __init__(self, items, labels):
@@ -64,7 +64,7 @@ random access is O(1) into the index table. **Duplicates are allowed,
 order is preserved.**
 
 ```python
-from kaparoo.data.sequence import SlicedSequence
+from kaparoo.data.sequences import SlicedSequence
 
 view = SlicedSequence(dataset, [3, 7, 11])
 view[0]   # == dataset[3]
@@ -77,7 +77,7 @@ End-to-end concatenation of zero or more sources. Lookup is O(log N) in
 the number of sources via cumulative-length `bisect_right`.
 
 ```python
-from kaparoo.data.sequence import ConcatSequence
+from kaparoo.data.sequences import ConcatSequence
 
 combined = ConcatSequence(train_a, train_b, train_c)
 len(combined)  # == len(train_a) + len(train_b) + len(train_c)
@@ -92,7 +92,7 @@ metadata aggregates.
 
 ```python
 from pathlib import Path
-from kaparoo.data.sequence import WindowedSequence
+from kaparoo.data.sequences import WindowedSequence
 
 class FirstFrameMeta(WindowedSequence[bytes, Path, Path]):
     def get_meta(self, index):
@@ -136,7 +136,7 @@ internally, so the sequence stays compact and survives a relocated root.
 
 ```python
 from pathlib import Path
-from kaparoo.data.sequence import FileFolderSequence
+from kaparoo.data.sequences import FileFolderSequence
 
 class GlobFolder(FileFolderSequence[bytes]):
     def __init__(self, root, *, pattern="*", recursive=False):
@@ -167,7 +167,7 @@ Indexing strategies vary too widely across formats to abstract here —
 subclasses own opening, indexing, and decoding.
 
 ```python
-from kaparoo.data.sequence import SingleFileSequence
+from kaparoo.data.sequences import SingleFileSequence
 
 class LinesFile(SingleFileSequence[str, int]):
     def __init__(self, path):
@@ -199,7 +199,7 @@ keyword-only.
 | `drop_last` *(default `True`)* | drop a trailing partial window if any |
 
 ```python
-from kaparoo.data.sequence import generate_batches
+from kaparoo.data.sequences import generate_batches
 
 # Overlapping 3-windows (default step=1)
 list(generate_batches(range(6), size=3))

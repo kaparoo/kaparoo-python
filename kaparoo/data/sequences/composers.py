@@ -6,7 +6,7 @@ from abc import abstractmethod
 from bisect import bisect_right
 from typing import TYPE_CHECKING
 
-from kaparoo.data.sequence.base import DataSequence
+from kaparoo.data.sequences.base import DataSequence
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
