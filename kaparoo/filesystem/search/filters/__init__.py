@@ -31,6 +31,7 @@ __all__ = (
     "StartsWithAny",
     "StartsWithAnyFilter",
     "StartsWithFilter",
+    "register_filter",
 )
 
 from kaparoo.filesystem.search.filters.base import Filter
@@ -69,3 +70,4 @@ from kaparoo.filesystem.search.filters.pattern import (
     StartsWith,
     StartsWithFilter,
 )
+from kaparoo.filesystem.search.filters.utils import register_filter

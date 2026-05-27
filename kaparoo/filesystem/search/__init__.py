@@ -34,6 +34,7 @@ __all__ = (
     "get_dirs",
     "get_files",
     "get_paths",
+    "register_filter",
     "search_dirs",
     "search_files",
     "search_paths",
@@ -75,6 +76,7 @@ from kaparoo.filesystem.search.filters import (
     StartsWithAny,
     StartsWithAnyFilter,
     StartsWithFilter,
+    register_filter,
 )
 from kaparoo.filesystem.search.wrappers import (
     search_dirs,

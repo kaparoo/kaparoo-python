@@ -20,8 +20,14 @@ import fnmatch
 import re
 from abc import ABC
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from kaparoo.filesystem.search.filters.base import Filter
+from kaparoo.filesystem.search.filters.utils import register_filter
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+    from typing import Any, Self
 
 
 @dataclass(frozen=True)
@@ -34,7 +40,10 @@ class PatternFilter(Filter, ABC):
     `pattern`.
 
     Attributes:
-        pattern: The string compared against the input.
+        pattern: The string compared against the input. When
+            `case_sensitive=False`, the pattern is `casefold`-ed at
+            construction time and the normalized form is what gets
+            stored and serialized.
         case_sensitive: If False, matching is performed case-insensitively
             via Unicode `casefold`. Defaults to True.
     """
@@ -51,6 +60,23 @@ class PatternFilter(Filter, ABC):
         return target if self.case_sensitive else target.casefold()
 
 
+def _pattern_to_dict(kind: str, f: PatternFilter) -> dict[str, Any]:
+    """Build a `PatternFilter` serialization dict; omit default `case_sensitive`."""
+    d: dict[str, Any] = {"kind": kind, "pattern": f.pattern}
+    if not f.case_sensitive:
+        d["case_sensitive"] = False
+    return d
+
+
+def _pattern_from_dict[T: PatternFilter](cls: type[T], data: Mapping[str, Any]) -> T:
+    """Build a `PatternFilter` subclass from a serialization dict."""
+    return cls(
+        pattern=data["pattern"],
+        case_sensitive=data.get("case_sensitive", True),
+    )
+
+
+@register_filter("equals")
 @dataclass(frozen=True)
 class EqualsFilter(PatternFilter):
     """Match strings that equal `pattern` exactly."""
@@ -58,7 +84,15 @@ class EqualsFilter(PatternFilter):
     def matches(self, target: str) -> bool:
         return self._prepare_target(target) == self.pattern
 
+    def to_dict(self) -> dict[str, Any]:
+        return _pattern_to_dict("equals", self)
 
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        return _pattern_from_dict(cls, data)
+
+
+@register_filter("starts_with")
 @dataclass(frozen=True)
 class StartsWithFilter(PatternFilter):
     """Match strings that start with `pattern`."""
@@ -66,7 +100,15 @@ class StartsWithFilter(PatternFilter):
     def matches(self, target: str) -> bool:
         return self._prepare_target(target).startswith(self.pattern)
 
+    def to_dict(self) -> dict[str, Any]:
+        return _pattern_to_dict("starts_with", self)
 
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        return _pattern_from_dict(cls, data)
+
+
+@register_filter("ends_with")
 @dataclass(frozen=True)
 class EndsWithFilter(PatternFilter):
     """Match strings that end with `pattern`."""
@@ -74,7 +116,15 @@ class EndsWithFilter(PatternFilter):
     def matches(self, target: str) -> bool:
         return self._prepare_target(target).endswith(self.pattern)
 
+    def to_dict(self) -> dict[str, Any]:
+        return _pattern_to_dict("ends_with", self)
 
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        return _pattern_from_dict(cls, data)
+
+
+@register_filter("contains")
 @dataclass(frozen=True)
 class ContainsFilter(PatternFilter):
     """Match strings that contain `pattern` as a substring."""
@@ -82,7 +132,15 @@ class ContainsFilter(PatternFilter):
     def matches(self, target: str) -> bool:
         return self.pattern in self._prepare_target(target)
 
+    def to_dict(self) -> dict[str, Any]:
+        return _pattern_to_dict("contains", self)
 
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        return _pattern_from_dict(cls, data)
+
+
+@register_filter("regex")
 @dataclass(frozen=True)
 class RegexFilter(PatternFilter):
     """Match strings against a regular expression (full-string match).
@@ -113,7 +171,15 @@ class RegexFilter(PatternFilter):
     def matches(self, target: str) -> bool:
         return self._compiled.fullmatch(target) is not None
 
+    def to_dict(self) -> dict[str, Any]:
+        return _pattern_to_dict("regex", self)
 
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        return _pattern_from_dict(cls, data)
+
+
+@register_filter("glob")
 @dataclass(frozen=True)
 class GlobFilter(PatternFilter):
     """Match strings against a POSIX glob pattern via `fnmatch`.
@@ -125,6 +191,13 @@ class GlobFilter(PatternFilter):
 
     def matches(self, target: str) -> bool:
         return fnmatch.fnmatchcase(self._prepare_target(target), self.pattern)
+
+    def to_dict(self) -> dict[str, Any]:
+        return _pattern_to_dict("glob", self)
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        return _pattern_from_dict(cls, data)
 
 
 # Short aliases. Prefer these in inline composition; prefer the

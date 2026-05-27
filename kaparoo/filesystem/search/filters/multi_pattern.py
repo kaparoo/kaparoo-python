@@ -14,8 +14,14 @@ __all__ = (
 
 from abc import ABC
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from kaparoo.filesystem.search.filters.base import Filter
+from kaparoo.filesystem.search.filters.utils import register_filter
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+    from typing import Any, Self
 
 
 @dataclass(frozen=True)
@@ -28,6 +34,9 @@ class MultiPatternFilter(Filter, ABC):
 
     Attributes:
         patterns: The strings compared against the input. Must be non-empty.
+            When `case_sensitive=False`, each entry is `casefold`-ed and the
+            tuple is deduped at construction time; the normalized form is
+            what gets stored and serialized.
         case_sensitive: If False, matching is performed case-insensitively
             via Unicode `casefold`. Defaults to True.
 
@@ -56,6 +65,23 @@ class MultiPatternFilter(Filter, ABC):
         return target if self.case_sensitive else target.casefold()
 
 
+def _multi_to_dict(kind: str, f: MultiPatternFilter) -> dict[str, Any]:
+    """Build a `MultiPatternFilter` serialization dict; omit default `case_sensitive`."""
+    d: dict[str, Any] = {"kind": kind, "patterns": list(f.patterns)}
+    if not f.case_sensitive:
+        d["case_sensitive"] = False
+    return d
+
+
+def _multi_from_dict[T: MultiPatternFilter](cls: type[T], data: Mapping[str, Any]) -> T:
+    """Build a `MultiPatternFilter` subclass from a serialization dict."""
+    return cls(
+        patterns=tuple(data["patterns"]),
+        case_sensitive=data.get("case_sensitive", True),
+    )
+
+
+@register_filter("equals_any")
 @dataclass(frozen=True)
 class EqualsAnyFilter(MultiPatternFilter):
     """Match strings that equal ANY of `patterns`."""
@@ -63,7 +89,15 @@ class EqualsAnyFilter(MultiPatternFilter):
     def matches(self, target: str) -> bool:
         return self._prepare_target(target) in self.patterns
 
+    def to_dict(self) -> dict[str, Any]:
+        return _multi_to_dict("equals_any", self)
 
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        return _multi_from_dict(cls, data)
+
+
+@register_filter("starts_with_any")
 @dataclass(frozen=True)
 class StartsWithAnyFilter(MultiPatternFilter):
     """Match strings that start with ANY of `patterns`."""
@@ -71,7 +105,15 @@ class StartsWithAnyFilter(MultiPatternFilter):
     def matches(self, target: str) -> bool:
         return self._prepare_target(target).startswith(self.patterns)
 
+    def to_dict(self) -> dict[str, Any]:
+        return _multi_to_dict("starts_with_any", self)
 
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        return _multi_from_dict(cls, data)
+
+
+@register_filter("ends_with_any")
 @dataclass(frozen=True)
 class EndsWithAnyFilter(MultiPatternFilter):
     """Match strings that end with ANY of `patterns`."""
@@ -79,7 +121,15 @@ class EndsWithAnyFilter(MultiPatternFilter):
     def matches(self, target: str) -> bool:
         return self._prepare_target(target).endswith(self.patterns)
 
+    def to_dict(self) -> dict[str, Any]:
+        return _multi_to_dict("ends_with_any", self)
 
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        return _multi_from_dict(cls, data)
+
+
+@register_filter("contains_any")
 @dataclass(frozen=True)
 class ContainsAnyFilter(MultiPatternFilter):
     """Match strings that contain ANY of `patterns` as a substring."""
@@ -87,6 +137,13 @@ class ContainsAnyFilter(MultiPatternFilter):
     def matches(self, target: str) -> bool:
         t = self._prepare_target(target)
         return any(p in t for p in self.patterns)
+
+    def to_dict(self) -> dict[str, Any]:
+        return _multi_to_dict("contains_any", self)
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        return _multi_from_dict(cls, data)
 
 
 # Short aliases. Prefer these in inline composition; prefer the

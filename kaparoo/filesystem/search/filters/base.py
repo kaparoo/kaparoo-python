@@ -4,6 +4,13 @@ __all__ = ("Filter",)
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+from kaparoo.filesystem.search.filters.utils import _FILTER_REGISTRY
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+    from typing import Any
 
 
 @dataclass(frozen=True)
@@ -15,8 +22,53 @@ class Filter(ABC):
           input string against a single `pattern`.
         - `LogicalFilter` and its concretes: composite rules that combine
           the results of one or more child filters.
+
+    Subclasses must implement `matches` and `to_dict`, and override
+    `from_dict` to construct themselves from a dict (with no further
+    dispatch). Polymorphic deserialization is provided by
+    `Filter.from_dict(data)`, which reads `data["kind"]`, looks up the
+    target class in the registry (populated by `register_filter`), and
+    delegates.
     """
 
     @abstractmethod
     def matches(self, target: str) -> bool:
         """Test whether `target` satisfies this filter."""
+
+    @abstractmethod
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to a `"kind"`-discriminated dict.
+
+        Round-trippable via `Filter.from_dict`. Default-valued fields
+        may be omitted from the output for compactness; `from_dict`
+        supplies them via `data.get(..., DEFAULT)`.
+        """
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Filter:
+        """Construct a `Filter` from a dict produced by `to_dict`.
+
+        When called on the base (`Filter.from_dict(data)`), dispatches
+        by `data["kind"]` to the registered target class. Concrete
+        subclasses override this to construct themselves from `data`'s
+        fields without dispatch.
+
+        Raises:
+            ValueError: If `data` lacks `"kind"`, or the kind is not
+                registered.
+            NotImplementedError: If called on a subclass that did not
+                override `from_dict`.
+        """
+        if cls is not Filter:
+            msg = f"{cls.__name__}.from_dict() must be overridden by subclasses."
+            raise NotImplementedError(msg)
+        try:
+            kind = data["kind"]
+        except KeyError:
+            msg = "filter dict missing 'kind' discriminator."
+            raise ValueError(msg) from None
+        target = _FILTER_REGISTRY.get(kind)
+        if target is None:
+            msg = f"unknown filter kind: {kind!r}"
+            raise ValueError(msg)
+        return target.from_dict(data)
