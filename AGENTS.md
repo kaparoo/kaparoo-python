@@ -110,7 +110,19 @@ their own published identity (e.g. `Claude <noreply@anthropic.com>`).
 ## Releases
 
 `0.x.y` follows SemVer; in pre-1.0, a minor bump may carry breaking
-changes. Release procedure for `X.Y.Z`:
+changes.
+
+Releases are automated by
+[`.github/workflows/publish.yml`](./.github/workflows/publish.yml):
+pushing an annotated tag matching `v*.*.*` triggers CI verification,
+a sdist+wheel build (`uv build` + `twine check`), then TestPyPI and
+PyPI publishes via `pypa/gh-action-pypi-publish`. Both publish steps
+use GitHub's OIDC trusted-publishing flow -- no API tokens are stored
+anywhere. The PyPI step is gated by the GitHub `pypi` environment,
+which has a manual approval rule, so PyPI never ships without a human
+reviewing the TestPyPI artifact first.
+
+Release procedure for `X.Y.Z`:
 
 1. Move `CHANGELOG.md`'s `[Unreleased]` content into a dated
    `[X.Y.Z] - YYYY-MM-DD` section. Drop entries whose subject was both
@@ -119,25 +131,33 @@ changes. Release procedure for `X.Y.Z`:
    in the changelog.
 2. Bump `version` in `pyproject.toml`; `uv sync --group dev` to
    refresh `uv.lock`.
-3. Commit: `🔖 Release version X.Y.Z`, body referencing the new
+3. Commit `🔖 Release version X.Y.Z` with a body referencing the new
    `[X.Y.Z]` CHANGELOG entry.
-4. `uv build`. Validate with `uvx twine check dist/*` and a fresh
-   install in an isolated environment
-   (`uv run --isolated --no-project --with dist/*.whl python -c "..."`).
-5. Publish to TestPyPI first:
-   `uv publish --index testpypi --username __token__ --keyring-provider subprocess`.
-   Verify the project page and a fresh install from
-   `test.pypi.org/simple/`.
-6. Publish to PyPI with the same command using `--index pypi`.
-7. Annotated tag `vX.Y.Z` whose message starts with
-   `🔖 Release version X.Y.Z` and references the CHANGELOG; push the
-   tag.
+4. `git push origin main`. The push-to-main `ci.yml` workflow runs
+   ruff + ty + pytest across the OS matrix; wait for it to go green.
+5. Create an annotated tag `vX.Y.Z` whose message starts with
+   `🔖 Release version X.Y.Z` and references the CHANGELOG; push it
+   with `git push origin vX.Y.Z`. The publish workflow starts.
+6. After the TestPyPI job finishes, verify the published artifact in
+   a clean environment before approving the PyPI step. From any shell
+   (PowerShell shown):
+   ```powershell
+   uv run --isolated --no-project --refresh-package kaparoo-python --default-index https://test.pypi.org/simple/ --with 'kaparoo-python==X.Y.Z' python -c "from importlib.metadata import version; assert version('kaparoo-python') == 'X.Y.Z'; print('OK')"
+   ```
+   Extend the smoke checks to import and exercise whatever the release
+   actually touches (new submodule, renamed symbol, fixed bug, ...).
+7. Approve the `pypi` environment in the GitHub Actions UI to release
+   the PyPI publish step. The job uploads to PyPI via OIDC.
 
-Tokens live in the OS keyring at the `publish-url` key (`keyring set
-<publish-url> __token__`), scoped per-project once the package exists
-on the index. Named indexes (`pypi`, `testpypi`) are configured under
+Named indexes (`pypi`, `testpypi`) are configured under
 `[[tool.uv.index]]` in `pyproject.toml`; `testpypi` carries
-`explicit = true` so it stays out of dependency resolution.
+`explicit = true` so it stays out of normal dependency resolution.
+The only consumers of those named indexes today are this verification
+step (which targets `testpypi` via `--default-index`) and any
+emergency manual publish (`uv publish --index <name>
+--keyring-provider subprocess` with an API token in the OS keyring at
+the `publish-url` key). Normal releases never go through that manual
+path.
 
 ## Template
 
