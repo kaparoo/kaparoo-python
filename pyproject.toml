@@ -104,15 +104,19 @@ addopts = [
 source = ["kaparoo"]
 branch = true
 data_file = ".cache/coverage/.coverage"
+# `kaparoo.filesystem.types` is a type-alias-only module — every import
+# site references it under `if TYPE_CHECKING:`, so it never executes at
+# runtime. Exclude it from measurement rather than chasing the lines
+# with a synthetic smoke test.
+omit = ["kaparoo/filesystem/types.py"]
 
 [tool.coverage.report]
 precision = 2
 show_missing = true
 skip_covered = false
-# 5%p below the baseline (93.11% on 2026-05-27) to absorb normal variation.
-# `kaparoo.data` and `kaparoo.filesystem.types` are uncovered by design
-# (see TODO.md); raise the gate once those modules contribute test coverage.
-fail_under = 88
+# ~5%p below the current measured coverage (100.00% as of 2026-05-28)
+# to absorb normal variation. Raise/lower in step with the baseline.
+fail_under = 95
 exclude_lines = [
     "pragma: no cover",
     "raise NotImplementedError",
