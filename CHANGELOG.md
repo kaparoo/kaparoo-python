@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+_No entries yet._
+
+## [0.3.0] - 2026-05-28
+
 ### Added
 
 - `kaparoo.data.sequences` subpackage: a `Sequence`-based foundation for
