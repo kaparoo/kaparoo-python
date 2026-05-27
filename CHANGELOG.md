@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+_No entries yet._
+
+## [0.2.1] - 2026-05-27
+
 ### Added
 
 - Filter serialization: `Filter.to_dict()` / `Filter.from_dict()` with
