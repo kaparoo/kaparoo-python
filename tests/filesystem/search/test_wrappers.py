@@ -191,3 +191,64 @@ def test_compose_endswith_any(tmp_filesystem: tuple[Path, ...]):
     root_dir, file1, file2, file3, _, sub_file = tmp_filesystem
     result = search_files(root_dir, name_filter=EndsWithAny((".txt", ".png")))
     assert set(result) == {file1, file2, file3, sub_file}
+
+
+# --- dict-form filters ------------------------------------------------------
+
+
+def test_name_filter_accepts_dict(tmp_filesystem: tuple[Path, ...]):
+    root_dir, file1, file2, _file3, _, sub_file = tmp_filesystem
+    spec = {"kind": "ends_with", "pattern": ".txt"}
+    result = search_files(root_dir, name_filter=spec)
+    assert set(result) == {file1, file2, sub_file}
+
+
+def test_name_filter_accepts_nested_logical_dict(tmp_filesystem: tuple[Path, ...]):
+    root_dir, _, file2, _, _, sub_file = tmp_filesystem
+    # Equivalent to: EndsWith(".txt") and not Equals("file1.txt")
+    spec = {
+        "kind": "and",
+        "children": [
+            {"kind": "ends_with", "pattern": ".txt"},
+            {"kind": "not", "child": {"kind": "equals", "pattern": "file1.txt"}},
+        ],
+    }
+    result = search_files(root_dir, name_filter=spec)
+    assert set(result) == {file2, sub_file}
+
+
+def test_part_filter_accepts_dict(tmp_filesystem: tuple[Path, ...]):
+    root_dir, _, _, _, _, sub_file = tmp_filesystem
+    # Only collect from the "sub_dir" subdirectory (matched by `part`,
+    # which is the dirpath relative to `root`).
+    spec = {"kind": "equals", "pattern": "sub_dir"}
+    result = search_files(root_dir, part_filter=spec)
+    assert set(result) == {sub_file}
+
+
+def test_dict_filter_matches_instance_filter(tmp_filesystem: tuple[Path, ...]):
+    root_dir, *_ = tmp_filesystem
+    instance = And((EndsWith(".txt"), Not(Equals("file1.txt"))))
+    dict_form = instance.to_dict()
+    a = search_files(root_dir, name_filter=instance)
+    b = search_files(root_dir, name_filter=dict_form)
+    assert set(a) == set(b)
+
+
+@pytest.mark.parametrize("search_fn", _SEARCH_FNS)
+def test_dict_filter_works_across_all_wrappers(search_fn, tmp_filesystem):
+    root_dir, *_ = tmp_filesystem
+    # Just verifying no errors; result content is wrapper-specific.
+    search_fn(root_dir, name_filter={"kind": "ends_with", "pattern": ".txt"})
+
+
+def test_invalid_dict_filter_raises(tmp_filesystem: tuple[Path, ...]):
+    root_dir, *_ = tmp_filesystem
+    with pytest.raises(ValueError, match="missing 'kind'"):
+        search_files(root_dir, name_filter={"pattern": ".txt"})  # no kind
+
+
+def test_unknown_kind_dict_filter_raises(tmp_filesystem: tuple[Path, ...]):
+    root_dir, *_ = tmp_filesystem
+    with pytest.raises(ValueError, match="unknown filter kind"):
+        search_files(root_dir, name_filter={"kind": "nope", "pattern": "x"})

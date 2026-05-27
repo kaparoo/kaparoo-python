@@ -103,3 +103,48 @@ def test_dispatcher_returns_correct_subclass_instance():
     d = EqualsFilter("foo").to_dict()
     restored = Filter.from_dict(d)
     assert type(restored) is EqualsFilter
+
+
+# --- Filter.coerce ---------------------------------------------------------
+
+
+def test_coerce_passes_through_filter_instance():
+    f = EqualsFilter("foo")
+    assert Filter.coerce(f) is f
+
+
+def test_coerce_passes_through_none():
+    assert Filter.coerce(None) is None
+
+
+def test_coerce_deserializes_mapping():
+    spec = {"kind": "equals", "pattern": "foo"}
+    result = Filter.coerce(spec)
+    assert result == EqualsFilter("foo")
+
+
+def test_coerce_deserializes_nested_logical_mapping():
+    spec = {
+        "kind": "and",
+        "children": [
+            {"kind": "glob", "pattern": "*.py"},
+            {"kind": "not", "child": {"kind": "equals", "pattern": "__init__.py"}},
+        ],
+    }
+    result = Filter.coerce(spec)
+    assert result == AndFilter(
+        (
+            GlobFilter("*.py"),
+            NotFilter(EqualsFilter("__init__.py")),
+        )
+    )
+
+
+def test_coerce_invalid_mapping_raises():
+    with pytest.raises(ValueError, match="missing 'kind'"):
+        Filter.coerce({"pattern": "foo"})
+
+
+def test_coerce_unknown_kind_raises():
+    with pytest.raises(ValueError, match="unknown filter kind"):
+        Filter.coerce({"kind": "nope"})

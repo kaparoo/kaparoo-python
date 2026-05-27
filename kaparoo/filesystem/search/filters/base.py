@@ -72,3 +72,20 @@ class Filter(ABC):
             msg = f"unknown filter kind: {kind!r}"
             raise ValueError(msg)
         return target.from_dict(data)
+
+    @classmethod
+    def coerce(cls, value: Filter | Mapping[str, Any] | None) -> Filter | None:
+        """Normalize `value` into a `Filter | None`.
+
+        Accepts a `Filter` (returned as-is), a `Mapping` (deserialized
+        via `Filter.from_dict`), or `None` (returned as-is). Useful at
+        API boundaries that wish to accept filter specs in dict form
+        alongside `Filter` instances.
+
+        Raises:
+            ValueError: If `value` is a mapping but cannot be deserialized
+                (missing or unknown `"kind"`).
+        """
+        if value is None or isinstance(value, Filter):
+            return value
+        return cls.from_dict(value)

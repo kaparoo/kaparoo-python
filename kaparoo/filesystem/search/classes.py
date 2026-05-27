@@ -6,14 +6,14 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, overload
 
 from kaparoo.filesystem.existence import ensure_dir_exists
+from kaparoo.filesystem.search.filters import Filter
 from kaparoo.filesystem.utils import stringify_path, stringify_paths
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Sequence
+    from collections.abc import Callable, Iterable, Mapping, Sequence
     from pathlib import Path
-    from typing import Literal
+    from typing import Any, Literal
 
-    from kaparoo.filesystem.search.filters import Filter
     from kaparoo.filesystem.types import StrPath
 
 
@@ -57,8 +57,8 @@ class Search(ABC):
         cls,
         root: StrPath,
         *,
-        part_filter: Filter | None = None,
-        name_filter: Filter | None = None,
+        part_filter: Filter | Mapping[str, Any] | None = None,
+        name_filter: Filter | Mapping[str, Any] | None = None,
         predicate: Callable[[Path], bool] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
@@ -72,8 +72,8 @@ class Search(ABC):
         cls,
         root: StrPath,
         *,
-        part_filter: Filter | None = None,
-        name_filter: Filter | None = None,
+        part_filter: Filter | Mapping[str, Any] | None = None,
+        name_filter: Filter | Mapping[str, Any] | None = None,
         predicate: Callable[[Path], bool] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
@@ -87,8 +87,8 @@ class Search(ABC):
         cls,
         root: StrPath,
         *,
-        part_filter: Filter | None = None,
-        name_filter: Filter | None = None,
+        part_filter: Filter | Mapping[str, Any] | None = None,
+        name_filter: Filter | Mapping[str, Any] | None = None,
         predicate: Callable[[Path], bool] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
@@ -101,8 +101,8 @@ class Search(ABC):
         cls,
         root: StrPath,
         *,
-        part_filter: Filter | None = None,
-        name_filter: Filter | None = None,
+        part_filter: Filter | Mapping[str, Any] | None = None,
+        name_filter: Filter | Mapping[str, Any] | None = None,
         predicate: Callable[[Path], bool] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
@@ -129,9 +129,13 @@ class Search(ABC):
         Args:
             root: The directory to walk.
             part_filter: Filter applied to each visited directory's relative
-                path string. None (default) accepts all directories.
+                path string. Accepts a `Filter`, a mapping deserializable
+                via `Filter.from_dict`, or `None`. None (default) accepts
+                all directories.
             name_filter: Filter applied to each candidate entry's leaf name.
-                None (default) accepts all names.
+                Accepts a `Filter`, a mapping deserializable via
+                `Filter.from_dict`, or `None`. None (default) accepts
+                all names.
             predicate: Callable applied to each surviving `Path` for a final
                 boolean check. None (default) accepts all paths.
             min_depth: Minimum inclusion depth (must be >= 1). Defaults to 1.
@@ -147,12 +151,16 @@ class Search(ABC):
             that pass every filter.
 
         Raises:
-            ValueError: If `min_depth < 1`, `max_depth < 1`, or
-                `min_depth > max_depth`.
+            ValueError: If `min_depth < 1`, `max_depth < 1`,
+                `min_depth > max_depth`, or `part_filter` / `name_filter`
+                is a mapping that cannot be deserialized.
             DirectoryNotFoundError: If `root` does not exist.
             NotADirectoryError: If `root` exists but is not a directory.
         """
         cls._validate_depth_range(min_depth, max_depth)
+
+        part_filter = Filter.coerce(part_filter)
+        name_filter = Filter.coerce(name_filter)
 
         root = ensure_dir_exists(root)
         root_depth = len(root.parts)
