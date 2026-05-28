@@ -17,6 +17,7 @@ The Astral toolchain — keep it unless there is a clear reason to change:
 - `ruff` — linting + formatting
 - `ty`   — type checking
 - `pytest` — testing
+- `pytest-cov` — coverage measurement and threshold gate
 
 ## Commands
 
@@ -71,10 +72,23 @@ applying it by hand.
   way). Within a group `import X` precedes `from X import Y`; entries are
   alphabetical.
 - Docstrings are optional — write them where they clarify intent, not
-  mechanically on every function, class, or method. When written, use
-  [Google style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings)
-  (`Args:` / `Returns:` / `Raises:` sections), and omit types from
-  `Args:` entries — the signature already carries them.
+  mechanically on every function, class, or method. When written,
+  document *intent and contracts, not mechanism*:
+  - Lead with a one-line summary — declarative noun phrase for
+    classes ("An ordered, lazily-loaded, read-only sequence ..."),
+    imperative verb phrase for functions and methods ("Yield sliding
+    windows from `sequence`.").
+  - Surface what callers cannot infer from the signature alone:
+    invariants, edge cases, what subclasses must override, policy
+    trade-offs. Skip restating what the code already shows.
+  - Use [Google style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings)
+    sections (`Args:`, `Returns:`, `Yields:`, `Raises:`,
+    `Type Parameters:`); omit types from `Args:` since the signature
+    carries them. Custom sections (`Parameterized subclasses:`,
+    `Truth table:`, `Example:`) are welcome when they clarify a real
+    pitfall or pattern.
+  - Reference identifiers in backticks (`get_item`, `size`,
+    `Filter.parse`).
 - Standalone runnable scripts carry PEP 723 inline metadata (the
   `# /// script` block). `uv` manages it (`uv add --script`); add or edit
   it by hand only when explicitly asked.
