@@ -3,7 +3,7 @@
 # ========================== #
 
 [build-system]
-requires = ["uv_build>=0.11.15,<0.12"]
+requires = ["uv_build>=0.11.16,<0.12"]
 build-backend = "uv_build"
 
 # ========================== #
@@ -46,8 +46,8 @@ Issues = "https://www.github.com/kaparoo/kaparoo-python/issues"
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=7.1",
-    "ruff>=0.15.13",
-    "ty>=0.0.37",
+    "ruff>=0.15.14",
+    "ty>=0.0.40",
 ]
 
 [tool.uv.build-backend]
@@ -129,7 +129,7 @@ exclude_lines = [
 directory = ".cache/coverage/htmlcov"
 
 [tool.ruff]
-required-version = ">=0.15.13"
+required-version = ">=0.15.14"
 cache-dir = "./.cache/ruff"
 extend-exclude = [
     ".cache",
