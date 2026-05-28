@@ -39,6 +39,15 @@ tracking; a `fail_under` gate is configured in `pyproject.toml`.
   clear, commented reason.
 - Tests live in `tests/` and may use bare `assert` (ruff `S101` is
   waived there).
+- **Tests mirror the source tree.** A source file
+  `kaparoo/<pkg>/<mod>.py` is tested at `tests/<pkg>/test_<mod>.py`;
+  a subpackage `kaparoo/<pkg>/<sub>/` is tested under
+  `tests/<pkg>/<sub>/`. Not every source file needs a dedicated test
+  file — types-only modules, re-export `__init__.py` markers, and
+  implementation details covered through a public-facing module are
+  intentional exceptions. Cross-module test helpers live in
+  `tests/<pkg>/helpers.py`, shared fixtures in `tests/fixtures/`,
+  and per-package pytest configuration in `conftest.py`.
 - `ty` has no plugin system; rely on standard typing (PEP 681
   `dataclass_transform`, `.pyi` stubs), not type-checker plugins.
 - **Submodule READMEs own the usage examples.** The root `README.md` is
