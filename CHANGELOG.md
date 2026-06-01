@@ -8,13 +8,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `SegmentTimer.measure(label)`: a stopwatch-style context manager (and
+  decorator) that records a segment covering only the wrapped block, so
+  time spent outside any `measure` block is excluded from `records` /
+  `summary`. Complements `lap`, which splits the timeline into
+  contiguous segments. Pauses inside the block are excluded; a block
+  that raises records nothing.
+
 ### Changed
 
-- `Timer.resume` / `LapTimer.resume` now return `None` instead of the
-  pause duration in nanoseconds. The value had no consumer (`suspend`
-  discarded it) and leaked a raw-nanosecond figure that broke the
-  timer's `unit` abstraction. Subclasses that need the pause interval
-  override the new protected `_resume` hook instead.
+- Renamed `LapTimer` -> `SegmentTimer`, `LapRecord` -> `SegmentRecord`,
+  and the record field `lap_time` -> `duration`, reflecting that the
+  timer now records named *segments* via both `lap` (split) and the new
+  `measure` (block). The `lap` method keeps its name.
+- `Timer.resume` / `SegmentTimer.resume` now return `None` instead of
+  the pause duration in nanoseconds. The value had no consumer
+  (`suspend` discarded it) and leaked a raw-nanosecond figure that broke
+  the timer's `unit` abstraction. Subclasses that need the pause
+  interval override the new protected `_resume` hook instead.
 
 ## [0.3.0] - 2026-05-28
 

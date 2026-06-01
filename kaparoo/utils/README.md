@@ -4,7 +4,7 @@ Small, focused helpers — not enough material for their own packages.
 
 ## Modules
 
-- [`timer`](./timer.py) — `Timer`, `LapTimer`, `LapRecord`
+- [`timer`](./timer.py) — `Timer`, `SegmentTimer`, `SegmentRecord`
 - [`optional`](./optional.py) — helpers for `T | None` values
 
 ## Timer
@@ -45,28 +45,57 @@ with Timer("ms") as t:
     do_work()
 ```
 
-## LapTimer
+## SegmentTimer
 
-`LapTimer` extends `Timer` with named intermediate timings. Every call
-to `lap(label)` produces a `LapRecord` (a `TypedDict` with `label`,
-`lap_time`, `total_time`).
+`SegmentTimer` extends `Timer` with named time *segments*. Each segment
+is a `SegmentRecord` (a `TypedDict` with `label`, `duration`,
+`total_time`) and is produced in one of two ways:
+
+- **`lap(label)` — split.** Each lap's `duration` is the time since the
+  previous lap (or the start), so every instant belongs to exactly one
+  segment.
+- **`measure(label)` — stopwatch.** Times only the wrapped block; time
+  spent outside any `measure` block is attributed to no segment.
 
 ```python
-from kaparoo.utils.timer import LapTimer
+from kaparoo.utils.timer import SegmentTimer
 
-with LapTimer("ms", ndigits=1) as lt:
+with SegmentTimer("ms", ndigits=1) as st:
     step_a()
-    lt.lap("A")
-    step_b()
-    lt.lap("B")
+    st.lap("A")               # split: time since start
+    idle()                    # NOT counted by the next measure
+    with st.measure("B"):     # stopwatch: only this block
+        step_b()
 
-# Per-lap details:
-for record in lt.records:
-    print(record["label"], record["lap_time"])
+# Per-segment details:
+for record in st.records:
+    print(record["label"], record["duration"])
 
-# Aggregated by label (sums `lap_time` for repeated labels):
-print(lt.summary)   # e.g. {"A": 12.3, "B": 8.7}
-print(lt.elapsed)   # total wall time of the `with` block
+# Aggregated by label (sums `duration` for repeated labels):
+print(st.summary)   # e.g. {"A": 12.3, "B": 8.7}
+print(st.elapsed)   # total wall time of the `with` block
+```
+
+### `lap` vs `measure`
+
+`lap` splits the timeline into contiguous segments — the gap before a
+lap is folded into that lap. `measure` brackets a region and ignores
+everything outside it, so untimed work between blocks is excluded from
+`summary`. Pick `lap` for back-to-back phases, `measure` for discrete
+operations interleaved with untimed work. Pauses inside either are
+excluded; a `measure` block that raises records nothing.
+
+`measure` doubles as a decorator (every decorated call records one
+segment, as long as the timer is running when it is called):
+
+```python
+st = SegmentTimer("ms")
+
+@st.measure("load")
+def load() -> None: ...
+
+with st:
+    load()        # records a "load" segment each call
 ```
 
 ### Same-label policies
@@ -77,11 +106,13 @@ print(lt.elapsed)   # total wall time of the `with` block
 | `"separate"` | append a `" (N)"` suffix to keep records distinct |
 | `"reject"` | raise `ValueError` |
 
+The policy applies to both `lap` and `measure`:
+
 ```python
-with LapTimer(on_same_label="separate") as lt:
-    lt.lap("A")
-    lt.lap("A")   # recorded as "A (2)"
-    lt.lap("A")   # recorded as "A (3)"
+with SegmentTimer(on_same_label="separate") as st:
+    st.lap("A")
+    st.lap("A")   # recorded as "A (2)"
+    st.lap("A")   # recorded as "A (3)"
 ```
 
 ## Optional helpers

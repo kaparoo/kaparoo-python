@@ -1,6 +1,6 @@
 __all__ = (
-    "LapRecord",
-    "LapTimer",
+    "SegmentRecord",
+    "SegmentTimer",
     "Timer",
     "factory_if_none",
     "replace_if_none",
@@ -18,4 +18,4 @@ from kaparoo.utils.optional import (
     unwrap_or_factories,
     unwrap_or_factory,
 )
-from kaparoo.utils.timer import LapRecord, LapTimer, Timer
+from kaparoo.utils.timer import SegmentRecord, SegmentTimer, Timer

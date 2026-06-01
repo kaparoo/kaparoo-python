@@ -42,9 +42,10 @@ hook for custom filter kinds.
 
 ### [`kaparoo.utils`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/utils)
 
-`Timer` / `LapTimer` context-manager-and-decorator timers, plus a small
-family of helpers for working with `Optional[T]` values
-(`replace_if_none`, `unwrap_or_default`, ...).
+`Timer` / `SegmentTimer` context-manager-and-decorator timers (with
+`lap`-split and `measure`-block timings), plus a small family of helpers
+for working with `Optional[T]` values (`replace_if_none`,
+`unwrap_or_default`, ...).
 
 ### [`kaparoo.data`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/data)
 
