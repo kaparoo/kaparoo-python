@@ -184,7 +184,13 @@ class StagedFile[AnyStrT: (str, bytes)]:
 
     @property
     def file(self) -> IO[AnyStrT]:
-        """The underlying open file object (full file API)."""
+        """The underlying open file object (full file API).
+
+        Use it for methods this class does not proxy (e.g. `writelines`) or to
+        pass to file-consuming APIs (`json.dump`, `pickle.dump`, ...). Do not
+        close it yourself; `commit` / `abort` manage the lifecycle, and
+        committing after an external close raises `ValueError`.
+        """
         return self._file
 
     @property
@@ -216,7 +222,8 @@ class StagedFile[AnyStrT: (str, bytes)]:
         without redoing the work.
 
         Raises:
-            ValueError: If the writer was already aborted.
+            ValueError: If the writer was already aborted, or if `file` was
+                closed externally (which would make the commit unsafe).
             FileExistsError: If `overwrite` is False and the destination
                 appeared after this writer opened. The staged file is
                 discarded and the existing file is left intact.
@@ -225,6 +232,9 @@ class StagedFile[AnyStrT: (str, bytes)]:
             return self._path
         if not self._finalizer.alive:
             msg = "cannot commit an aborted writer"
+            raise ValueError(msg)
+        if self._file.closed:
+            msg = "cannot commit: the underlying file was closed externally"
             raise ValueError(msg)
         self._file.flush()
         os.fsync(self._file.fileno())

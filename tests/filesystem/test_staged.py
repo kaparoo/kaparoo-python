@@ -112,8 +112,22 @@ def test_commit_after_abort_raises(tmp_path: Path):
 def test_file_property_exposes_handle(tmp_path: Path):
     dest = tmp_path / "data.txt"
     with StagedFile(dest, encoding="utf-8") as f:
-        f.file.write("via handle")
-    assert dest.read_text(encoding="utf-8") == "via handle"
+        f.file.writelines(["a\n", "b\n"])  # method this class does not proxy
+    assert dest.read_text(encoding="utf-8") == "a\nb\n"
+
+
+def test_commit_after_external_close_raises(tmp_path: Path):
+    # Closing the underlying handle would make a commit unsafe; it is rejected
+    # with a clear error rather than a confusing "I/O on closed file".
+    dest = tmp_path / "data.txt"
+    f = StagedFile(dest, encoding="utf-8")
+    f.write("x")
+    f.file.close()  # misuse
+    with pytest.raises(ValueError, match="closed externally"):
+        f.commit()
+    assert not dest.exists()
+    f.abort()  # cleans up the staged temp file
+    assert list(tmp_path.glob("*.tmp")) == []
 
 
 # --- binary mode -----------------------------------------------------------
