@@ -10,6 +10,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `kaparoo.filesystem` directory checks `dir_not_empty`,
+  `dir_not_empty_unsafe`, `dirs_not_empty`, and `dirs_not_empty_unsafe`,
+  the negated counterparts of the `dir_empty` series. `dirs_not_empty`
+  is True only when every directory is non-empty.
 - `kaparoo.utils.aggregate` module **(experimental / WIP -- API may change
   before release)**: `Aggregator` for nested, pluggable metric aggregation
   (the batch → epoch → run pattern). Each metric is

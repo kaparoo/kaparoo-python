@@ -3,8 +3,12 @@ from __future__ import annotations
 __all__ = (
     "dir_empty",
     "dir_empty_unsafe",
+    "dir_not_empty",
+    "dir_not_empty_unsafe",
     "dirs_empty",
     "dirs_empty_unsafe",
+    "dirs_not_empty",
+    "dirs_not_empty_unsafe",
     "make_dir",
     "make_dirs",
 )
@@ -224,3 +228,53 @@ def dirs_empty(paths: StrPaths, *, root: StrPath | None = None) -> bool:
     """
     paths = ensure_dirs_exist(paths, root=root)
     return all(dir_empty_unsafe(p) for p in paths)
+
+
+def dir_not_empty_unsafe(path: StrPath) -> bool:
+    """Check if a directory is not empty without existence checks."""
+    return not dir_empty_unsafe(path)
+
+
+def dirs_not_empty_unsafe(paths: StrPaths, *, root: StrPath | None = None) -> bool:
+    """Check if directories are not empty without existence checks."""
+    if root is not None:
+        paths = [Path(root) / p for p in paths]
+    return all(dir_not_empty_unsafe(p) for p in paths)
+
+
+def dir_not_empty(path: StrPath) -> bool:
+    """Check if a directory is not empty.
+
+    Args:
+        path: The directory path to check.
+
+    Returns:
+        True if the directory is not empty, False otherwise.
+
+    Raises:
+        DirectoryNotFoundError: If the path does not exist.
+        NotADirectoryError: If the path is not a directory.
+    """
+    path = ensure_dir_exists(path)
+    return dir_not_empty_unsafe(path)
+
+
+def dirs_not_empty(paths: StrPaths, *, root: StrPath | None = None) -> bool:
+    """Check if directories are not empty.
+
+    Args:
+        paths: A sequence of directory paths to check.
+        root: The root directory to prepend to each path. Defaults to None.
+
+    Returns:
+        True if all directories are not empty, False otherwise.
+
+    Raises:
+        DirectoryNotFoundError: If `root` is provided and does not exist.
+        DirectoryNotFoundError: If any of the paths do not exist.
+        NotADirectoryError: If `root` is provided and is not a directory.
+        NotADirectoryError: If any of the paths are not directories.
+        ValueError: If `root` is provided and any of the paths are absolute.
+    """
+    paths = ensure_dirs_exist(paths, root=root)
+    return all(dir_not_empty_unsafe(p) for p in paths)

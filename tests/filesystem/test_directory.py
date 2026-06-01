@@ -8,8 +8,12 @@ import pytest
 from kaparoo.filesystem.directory import (
     dir_empty,
     dir_empty_unsafe,
+    dir_not_empty,
+    dir_not_empty_unsafe,
     dirs_empty,
     dirs_empty_unsafe,
+    dirs_not_empty,
+    dirs_not_empty_unsafe,
     make_dir,
     make_dirs,
 )
@@ -160,3 +164,57 @@ def test_dirs_empty_matches_unsafe_on_valid_input(tmp_path: Path, tmp_dirs: list
     (extra / "file.txt").touch()
     mixed = [*tmp_dirs, extra]
     assert dirs_empty(mixed) == dirs_empty_unsafe(mixed)
+
+
+# --- dir_not_empty / dir_not_empty_unsafe ----------------------------------
+
+
+def test_dir_not_empty(tmp_dir: Path):
+    assert dir_not_empty(tmp_dir) is False
+    (tmp_dir / "file.txt").touch()
+    assert dir_not_empty(tmp_dir) is True
+
+
+def test_dir_not_empty_is_inverse_of_empty(tmp_dir: Path):
+    # `dir_not_empty` must be the exact negation of `dir_empty`.
+    assert dir_not_empty(tmp_dir) == (not dir_empty(tmp_dir))
+    (tmp_dir / "file.txt").touch()
+    assert dir_not_empty(tmp_dir) == (not dir_empty(tmp_dir))
+
+
+def test_dir_not_empty_unsafe_accepts_str_and_path(tmp_dir: Path):
+    assert dir_not_empty_unsafe(tmp_dir) is False
+    assert dir_not_empty_unsafe(str(tmp_dir)) is False
+    (tmp_dir / "file.txt").touch()
+    assert dir_not_empty_unsafe(tmp_dir) is True
+
+
+# --- dirs_not_empty / dirs_not_empty_unsafe --------------------------------
+
+
+def test_dirs_not_empty(tmp_path: Path, tmp_dirs: list[Path]):
+    # `dirs_not_empty` is True only when *every* directory is non-empty.
+    assert dirs_not_empty(tmp_dirs) is False  # all start empty
+    for d in tmp_dirs:
+        (d / "file.txt").touch()
+    assert dirs_not_empty(tmp_dirs) is True
+
+    (extra := tmp_path / "extra").mkdir()  # one empty dir flips it back
+    assert dirs_not_empty([*tmp_dirs, extra]) is False
+
+
+def test_dirs_not_empty_unsafe(tmp_path: Path, tmp_dirs: list[Path]):
+    assert dirs_not_empty_unsafe(tmp_dirs) is False
+    for d in tmp_dirs:
+        (d / "file.txt").touch()
+    assert dirs_not_empty_unsafe(tmp_dirs) is True
+
+    (extra := tmp_path / "extra").mkdir()
+    assert dirs_not_empty_unsafe([*tmp_dirs, extra]) is False
+
+
+@pytest.mark.usefixtures("tmp_dirs")
+def test_dirs_not_empty_with_root(tmp_path: Path, tmp_dirnames: list[str]):
+    # Empty dirs -> not all non-empty; `root` handled identically by both.
+    assert dirs_not_empty(tmp_dirnames, root=tmp_path) is False
+    assert dirs_not_empty_unsafe(tmp_dirnames, root=tmp_path) is False

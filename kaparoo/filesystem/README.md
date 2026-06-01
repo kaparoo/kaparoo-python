@@ -6,8 +6,9 @@
 
 - [`existence`](./existence.py) — boolean predicates (`*_exists`) and
   validating `ensure_*` variants
-- [`directory`](./directory.py) — `make_dir(s)`, `dir_empty(s)` with
-  validation, plus `_unsafe` variants that skip pre-checks
+- [`directory`](./directory.py) — `make_dir(s)`, `dir_empty(s)` /
+  `dir_not_empty(s)` with validation, plus `_unsafe` variants that skip
+  pre-checks
 - [`utils`](./utils.py) — `stringify_path(s)`, `wrap_path(s)`
 - [`exceptions`](./exceptions.py) — `DirectoryNotFoundError`, `NotAFileError`
 - [`types`](./types.py) — `StrPath`, `StrPaths` type aliases
@@ -58,7 +59,7 @@ except FileNotFoundError:  # catches DirectoryNotFoundError too
 
 ```python
 from kaparoo.filesystem import (
-    dir_empty, dirs_empty, make_dir, make_dirs,
+    dir_empty, dir_not_empty, dirs_empty, make_dir, make_dirs,
 )
 
 cache_dir = make_dir("var/cache", exist_ok=True)
@@ -69,11 +70,18 @@ make_dirs(["logs", "tmp"], root="var", exist_ok=True)
 # Empty checks (raise if missing or not a directory)
 assert dir_empty(cache_dir)
 assert dirs_empty(["logs", "tmp"], root="var")
+
+# ...and their negations
+(cache_dir / "data.bin").touch()
+assert dir_not_empty(cache_dir)
 ```
 
-The `_unsafe` variants (`dir_empty_unsafe`, `dirs_empty_unsafe`) skip
-existence/type validation and are intended for hot paths where the
-caller has already validated.
+Each check has a negated counterpart (`dir_not_empty`, `dirs_not_empty`);
+`dirs_not_empty` is True only when *every* directory is non-empty. The
+`_unsafe` variants (`dir_empty_unsafe`, `dir_not_empty_unsafe`,
+`dirs_empty_unsafe`, `dirs_not_empty_unsafe`) skip existence/type
+validation and are intended for hot paths where the caller has already
+validated.
 
 ## Path manipulation
 
