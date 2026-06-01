@@ -8,6 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-02
+
 ### Added
 
 - `kaparoo.filesystem.staged.StagedFile`: a safe (atomic) file writer.
@@ -51,8 +53,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `dir_not_empty_unsafe`, `dirs_not_empty`, and `dirs_not_empty_unsafe`,
   the negated counterparts of the `dir_empty` series. `dirs_not_empty`
   is True only when every directory is non-empty.
-- `kaparoo.utils.aggregate` module **(experimental / WIP -- API may change
-  before release)**: `Aggregator` for nested, pluggable metric aggregation
+- `kaparoo.utils.aggregate` module **(experimental -- the API may change in
+  a later release)**: `Aggregator` for nested, pluggable metric aggregation
   (the batch → epoch → run pattern). Each metric is
   reduced by a `Reduction` -- built-ins `Mean` (weighted), `Sum`, `Min`,
   `Max`, `Last`, and `Fold` (a scalar monoid from a callable) -- with
