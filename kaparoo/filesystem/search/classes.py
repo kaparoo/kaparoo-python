@@ -169,7 +169,7 @@ class Search(ABC):
 
         for dirpath, dirnames, filenames in root.walk():
             child_depth = len(dirpath.parts) - root_depth + 1
-            part = stringify_path(dirpath.relative_to(root))
+            part = stringify_path(dirpath, after=root)
 
             if child_depth >= min_depth and cls._filter_part(part, part_filter):
                 names = cls._select_names(dirnames, filenames)
