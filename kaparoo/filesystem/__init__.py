@@ -1,6 +1,7 @@
 __all__ = (
     "DirectoryNotFoundError",
     "NotAFileError",
+    "TemporaryFile",
     "dir_empty",
     "dir_empty_unsafe",
     "dir_exists",
@@ -75,6 +76,7 @@ from kaparoo.filesystem.search import (
     search_files,
     search_paths,
 )
+from kaparoo.filesystem.temporary import TemporaryFile
 from kaparoo.filesystem.utils import (
     reserve_path,
     reserve_paths,

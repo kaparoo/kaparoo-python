@@ -11,6 +11,8 @@
   pre-checks
 - [`utils`](./utils.py) — `stringify_path(s)`, `wrap_path(s)`,
   `reserve_path(s)`
+- [`temporary`](./temporary.py) — `TemporaryFile`, a scratch temp file
+  usable as a context manager or explicitly
 - [`exceptions`](./exceptions.py) — `DirectoryNotFoundError`, `NotAFileError`
 - [`types`](./types.py) — `StrPath`, `StrPaths` type aliases
 - [`search/`](./search/) — composable filesystem search (own README)
@@ -149,6 +151,38 @@ when you want the check (and parent setup) decoupled from the creation.
 existing target. To start a directory from a clean slate, use the
 `clean` option on `make_dir` / `make_dirs` (see below), which is the only
 destructive operation here and is named to say so.
+
+## Temporary files
+
+`TemporaryFile` is a scratch temporary file — a real, named file opened in
+binary `w+b` mode that is removed when closed. It works both as a context
+manager and explicitly (like a file object), and is cleaned up even if you
+forget to close it (a `weakref` finalizer runs on garbage collection).
+
+```python
+from kaparoo.filesystem import TemporaryFile
+
+# Context manager — removed on exit.
+with TemporaryFile() as tmp:
+    tmp.write(b"scratch")
+    tmp.seek(0)
+    data = tmp.read()
+    print(tmp.path)  # the Path, valid inside the block
+
+# Explicit — close() removes it; close() is idempotent.
+tmp = TemporaryFile(directory="var", suffix=".bin")
+tmp.write(b"...")
+tmp.close()
+
+# Keep the file: delete=False leaves it at `path` for you to move/rename.
+tmp = TemporaryFile(delete=False)
+tmp.close()
+final = tmp.path  # still on disk
+```
+
+It is binary-only; for text, wrap `tmp.file` (the underlying handle) in an
+`io.TextIOWrapper` or encode before writing. While open, reopening
+`tmp.path` by name may fail on Windows — write through the object.
 
 ## Platform notes
 

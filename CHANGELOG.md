@@ -10,6 +10,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `kaparoo.filesystem.temporary.TemporaryFile`: a scratch temporary file
+  (binary `w+b`) usable as a context manager *or* explicitly like a file
+  object (`write` / `read` / `seek` / `tell` / `flush` / `close`, plus
+  `path` and the underlying `file`). Removed when closed -- on block exit,
+  an explicit `close()`, or garbage collection (via a `weakref` finalizer)
+  -- unless `delete=False`, which keeps it at `path`. Accepts `suffix` /
+  `prefix` / `directory`.
 - `kaparoo.filesystem.utils.reserve_path` / `reserve_paths`: a guard (and
   its bulk form) for a path that should not yet exist, returning it
   (optionally stringified) so the caller can create something there.
