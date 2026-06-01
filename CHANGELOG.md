@@ -10,6 +10,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `kaparoo.utils.aggregate` module **(experimental / WIP -- API may change
+  before release)**: `Aggregator` for nested, pluggable metric aggregation
+  (the batch → epoch → run pattern). Each metric is
+  reduced by a `Reduction` -- built-ins `Mean` (weighted), `Sum`, `Min`,
+  `Max`, `Last`, and `Fold` (a scalar monoid from a callable) -- with
+  per-metric `overrides`. Reductions are online (constant memory); nested
+  levels compose via `merge` (exact sample-weighted pooling) or
+  `update(child.compute(), ...)` (different reduction per level). Custom
+  reductions subclass `Reduction` / `UnweightedReduction`.
 - `SegmentTimer.measure(label)`: a stopwatch-style context manager (and
   decorator) that records a segment covering only the wrapped block, so
   time spent outside any `measure` block is excluded from `records` /

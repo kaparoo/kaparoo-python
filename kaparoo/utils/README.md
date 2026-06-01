@@ -5,6 +5,8 @@ Small, focused helpers — not enough material for their own packages.
 ## Modules
 
 - [`timer`](./timer.py) — `Timer`, `SegmentTimer`, `SegmentRecord`
+- [`aggregate`](./aggregate.py) — `Aggregator` + the `Reduction` family
+  (`Mean`, `Sum`, `Min`, `Max`, `Last`, `Fold`)
 - [`optional`](./optional.py) — helpers for `T | None` values
 
 ## Timer
@@ -114,6 +116,72 @@ with SegmentTimer(on_same_label="separate") as st:
     st.lap("A")   # recorded as "A (2)"
     st.lap("A")   # recorded as "A (3)"
 ```
+
+## Aggregation
+
+> **🚧 Work in progress** — this API is experimental and may change or be
+> removed before the next release. It is not yet covered by the project's
+> SemVer guarantees.
+
+`Aggregator` accumulates labelled value streams and reduces each with a
+pluggable `Reduction`, composing across nested loops (the deep-learning
+batch → epoch → run pattern). Reductions are *online* — constant memory
+per metric, no per-sample storage.
+
+```python
+from kaparoo.utils.aggregate import Aggregator, Mean, Last, Max
+
+# One default reduction, plus per-metric overrides:
+agg = Aggregator(Mean(), overrides={"lr": Last(), "grad_norm": Max()})
+for batch in loader:
+    agg.update({"loss": ..., "acc": ..., "lr": ..., "grad_norm": ...},
+               weight=len(batch))   # weight = batch size -> correct pooled mean
+print(agg.compute())                # {"loss": ..., "acc": ..., "lr": ..., "grad_norm": ...}
+```
+
+### Nesting: `merge` vs `update(compute())`
+
+```python
+run, history = Aggregator(Mean()), []
+for epoch in range(epochs):
+    ep = run.fresh()                       # same config, empty
+    for batch in loader:
+        ep.update(step(batch), weight=len(batch))
+    history.append(ep.compute())           # keep per-epoch results
+    run.merge(ep)                          # exact pooled mean over ALL batches
+print(run.compute())
+```
+
+- `merge(child)` combines raw states (same reduction, sample-weighted) —
+  the result is exactly as if every batch had fed one tracker.
+- `update(child.compute(), weight=...)` feeds a child's *results* back as
+  samples, so an outer level can use a **different** reduction than its
+  children — e.g. `Aggregator(Min())` fed each epoch's mean to track the
+  best epoch.
+
+### Reductions
+
+| Reduction | Result | Empty |
+| --- | --- | --- |
+| `Mean()` | weighted arithmetic mean | `nan` |
+| `Sum()` | sum of values (weight ignored) | `0.0` |
+| `Min()` / `Max()` | running min / max (weight ignored) | `nan` |
+| `Last()` | most recent value | `nan` |
+| `Fold(combine, initial)` | scalar monoid from a callable | `initial` |
+
+Custom reductions extend the family two ways. For a scalar monoid, pass a
+callable to `Fold`:
+
+```python
+import operator
+Aggregator(Fold(operator.mul, 1.0))           # running product
+```
+
+For a reduction with richer state (weighted variance, RMS, ...), subclass
+`Reduction` (or `UnweightedReduction` when weight is irrelevant) and
+implement `identity` / `step` (or `accumulate`) / `merge` / `result`. The
+`merge` method *is* the nesting behavior, so custom reductions nest as
+exactly as the built-ins.
 
 ## Optional helpers
 
