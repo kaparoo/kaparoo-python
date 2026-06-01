@@ -11,7 +11,7 @@
   pre-checks
 - [`utils`](./utils.py) — `stringify_path(s)`, `wrap_path(s)`,
   `reserve_path(s)`
-- [`temporary`](./temporary.py) — `TemporaryFile`, a scratch temp file
+- [`atomic`](./atomic.py) — `AtomicWriter`, a safe (atomic) file writer
   usable as a context manager or explicitly
 - [`exceptions`](./exceptions.py) — `DirectoryNotFoundError`, `NotAFileError`
 - [`types`](./types.py) — `StrPath`, `StrPaths` type aliases
@@ -152,37 +152,39 @@ existing target. To start a directory from a clean slate, use the
 `clean` option on `make_dir` / `make_dirs` (see below), which is the only
 destructive operation here and is named to say so.
 
-## Temporary files
+## Safe (atomic) writes
 
-`TemporaryFile` is a scratch temporary file — a real, named file opened in
-binary `w+b` mode that is removed when closed. It works both as a context
-manager and explicitly (like a file object), and is cleaned up even if you
-forget to close it (a `weakref` finalizer runs on garbage collection).
+`AtomicWriter` saves a file safely: it stages the bytes in a temporary file
+in the destination's own directory and moves it into place only on commit.
+A reader never sees a half-written file, and a failed write leaves any
+existing file untouched. It works as a context manager — commit on a clean
+exit, discard on an exception — or explicitly, like a file object.
 
 ```python
-from kaparoo.filesystem import TemporaryFile
+from kaparoo.filesystem import AtomicWriter
 
-# Context manager — removed on exit.
-with TemporaryFile() as tmp:
-    tmp.write(b"scratch")
-    tmp.seek(0)
-    data = tmp.read()
-    print(tmp.path)  # the Path, valid inside the block
+# Context manager: committed on success, discarded on error.
+with AtomicWriter("out/data.bin") as f:
+    f.write(payload)  # an exception here leaves out/ untouched
 
-# Explicit — close() removes it; close() is idempotent.
-tmp = TemporaryFile(directory="var", suffix=".bin")
-tmp.write(b"...")
-tmp.close()
-
-# Keep the file: delete=False leaves it at `path` for you to move/rename.
-tmp = TemporaryFile(delete=False)
-tmp.close()
-final = tmp.path  # still on disk
+# Explicit: write, then commit (or abort to discard).
+f = AtomicWriter("out/data.bin", overwrite=True)
+f.write(payload)
+f.commit()  # returns the destination Path; idempotent
 ```
 
-It is binary-only; for text, wrap `tmp.file` (the underlying handle) in an
-`io.TextIOWrapper` or encode before writing. While open, reopening
-`tmp.path` by name may fail on Windows — write through the object.
+With `overwrite=False` (the default) an existing destination raises
+`FileExistsError` up front, and the commit creates the file atomically —
+never clobbering a file that appeared meanwhile. With `overwrite=True` the
+destination is replaced in one atomic step, keeping its previous
+permissions. An uncommitted writer (an explicit instance dropped without
+`commit()`) discards its staged file on garbage collection, so a partial
+write is never promoted by accident.
+
+The staged file is binary (`wb`); for text, encode before writing or wrap
+`f.file` (the underlying handle). The committed file gets the usual
+umask-based permissions, and the destination's parent directory must
+already exist.
 
 ## Platform notes
 

@@ -10,13 +10,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- `kaparoo.filesystem.temporary.TemporaryFile`: a scratch temporary file
-  (binary `w+b`) usable as a context manager *or* explicitly like a file
-  object (`write` / `read` / `seek` / `tell` / `flush` / `close`, plus
-  `path` and the underlying `file`). Removed when closed -- on block exit,
-  an explicit `close()`, or garbage collection (via a `weakref` finalizer)
-  -- unless `delete=False`, which keeps it at `path`. Accepts `suffix` /
-  `prefix` / `directory`.
+- `kaparoo.filesystem.atomic.AtomicWriter`: a safe (atomic) file writer.
+  Bytes are staged in a temporary file in the destination's directory and
+  moved into place only on commit, so readers never see a half-written file
+  and a failed write leaves any existing file untouched. Usable as a context
+  manager (commit on clean exit, discard on exception) *or* explicitly like
+  a file object (`write` / `seek` / `tell` / `flush`, plus `commit` /
+  `abort`, `path`, `committed`, and the underlying `file`). `overwrite=False`
+  (default) fails fast on an existing destination and creates the file
+  atomically; `overwrite=True` replaces it, keeping its permissions. An
+  uncommitted writer discards its staged file on garbage collection.
 - `kaparoo.filesystem.utils.reserve_path` / `reserve_paths`: a guard (and
   its bulk form) for a path that should not yet exist, returning it
   (optionally stringified) so the caller can create something there.

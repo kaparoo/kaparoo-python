@@ -1,7 +1,7 @@
 __all__ = (
+    "AtomicWriter",
     "DirectoryNotFoundError",
     "NotAFileError",
-    "TemporaryFile",
     "dir_empty",
     "dir_empty_unsafe",
     "dir_exists",
@@ -38,6 +38,7 @@ __all__ = (
     "wrap_paths",
 )
 
+from kaparoo.filesystem.atomic import AtomicWriter
 from kaparoo.filesystem.directory import (
     dir_empty,
     dir_empty_unsafe,
@@ -76,7 +77,6 @@ from kaparoo.filesystem.search import (
     search_files,
     search_paths,
 )
-from kaparoo.filesystem.temporary import TemporaryFile
 from kaparoo.filesystem.utils import (
     reserve_path,
     reserve_paths,
