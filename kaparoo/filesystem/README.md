@@ -11,8 +11,8 @@
   pre-checks
 - [`utils`](./utils.py) — `stringify_path(s)`, `wrap_path(s)`,
   `reserve_path(s)`
-- [`staged`](./staged.py) — `StagedFile`, a safe (atomic) file writer
-  usable as a context manager or explicitly
+- [`staged`](./staged.py) — `StagedFile` / `StagedDirectory`, safe
+  (atomic) writers usable as a context manager or explicitly
 - [`exceptions`](./exceptions.py) — `DirectoryNotFoundError`, `NotAFileError`
 - [`types`](./types.py) — `StrPath`, `StrPaths` type aliases
 - [`search/`](./search/) — composable filesystem search (own README)
@@ -189,6 +189,25 @@ dropped without `commit()`) discards its staged file on garbage collection,
 so a partial write is never promoted by accident.
 
 The committed file gets the usual umask-based permissions.
+
+`StagedDirectory` is the directory counterpart: you populate its `workdir`
+(a temporary directory in the destination's parent) and it is moved into
+place on commit.
+
+```python
+from kaparoo.filesystem import StagedDirectory
+
+with StagedDirectory("out/dataset", make_parents=True) as d:
+    (d.workdir / "train.json").write_text(payload)
+    (d.workdir / "shards").mkdir()
+# out/dataset appears in one step; an exception would leave it absent
+```
+
+Creating a new directory (`overwrite=False`) is atomic — a single rename.
+Replacing an existing one (`overwrite=True`) is *not* fully atomic: the old
+directory is swapped aside and removed, so there is a brief window where the
+destination is absent and, on a rare failure mid-swap, the previous contents
+remain in a sibling `<name>.old` directory for recovery.
 
 ## Platform notes
 

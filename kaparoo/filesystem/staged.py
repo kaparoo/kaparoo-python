@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-__all__ = ("StagedFile",)
+__all__ = ("StagedDirectory", "StagedFile")
 
 import contextlib
 import os
+import shutil
 import stat
 import tempfile
 import weakref
@@ -29,13 +30,32 @@ def _discard(file: IO[str] | IO[bytes], temp_path: Path) -> None:
     temp_path.unlink(missing_ok=True)
 
 
-def _default_file_mode() -> int:
-    """Return the mode new files would get (`0o666` minus the current umask)."""
+def _discard_dir(workdir: Path) -> None:
+    """Remove the staging directory and its contents (the abort path).
+
+    Lives at module level (not bound to the instance) so the
+    `weakref.finalize` registration does not keep the `StagedDirectory` alive.
+    """
+    shutil.rmtree(workdir, ignore_errors=True)
+
+
+def _umask_default(base: int) -> int:
+    """Return `base` minus the current umask (the mode new paths would get)."""
     # Reading the umask requires setting it; restore it immediately. This
     # briefly mutates process-global state and so is not thread-safe.
     mask = os.umask(0)
     os.umask(mask)
-    return 0o666 & ~mask
+    return base & ~mask
+
+
+def _default_file_mode() -> int:
+    """Return the mode new files would get (`0o666` minus the current umask)."""
+    return _umask_default(0o666)
+
+
+def _default_dir_mode() -> int:
+    """Return the mode new directories would get (`0o777` minus the umask)."""
+    return _umask_default(0o777)
 
 
 class StagedFile[AnyStrT: (str, bytes)]:
@@ -234,6 +254,166 @@ class StagedFile[AnyStrT: (str, bytes)]:
 
     def abort(self) -> None:
         """Discard the staged file without writing to `path`.
+
+        Idempotent, and a no-op once committed.
+        """
+        if self._committed:
+            return
+        self._finalizer()
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        if exc_type is not None:
+            self.abort()
+        elif self._finalizer.alive:
+            self.commit()
+
+
+class StagedDirectory:
+    """Build a directory safely: populate a temp dir, then commit by atomic move.
+
+    Files are written into a temporary directory (`workdir`) in the
+    destination's own parent, which is moved into place only on `commit`, so
+    a reader never observes a partially-built directory and a failed build
+    leaves any existing directory untouched.
+
+    Usable as a context manager -- committing on a clean exit and discarding
+    on an exception -- or explicitly:
+
+    Example:
+        ```python
+        with StagedDirectory("out/dataset", make_parents=True) as d:
+            (d.workdir / "train.json").write_text(payload)
+            (d.workdir / "shards").mkdir()
+        # out/dataset now appears in one step
+
+        d = StagedDirectory("out/dataset", overwrite=True)
+        (d.workdir / "x.bin").write_bytes(blob)
+        d.commit()
+        ```
+
+    Creating a new directory (`overwrite=False`, the default) is atomic: the
+    staged directory is moved into place with a single rename, and an existing
+    destination is a fail-fast `FileExistsError`. Replacing an existing one
+    (`overwrite=True`) is *not* fully atomic -- the old directory is swapped
+    aside and then removed, leaving a brief window where the destination is
+    absent and, on a rare failure mid-swap, the previous contents in a sibling
+    ``<name>.old`` directory for recovery.
+
+    The committed directory gets the usual umask-based permissions. Pass
+    `make_parents=True` to create the destination's parent if it is missing.
+    An uncommitted instance discards its staging directory on garbage
+    collection.
+    """
+
+    __slots__ = (
+        "__weakref__",
+        "_committed",
+        "_finalizer",
+        "_overwrite",
+        "_path",
+        "_workdir",
+    )
+
+    def __init__(
+        self,
+        path: StrPath,
+        *,
+        overwrite: bool = False,
+        make_parents: bool = False,
+    ) -> None:
+        """Open a staged directory builder for `path`.
+
+        Args:
+            path: The destination directory path.
+            overwrite: Whether to replace an existing directory. When False, an
+                existing destination raises immediately. Defaults to False.
+            make_parents: Whether to create the destination's parent directory
+                if it is missing. Defaults to False.
+
+        Raises:
+            FileExistsError: If `overwrite` is False and `path` already exists.
+            FileNotFoundError: If the parent directory is missing and
+                `make_parents` is False.
+        """
+        path = reserve_path(path, exist_ok=overwrite, make_parents=make_parents)
+        self._path = path
+        self._overwrite = overwrite
+        self._committed = False
+        self._workdir = Path(
+            tempfile.mkdtemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+        )
+        self._finalizer = weakref.finalize(self, _discard_dir, self._workdir)
+
+    @property
+    def path(self) -> Path:
+        """The destination path the staged directory commits to."""
+        return self._path
+
+    @property
+    def workdir(self) -> Path:
+        """The staging directory to populate before commit."""
+        return self._workdir
+
+    @property
+    def committed(self) -> bool:
+        """Whether the staging directory has been committed to `path`."""
+        return self._committed
+
+    def commit(self) -> Path:
+        """Atomically move the staged directory into `path`.
+
+        Returns the destination path. Idempotent: a second call (or a
+        context-manager exit after an explicit commit) returns `path`
+        without redoing the work.
+
+        Raises:
+            ValueError: If the builder was already aborted.
+            FileExistsError: If `overwrite` is False and the destination
+                appeared after this builder opened. The staging directory is
+                left for the finalizer to clean up.
+        """
+        if self._committed:
+            return self._path
+        if not self._finalizer.alive:
+            msg = "cannot commit an aborted staged directory"
+            raise ValueError(msg)
+        mode = _default_dir_mode()
+        if self._overwrite:
+            # Inherit the replaced directory's mode; fall back to the default
+            # when the destination does not exist yet.
+            with contextlib.suppress(OSError):
+                mode = stat.S_IMODE(self._path.stat().st_mode)
+        self._workdir.chmod(mode)
+        if self._overwrite and self._path.exists():
+            # No portable atomic dir replace: swap the old one aside, move the
+            # staged one in, then remove the old. A failure between the two
+            # renames leaves the previous contents in `<name>.old`.
+            backup = self._path.with_name(f"{self._workdir.name}.old")
+            self._path.rename(backup)
+            self._workdir.rename(self._path)
+            shutil.rmtree(backup)
+        else:
+            if not self._overwrite and self._path.exists():
+                msg = (
+                    "directory already exists, pass overwrite=True to replace: "
+                    f"{self._path}"
+                )
+                raise FileExistsError(msg)
+            self._workdir.rename(self._path)
+        self._committed = True
+        self._finalizer.detach()
+        return self._path
+
+    def abort(self) -> None:
+        """Discard the staging directory without creating `path`.
 
         Idempotent, and a no-op once committed.
         """

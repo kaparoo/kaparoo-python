@@ -23,6 +23,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and creates the file atomically; `overwrite=True` replaces it, keeping its
   permissions; `make_parents=True` creates a missing parent directory. An
   uncommitted writer discards its staged file on garbage collection.
+- `kaparoo.filesystem.staged.StagedDirectory`: the directory counterpart of
+  `StagedFile`. Files are written into a temporary `workdir` in the
+  destination's parent and moved into place on commit. Same context-manager /
+  explicit usage and `commit` / `abort` / `path` / `committed` API (plus
+  `workdir`), and the same `overwrite` / `make_parents` options. Creating a
+  new directory is atomic (single rename); replacing an existing one
+  (`overwrite=True`) swaps the old aside and removes it, which is not fully
+  atomic. An uncommitted builder discards its staging directory on garbage
+  collection.
 - `kaparoo.filesystem.utils.reserve_path` / `reserve_paths`: a guard (and
   its bulk form) for a path that should not yet exist, returning it
   (optionally stringified) so the caller can create something there.

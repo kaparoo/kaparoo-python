@@ -1,6 +1,7 @@
 __all__ = (
     "DirectoryNotFoundError",
     "NotAFileError",
+    "StagedDirectory",
     "StagedFile",
     "dir_empty",
     "dir_empty_unsafe",
@@ -76,7 +77,7 @@ from kaparoo.filesystem.search import (
     search_files,
     search_paths,
 )
-from kaparoo.filesystem.staged import StagedFile
+from kaparoo.filesystem.staged import StagedDirectory, StagedFile
 from kaparoo.filesystem.utils import (
     reserve_path,
     reserve_paths,

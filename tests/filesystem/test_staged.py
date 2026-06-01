@@ -7,7 +7,12 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from kaparoo.filesystem.staged import StagedFile, _default_file_mode
+from kaparoo.filesystem.staged import (
+    StagedDirectory,
+    StagedFile,
+    _default_dir_mode,
+    _default_file_mode,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -247,3 +252,174 @@ def test_reexported_from_package():
     from kaparoo import filesystem
 
     assert filesystem.StagedFile is StagedFile
+    assert filesystem.StagedDirectory is StagedDirectory
+
+
+# ===========================================================================
+# StagedDirectory
+# ===========================================================================
+
+
+def test_dir_context_manager_commits_on_success(tmp_path: Path):
+    dest = tmp_path / "dataset"
+    with StagedDirectory(dest) as d:
+        assert d.path == dest
+        assert d.workdir.is_dir()
+        (d.workdir / "a.txt").write_text("a", encoding="utf-8")
+        (d.workdir / "sub").mkdir()
+        assert not dest.exists()  # nothing visible until commit
+        staging = d.workdir
+    assert d.committed is True
+    assert (dest / "a.txt").read_text(encoding="utf-8") == "a"
+    assert (dest / "sub").is_dir()
+    assert not staging.exists()  # staging moved into place
+    assert list(tmp_path.glob("*.tmp")) == []
+
+
+def test_dir_context_manager_aborts_on_exception(tmp_path: Path):
+    dest = tmp_path / "dataset"
+    boom = RuntimeError("boom")
+    with pytest.raises(RuntimeError, match="boom"), StagedDirectory(dest) as d:  # noqa: PT012
+        (d.workdir / "a.txt").write_text("a", encoding="utf-8")
+        raise boom
+    assert not dest.exists()  # failed build leaves nothing behind
+    assert list(tmp_path.glob("*.tmp")) == []
+
+
+def test_dir_context_manager_after_explicit_commit_is_noop(tmp_path: Path):
+    # Committing inside the block, then exiting cleanly, must not re-run it.
+    dest = tmp_path / "dataset"
+    with StagedDirectory(dest) as d:
+        (d.workdir / "a.txt").write_text("a", encoding="utf-8")
+        d.commit()
+    assert (dest / "a.txt").read_text(encoding="utf-8") == "a"
+
+
+def test_dir_explicit_commit_returns_path(tmp_path: Path):
+    dest = tmp_path / "dataset"
+    d = StagedDirectory(dest)
+    (d.workdir / "a.txt").write_text("a", encoding="utf-8")
+    assert d.committed is False
+    assert d.commit() == dest
+    assert d.committed is True
+    assert (dest / "a.txt").read_text(encoding="utf-8") == "a"
+
+
+def test_dir_explicit_abort_discards(tmp_path: Path):
+    dest = tmp_path / "dataset"
+    d = StagedDirectory(dest)
+    (d.workdir / "a.txt").write_text("a", encoding="utf-8")
+    d.abort()
+    assert not dest.exists()
+    assert list(tmp_path.glob("*.tmp")) == []
+
+
+def test_dir_commit_is_idempotent(tmp_path: Path):
+    dest = tmp_path / "dataset"
+    d = StagedDirectory(dest)
+    (d.workdir / "a.txt").write_text("a", encoding="utf-8")
+    assert d.commit() == dest
+    assert d.commit() == dest  # second call is a no-op
+    assert (dest / "a.txt").exists()
+
+
+def test_dir_abort_after_commit_is_noop(tmp_path: Path):
+    dest = tmp_path / "dataset"
+    d = StagedDirectory(dest)
+    (d.workdir / "a.txt").write_text("a", encoding="utf-8")
+    d.commit()
+    d.abort()  # cannot un-commit
+    assert (dest / "a.txt").exists()
+
+
+def test_dir_commit_after_abort_raises(tmp_path: Path):
+    dest = tmp_path / "dataset"
+    d = StagedDirectory(dest)
+    d.abort()
+    with pytest.raises(ValueError, match="aborted"):
+        d.commit()
+
+
+def test_dir_make_parents(tmp_path: Path):
+    dest = tmp_path / "nested" / "deeper" / "dataset"
+    with StagedDirectory(dest, make_parents=True) as d:
+        (d.workdir / "a.txt").write_text("a", encoding="utf-8")
+    assert (dest / "a.txt").is_file()
+
+
+def test_dir_missing_parent_without_make_parents_raises(tmp_path: Path):
+    dest = tmp_path / "missing" / "dataset"
+    with pytest.raises(FileNotFoundError):
+        StagedDirectory(dest)
+
+
+def test_dir_overwrite_false_fail_fast_when_exists(tmp_path: Path):
+    dest = tmp_path / "dataset"
+    dest.mkdir()
+    (dest / "keep.txt").write_text("keep", encoding="utf-8")
+    with pytest.raises(FileExistsError, match="already exists"):
+        StagedDirectory(dest)
+    assert (dest / "keep.txt").exists()
+
+
+def test_dir_overwrite_true_replaces_nonempty(tmp_path: Path):
+    dest = tmp_path / "dataset"
+    dest.mkdir()
+    (dest / "old.txt").write_text("old", encoding="utf-8")
+    with StagedDirectory(dest, overwrite=True) as d:
+        (d.workdir / "new.txt").write_text("new", encoding="utf-8")
+    assert (dest / "new.txt").read_text(encoding="utf-8") == "new"
+    assert not (dest / "old.txt").exists()  # old contents replaced
+    assert list(tmp_path.glob("*.old")) == []  # backup removed
+
+
+def test_dir_overwrite_true_when_absent_creates(tmp_path: Path):
+    dest = tmp_path / "dataset"
+    with StagedDirectory(dest, overwrite=True) as d:
+        (d.workdir / "a.txt").write_text("a", encoding="utf-8")
+    assert (dest / "a.txt").exists()
+
+
+def test_dir_commit_raises_if_destination_appears_after_init(tmp_path: Path):
+    dest = tmp_path / "dataset"
+    d = StagedDirectory(dest)  # dest absent here
+    (d.workdir / "a.txt").write_text("a", encoding="utf-8")
+    dest.mkdir()  # appeared concurrently
+    with pytest.raises(FileExistsError, match="already exists"):
+        d.commit()
+    assert dest.is_dir()
+
+
+def test_dir_garbage_collection_discards_without_committing(tmp_path: Path):
+    dest = tmp_path / "dataset"
+    d = StagedDirectory(dest)
+    (d.workdir / "a.txt").write_text("a", encoding="utf-8")
+
+    del d
+    gc.collect()
+    assert not dest.exists()
+    assert list(tmp_path.glob("*.tmp")) == []
+
+
+@pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason="POSIX permission bits are ignored on Windows",
+)
+def test_dir_committed_uses_umask_default_mode(tmp_path: Path):
+    dest = tmp_path / "dataset"
+    with StagedDirectory(dest) as d:
+        (d.workdir / "a.txt").write_text("a", encoding="utf-8")
+    assert stat.S_IMODE(dest.stat().st_mode) == _default_dir_mode()
+
+
+@pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason="POSIX permission bits are ignored on Windows",
+)
+def test_dir_overwrite_preserves_existing_mode(tmp_path: Path):
+    dest = tmp_path / "dataset"
+    dest.mkdir()
+    dest.chmod(0o750)
+    with StagedDirectory(dest, overwrite=True) as d:
+        (d.workdir / "a.txt").write_text("a", encoding="utf-8")
+    assert stat.S_IMODE(dest.stat().st_mode) == 0o750
