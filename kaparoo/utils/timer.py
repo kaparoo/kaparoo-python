@@ -114,14 +114,13 @@ class BaseTimer(ContextDecorator, ABC):
         self._pause_start = time.perf_counter_ns()
         self._is_paused = True
 
-    def resume(self) -> int:
-        """Resume the timer after a `pause` call.
+    def _resume(self) -> int:
+        """Resume the timer and return the just-finished pause, in nanoseconds.
 
-        The just-elapsed pause interval is added to the internal start time
-        so that subsequent measurements correctly exclude it.
-
-        Returns:
-            The duration of the just-finished pause, in nanoseconds.
+        The shared worker behind `resume`; subclasses override this hook
+        (not the public `resume`) to react to the pause interval. The
+        just-elapsed pause is added to the internal start time so that
+        subsequent measurements correctly exclude it.
 
         Raises:
             RuntimeError: If the timer has not been started, or is not paused.
@@ -136,6 +135,17 @@ class BaseTimer(ContextDecorator, ABC):
         self._is_paused = False
 
         return pause_duration
+
+    def resume(self) -> None:
+        """Resume the timer after a `pause` call.
+
+        The just-elapsed pause interval is excluded from subsequent
+        measurements.
+
+        Raises:
+            RuntimeError: If the timer has not been started, or is not paused.
+        """
+        self._resume()
 
     @contextmanager
     def suspend(self) -> Iterator[None]:
@@ -288,20 +298,14 @@ class LapTimer(BaseTimer):
 
         return {label: self._apply_ndigits(total) for label, total in grouped.items()}
 
-    def resume(self) -> int:
+    def _resume(self) -> int:
         """Resume the timer and advance the lap baseline.
 
-        Extends `BaseTimer.resume` by also adding the pause duration to
+        Extends `BaseTimer._resume` by also adding the pause duration to
         `_last_time` so that the next lap's `lap_time` excludes the pause
         interval.
-
-        Returns:
-            The duration of the just-finished pause, in nanoseconds.
-
-        Raises:
-            RuntimeError: If the timer has not been started, or is not paused.
         """
-        pause_duration = super().resume()
+        pause_duration = super()._resume()
         self._last_time += pause_duration
 
         return pause_duration

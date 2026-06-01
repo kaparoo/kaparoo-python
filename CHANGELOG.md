@@ -8,7 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-_No entries yet._
+### Changed
+
+- `Timer.resume` / `LapTimer.resume` now return `None` instead of the
+  pause duration in nanoseconds. The value had no consumer (`suspend`
+  discarded it) and leaked a raw-nanosecond figure that broke the
+  timer's `unit` abstraction. Subclasses that need the pause interval
+  override the new protected `_resume` hook instead.
 
 ## [0.3.0] - 2026-05-28
 
