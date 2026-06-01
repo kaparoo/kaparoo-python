@@ -194,6 +194,19 @@ def test_overwrite_true_replaces(tmp_path: Path):
     assert dest.read_text(encoding="utf-8") == "new"
 
 
+def test_overwrite_on_directory_raises(tmp_path: Path):
+    # overwrite=True cannot replace a directory with a file; reject clearly
+    # instead of letting `replace` fail with a platform-specific OSError.
+    dest = tmp_path / "x"
+    dest.mkdir()
+    f = StagedFile(dest, overwrite=True, encoding="utf-8")
+    f.write("data")
+    with pytest.raises(IsADirectoryError):
+        f.commit()
+    assert dest.is_dir()  # untouched
+    f.abort()
+
+
 def test_overwrite_true_when_absent_creates(tmp_path: Path):
     # overwrite=True with no existing destination exercises the "no mode to
     # inherit" branch of commit.
@@ -385,6 +398,20 @@ def test_dir_overwrite_true_replaces_nonempty(tmp_path: Path):
     assert (dest / "new.txt").read_text(encoding="utf-8") == "new"
     assert not (dest / "old.txt").exists()  # old contents replaced
     assert list(tmp_path.glob("*.old")) == []  # backup removed
+
+
+def test_dir_overwrite_on_file_raises(tmp_path: Path):
+    # overwrite=True cannot replace a non-directory with a directory; reject
+    # before the swap so the existing file is left intact.
+    dest = tmp_path / "x"
+    dest.write_text("file", encoding="utf-8")
+    d = StagedDirectory(dest, overwrite=True)
+    (d.workdir / "a.txt").write_text("a", encoding="utf-8")
+    with pytest.raises(NotADirectoryError):
+        d.commit()
+    assert dest.read_text(encoding="utf-8") == "file"  # untouched
+    assert list(tmp_path.glob("*.old")) == []
+    d.abort()
 
 
 def test_dir_overwrite_true_when_absent_creates(tmp_path: Path):

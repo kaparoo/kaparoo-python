@@ -224,6 +224,8 @@ class StagedFile[AnyStrT: (str, bytes)]:
         Raises:
             ValueError: If the writer was already aborted, or if `file` was
                 closed externally (which would make the commit unsafe).
+            IsADirectoryError: If `overwrite` is True and the destination
+                exists but is a directory.
             FileExistsError: If `overwrite` is False and the destination
                 appeared after this writer opened. The staged file is
                 discarded and the existing file is left intact.
@@ -236,6 +238,9 @@ class StagedFile[AnyStrT: (str, bytes)]:
         if self._file.closed:
             msg = "cannot commit: the underlying file was closed externally"
             raise ValueError(msg)
+        if self._overwrite and self._path.is_dir():
+            msg = f"is a directory: {self._path}"
+            raise IsADirectoryError(msg)
         self._file.flush()
         os.fsync(self._file.fileno())
         self._file.close()
@@ -387,14 +392,26 @@ class StagedDirectory:
         Raises:
             ValueError: If the builder was already aborted.
             FileExistsError: If `overwrite` is False and the destination
-                appeared after this builder opened. The staging directory is
-                left for the finalizer to clean up.
+                appeared after this builder opened.
+            NotADirectoryError: If `overwrite` is True and the destination
+                exists but is not a directory.
         """
         if self._committed:
             return self._path
         if not self._finalizer.alive:
             msg = "cannot commit an aborted staged directory"
             raise ValueError(msg)
+        exists = self._path.exists()
+        if exists:
+            if not self._overwrite:
+                msg = (
+                    "directory already exists, pass overwrite=True to replace: "
+                    f"{self._path}"
+                )
+                raise FileExistsError(msg)
+            if not self._path.is_dir():
+                msg = f"not a directory: {self._path}"
+                raise NotADirectoryError(msg)
         mode = _default_dir_mode()
         if self._overwrite:
             # Inherit the replaced directory's mode; fall back to the default
@@ -402,21 +419,16 @@ class StagedDirectory:
             with contextlib.suppress(OSError):
                 mode = stat.S_IMODE(self._path.stat().st_mode)
         self._workdir.chmod(mode)
-        if self._overwrite and self._path.exists():
-            # No portable atomic dir replace: swap the old one aside, move the
-            # staged one in, then remove the old. A failure between the two
-            # renames leaves the previous contents in `<name>.old`.
+        if exists:
+            # Replacing an existing directory. No portable atomic dir replace:
+            # swap the old one aside, move the staged one in, then remove the
+            # old. A failure between the renames leaves the previous contents
+            # in `<name>.old`.
             backup = self._path.with_name(f"{self._workdir.name}.old")
             self._path.rename(backup)
             self._workdir.rename(self._path)
             shutil.rmtree(backup)
         else:
-            if not self._overwrite and self._path.exists():
-                msg = (
-                    "directory already exists, pass overwrite=True to replace: "
-                    f"{self._path}"
-                )
-                raise FileExistsError(msg)
             self._workdir.rename(self._path)
         self._committed = True
         self._finalizer.detach()
