@@ -208,48 +208,48 @@ def test_timer_elapsed_default_is_zero():
 def test_segment_timer_basic(fake_clock):
     # enter=0, A=100ms, B=250ms, C=400ms, finalize=500ms
     fake_clock(0, 100_000_000, 250_000_000, 400_000_000, 500_000_000)
-    with SegmentTimer("ms") as lt:
-        lt.lap("A")
-        lt.lap("B")
-        lt.lap("C")
+    with SegmentTimer("ms") as st:
+        st.lap("A")
+        st.lap("B")
+        st.lap("C")
 
-    assert [r["label"] for r in lt.records] == ["A", "B", "C"]
-    assert lt.records[0]["duration"] == 100.0
-    assert lt.records[0]["total_time"] == 100.0
-    assert lt.records[1]["duration"] == 150.0
-    assert lt.records[1]["total_time"] == 250.0
-    assert lt.records[2]["duration"] == 150.0
-    assert lt.records[2]["total_time"] == 400.0
-    assert lt.elapsed == 500.0
+    assert [r["label"] for r in st.records] == ["A", "B", "C"]
+    assert st.records[0]["duration"] == 100.0
+    assert st.records[0]["total_time"] == 100.0
+    assert st.records[1]["duration"] == 150.0
+    assert st.records[1]["total_time"] == 250.0
+    assert st.records[2]["duration"] == 150.0
+    assert st.records[2]["total_time"] == 400.0
+    assert st.elapsed == 500.0
 
 
 def test_segment_timer_summary_aggregates_duplicates(fake_clock):
     # enter=0, A=100ms, B=250ms, A=350ms, finalize=500ms
     fake_clock(0, 100_000_000, 250_000_000, 350_000_000, 500_000_000)
-    with SegmentTimer("ms") as lt:
-        lt.lap("A")
-        lt.lap("B")
-        lt.lap("A")
-    assert lt.summary == {"A": 200.0, "B": 150.0}
+    with SegmentTimer("ms") as st:
+        st.lap("A")
+        st.lap("B")
+        st.lap("A")
+    assert st.summary == {"A": 200.0, "B": 150.0}
 
 
 def test_segment_timer_summary_excludes_trailing_time(fake_clock):
     # The 400ms gap between the last lap and exit does NOT show up in summary
     # (summary only aggregates explicit duration values).
     fake_clock(0, 100_000_000, 500_000_000)
-    with SegmentTimer("ms") as lt:
-        lt.lap("A")
-    assert lt.summary == {"A": 100.0}
-    assert lt.elapsed == 500.0
+    with SegmentTimer("ms") as st:
+        st.lap("A")
+    assert st.summary == {"A": 100.0}
+    assert st.elapsed == 500.0
 
 
 def test_segment_timer_summary_ndigits_rounds_sum(fake_clock):
     # 100.111111 + 100.111111 = 200.222222 -> rounded to 200.22
     fake_clock(0, 100_111_111, 200_222_222, 300_000_000)
-    with SegmentTimer("ms", ndigits=2) as lt:
-        lt.lap("A")
-        lt.lap("A")
-    assert lt.summary == {"A": 200.22}
+    with SegmentTimer("ms", ndigits=2) as st:
+        st.lap("A")
+        st.lap("A")
+    assert st.summary == {"A": 200.22}
 
 
 def test_segment_timer_invalid_on_same_label():
@@ -259,92 +259,92 @@ def test_segment_timer_invalid_on_same_label():
 
 def test_segment_timer_merge_keeps_label_as_is(fake_clock):
     fake_clock(0, 100, 200, 300)
-    with SegmentTimer() as lt:
-        lt.lap("A")
-        lt.lap("A")
-    assert [r["label"] for r in lt.records] == ["A", "A"]
+    with SegmentTimer() as st:
+        st.lap("A")
+        st.lap("A")
+    assert [r["label"] for r in st.records] == ["A", "A"]
 
 
 def test_segment_timer_reject_raises(fake_clock):
     fake_clock(0, 100, 200)
-    with SegmentTimer(on_same_label="reject") as lt:
-        lt.lap("A")
+    with SegmentTimer(on_same_label="reject") as st:
+        st.lap("A")
         with pytest.raises(ValueError, match="already used"):
-            lt.lap("A")
+            st.lap("A")
 
 
 def test_segment_timer_reject_failed_lap_not_recorded(fake_clock):
     fake_clock(0, 100, 200)
-    with SegmentTimer(on_same_label="reject") as lt:
-        lt.lap("A")
+    with SegmentTimer(on_same_label="reject") as st:
+        st.lap("A")
         with pytest.raises(ValueError, match="already used"):
-            lt.lap("A")  # raises before append
+            st.lap("A")  # raises before append
     # Only the successful lap is in records.
-    assert len(lt.records) == 1
+    assert len(st.records) == 1
 
 
 def test_segment_timer_separate_suffix(fake_clock):
     fake_clock(0, 100, 200, 300, 400)
-    with SegmentTimer(on_same_label="separate") as lt:
-        lt.lap("A")
-        lt.lap("A")
-        lt.lap("A")
-    assert [r["label"] for r in lt.records] == ["A", "A (2)", "A (3)"]
+    with SegmentTimer(on_same_label="separate") as st:
+        st.lap("A")
+        st.lap("A")
+        st.lap("A")
+    assert [r["label"] for r in st.records] == ["A", "A (2)", "A (3)"]
 
 
 def test_segment_timer_pause_resume_excludes_interval(fake_clock):
     # enter=0, A=100ms, pause=200ms, resume=400ms (pause_dur=200ms),
     # B=500ms, finalize=600ms
     fake_clock(0, 100_000_000, 200_000_000, 400_000_000, 500_000_000, 600_000_000)
-    with SegmentTimer("ms") as lt:
-        lt.lap("A")
-        lt.pause()
-        lt.resume()
-        lt.lap("B")
-    assert lt.records[0]["duration"] == 100.0  # 100 - 0
+    with SegmentTimer("ms") as st:
+        st.lap("A")
+        st.pause()
+        st.resume()
+        st.lap("B")
+    assert st.records[0]["duration"] == 100.0  # 100 - 0
     # After resume: _start_time=200, _last_time was 100 -> 100+200=300.
     # B at 500: duration = 500-300 = 200, total = 500-200 = 300.
-    assert lt.records[1]["duration"] == 200.0
-    assert lt.records[1]["total_time"] == 300.0
-    assert lt.elapsed == 400.0  # 600 - 200
+    assert st.records[1]["duration"] == 200.0
+    assert st.records[1]["total_time"] == 300.0
+    assert st.elapsed == 400.0  # 600 - 200
 
 
 def test_segment_timer_lap_while_paused_raises(fake_clock):
     fake_clock(0, 100_000_000, 200_000_000, 300_000_000)
-    with SegmentTimer() as lt:
-        lt.pause()
+    with SegmentTimer() as st:
+        st.pause()
         with pytest.raises(RuntimeError, match="while paused"):
-            lt.lap("X")
+            st.lap("X")
 
 
 def test_segment_timer_reuse_resets_state(fake_clock):
     # First `with` uses 3 ticks (enter, lap, finalize); second uses the same.
     fake_clock(0, 100, 200, 300, 400, 500)
-    lt = SegmentTimer(on_same_label="reject")
-    with lt:
-        lt.lap("X")
-    assert len(lt.records) == 1
-    with lt:
-        lt.lap("X")  # would raise if state weren't reset
-    assert len(lt.records) == 1
+    st = SegmentTimer(on_same_label="reject")
+    with st:
+        st.lap("X")
+    assert len(st.records) == 1
+    with st:
+        st.lap("X")  # would raise if state weren't reset
+    assert len(st.records) == 1
 
 
 def test_segment_timer_empty_run(fake_clock):
     fake_clock(0, 100_000_000)
-    with SegmentTimer("ms") as lt:
+    with SegmentTimer("ms") as st:
         pass
-    assert lt.records == []
-    assert lt.summary == {}
-    assert lt.elapsed == 100.0
+    assert st.records == []
+    assert st.summary == {}
+    assert st.elapsed == 100.0
 
 
 def test_segment_timer_post_exit_lap_raises(fake_clock):
     fake_clock(0, 100)
-    lt = SegmentTimer()
-    with lt:
+    st = SegmentTimer()
+    with st:
         pass
     with pytest.raises(RuntimeError, match="not been started"):
-        lt.lap("X")
+        st.lap("X")
 
 
 def test_segment_record_typeddict_construction():
@@ -354,10 +354,10 @@ def test_segment_record_typeddict_construction():
 
 def test_segment_timer_defaults_are_empty():
     # Documented defaults before the first `__enter__`.
-    lt = SegmentTimer()
-    assert lt.elapsed == 0.0
-    assert lt.records == []
-    assert lt.summary == {}
+    st = SegmentTimer()
+    assert st.elapsed == 0.0
+    assert st.records == []
+    assert st.summary == {}
 
 
 # --- SegmentTimer.measure ---------------------------------------------------
