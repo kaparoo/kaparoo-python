@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("AtomicFile",)
+__all__ = ("StagedFile",)
 
 import contextlib
 import os
@@ -9,6 +9,8 @@ import tempfile
 import weakref
 from pathlib import Path
 from typing import TYPE_CHECKING, cast, overload
+
+from kaparoo.filesystem.utils import reserve_path
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -21,7 +23,7 @@ def _discard(file: IO[str] | IO[bytes], temp_path: Path) -> None:
     """Close `file` and remove the staged temp file (the abort path).
 
     Lives at module level (not bound to the instance) so the
-    `weakref.finalize` registration does not keep the `AtomicFile` alive.
+    `weakref.finalize` registration does not keep the `StagedFile` alive.
     """
     file.close()  # idempotent
     temp_path.unlink(missing_ok=True)
@@ -36,16 +38,16 @@ def _default_file_mode() -> int:
     return 0o666 & ~mask
 
 
-class AtomicFile[AnyStrT: (str, bytes)]:
+class StagedFile[AnyStrT: (str, bytes)]:
     """Write a file safely: stage to a temp file, then commit by atomic move.
 
     Content is written to a temporary file in the destination's own directory
     and moved into place only on `commit`, so a reader never observes a
     half-written file and a failed write leaves any existing file untouched.
 
-    The default is text (`AtomicFile[str]`) with optional `encoding` /
+    The default is text (`StagedFile[str]`) with optional `encoding` /
     `newline`, as with `open`; pass `binary=True` for a binary writer
-    (`AtomicFile[bytes]`). The type parameter follows the mode, so `write`
+    (`StagedFile[bytes]`). The type parameter follows the mode, so `write`
     and `file` are typed `str` or `bytes` accordingly.
 
     Usable as a context manager -- committing on a clean exit and discarding
@@ -55,11 +57,11 @@ class AtomicFile[AnyStrT: (str, bytes)]:
         ```python
         # Text (the default), as a context manager: commit on success,
         # discard on error.
-        with AtomicFile("out/report.json", encoding="utf-8") as f:
+        with StagedFile("out/report.json", encoding="utf-8") as f:
             f.write(json.dumps(data))  # an exception here leaves out/ untouched
 
         # Binary, explicitly: write, then commit (or abort to discard).
-        f = AtomicFile("out/data.bin", binary=True)
+        f = StagedFile("out/data.bin", binary=True)
         f.write(payload)
         f.commit()
         ```
@@ -72,7 +74,7 @@ class AtomicFile[AnyStrT: (str, bytes)]:
 
     The committed file gets the usual umask-based permissions (not the
     restrictive mode of the internal temp file). The destination's parent
-    directory must already exist.
+    directory must already exist, unless `make_parents=True`.
     """
 
     __slots__ = (
@@ -87,10 +89,11 @@ class AtomicFile[AnyStrT: (str, bytes)]:
 
     @overload
     def __init__(
-        self: AtomicFile[str],
+        self: StagedFile[str],
         path: StrPath,
         *,
         overwrite: bool = ...,
+        make_parents: bool = ...,
         binary: Literal[False] = ...,
         encoding: str | None = ...,
         newline: str | None = ...,
@@ -98,10 +101,11 @@ class AtomicFile[AnyStrT: (str, bytes)]:
 
     @overload
     def __init__(
-        self: AtomicFile[bytes],
+        self: StagedFile[bytes],
         path: StrPath,
         *,
         overwrite: bool = ...,
+        make_parents: bool = ...,
         binary: Literal[True],
     ) -> None: ...
 
@@ -110,6 +114,7 @@ class AtomicFile[AnyStrT: (str, bytes)]:
         path: StrPath,
         *,
         overwrite: bool = False,
+        make_parents: bool = False,
         binary: bool = False,
         encoding: str | None = None,
         newline: str | None = None,
@@ -120,6 +125,8 @@ class AtomicFile[AnyStrT: (str, bytes)]:
             path: The destination file path.
             overwrite: Whether to replace an existing file. When False, an
                 existing destination raises immediately. Defaults to False.
+            make_parents: Whether to create the destination's parent directory
+                if it is missing. Defaults to False.
             binary: Whether to write binary (`bytes`) instead of text (`str`).
                 Defaults to False.
             encoding: Text encoding (text mode only); `None` uses the platform
@@ -129,12 +136,10 @@ class AtomicFile[AnyStrT: (str, bytes)]:
 
         Raises:
             FileExistsError: If `overwrite` is False and `path` already exists.
-            FileNotFoundError: If the destination's parent directory is missing.
+            FileNotFoundError: If the parent directory is missing and
+                `make_parents` is False.
         """
-        path = Path(path)
-        if not overwrite and path.exists():
-            msg = f"file already exists, pass overwrite=True to replace: {path}"
-            raise FileExistsError(msg)
+        path = reserve_path(path, exist_ok=overwrite, make_parents=make_parents)
         fd, name = tempfile.mkstemp(
             dir=path.parent, prefix=f".{path.name}.", suffix=".tmp"
         )

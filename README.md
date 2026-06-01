@@ -32,7 +32,7 @@ Each submodule ships its own README with focused examples.
 `pathlib`-based filesystem helpers: existence checks (`*_exists`),
 `ensure_*` validators, `make_dir(s)` (with a destructive `clean` reset
 option), `dir_empty(s)`, `reserve_path(s)` guards for not-yet-existing
-destinations, an `AtomicFile` for safe (atomic) file writes, path
+destinations, a `StagedFile` for safe (atomic) file writes, path
 stringification, and a small exception hierarchy.
 
 ### [`kaparoo.filesystem.search`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/filesystem/search)

@@ -11,7 +11,7 @@
   pre-checks
 - [`utils`](./utils.py) — `stringify_path(s)`, `wrap_path(s)`,
   `reserve_path(s)`
-- [`atomic`](./atomic.py) — `AtomicFile`, a safe (atomic) file writer
+- [`staged`](./staged.py) — `StagedFile`, a safe (atomic) file writer
   usable as a context manager or explicitly
 - [`exceptions`](./exceptions.py) — `DirectoryNotFoundError`, `NotAFileError`
 - [`types`](./types.py) — `StrPath`, `StrPaths` type aliases
@@ -154,28 +154,28 @@ destructive operation here and is named to say so.
 
 ## Safe (atomic) writes
 
-`AtomicFile` saves a file safely: it stages the content in a temporary file
+`StagedFile` saves a file safely: it stages the content in a temporary file
 in the destination's own directory and moves it into place only on commit.
 A reader never sees a half-written file, and a failed write leaves any
 existing file untouched. It works as a context manager — commit on a clean
 exit, discard on an exception — or explicitly, like a file object.
 
 ```python
-from kaparoo.filesystem import AtomicFile
+from kaparoo.filesystem import StagedFile
 
 # Text (the default), as a context manager: commit on success, discard
 # on error.
-with AtomicFile("out/report.json", encoding="utf-8") as f:
+with StagedFile("out/report.json", encoding="utf-8") as f:
     f.write(json.dumps(data))  # an exception here leaves out/ untouched
 
 # Binary mode, explicitly: write, then commit (or abort to discard).
-f = AtomicFile("out/data.bin", binary=True)
+f = StagedFile("out/data.bin", binary=True)
 f.write(payload)
 f.commit()  # returns the destination Path; idempotent
 ```
 
-The default is text (`AtomicFile[str]`) with optional `encoding` / `newline`,
-as with `open`; pass `binary=True` for a binary writer (`AtomicFile[bytes]`).
+The default is text (`StagedFile[str]`) with optional `encoding` / `newline`,
+as with `open`; pass `binary=True` for a binary writer (`StagedFile[bytes]`).
 The type parameter follows the mode, so `write` and `file` are typed `str`
 or `bytes` accordingly.
 
@@ -183,12 +183,12 @@ With `overwrite=False` (the default) an existing destination raises
 `FileExistsError` up front, and the commit creates the file atomically —
 never clobbering a file that appeared meanwhile. With `overwrite=True` the
 destination is replaced in one atomic step, keeping its previous
-permissions. An uncommitted writer (an explicit instance dropped without
-`commit()`) discards its staged file on garbage collection, so a partial
-write is never promoted by accident.
+permissions. Pass `make_parents=True` to create the destination's parent
+directory if it is missing. An uncommitted writer (an explicit instance
+dropped without `commit()`) discards its staged file on garbage collection,
+so a partial write is never promoted by accident.
 
-The committed file gets the usual umask-based permissions, and the
-destination's parent directory must already exist.
+The committed file gets the usual umask-based permissions.
 
 ## Platform notes
 
