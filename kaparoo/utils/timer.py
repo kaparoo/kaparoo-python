@@ -48,6 +48,12 @@ class BaseTimer(ContextDecorator, ABC):
     to record their final result, and may override the `_reset` hook to
     clear per-`with`-block state. Not part of the public API -- prefer
     `Timer` or `LapTimer`.
+
+    An instance is reusable but **not reentrant**: a single instance must
+    not be nested within itself -- including as a decorator on a recursive
+    function -- because it holds one set of per-run state. Re-entering a
+    still-running timer raises `RuntimeError`; use a separate instance per
+    concurrent measurement.
     """
 
     def __init__(self, unit: TimeUnit = "s", *, ndigits: int | None = None) -> None:
@@ -163,6 +169,10 @@ class BaseTimer(ContextDecorator, ABC):
                 self.resume()
 
     def __enter__(self) -> Self:
+        if self._started:
+            msg = "Timer is not reentrant; use a separate instance."
+            raise RuntimeError(msg)
+
         self._start_time = time.perf_counter_ns()
         self._started = True
         self._is_paused = False
@@ -178,8 +188,10 @@ class BaseTimer(ContextDecorator, ABC):
         if self._is_paused:
             self.resume()
 
-        self._finalize()
-        self._started = False
+        try:
+            self._finalize()
+        finally:
+            self._started = False
 
 
 class Timer(BaseTimer):

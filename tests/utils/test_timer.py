@@ -168,6 +168,16 @@ def test_timer_reuse(fake_clock):
     assert t.elapsed == 50.0
 
 
+def test_timer_reentrant_use_raises(fake_clock):
+    # Re-entering a still-running instance must fail loudly rather than
+    # silently corrupting the outer measurement.
+    fake_clock(0, 100_000_000)
+    t = Timer("ms")
+    with t, pytest.raises(RuntimeError, match="not reentrant"):  # noqa: SIM117
+        with t:
+            pass
+
+
 def test_timer_as_decorator(fake_clock):
     fake_clock(0, 100_000_000)
     t = Timer("ms")
