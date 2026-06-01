@@ -121,6 +121,33 @@ def test_file_property_exposes_handle(tmp_path: Path):
     assert dest.read_bytes() == b"via handle"
 
 
+# --- text mode -------------------------------------------------------------
+
+
+def test_text_mode_writes_str(tmp_path: Path):
+    dest = tmp_path / "report.txt"
+    with AtomicWriter(dest, text=True, encoding="utf-8") as f:
+        assert f.write("héllo\n") == len("héllo\n")
+        f.write("world")
+    assert dest.read_text(encoding="utf-8") == "héllo\nworld"
+
+
+def test_text_mode_explicit_commit(tmp_path: Path):
+    dest = tmp_path / "a.txt"
+    f = AtomicWriter(dest, text=True, encoding="utf-8")
+    f.write("data")
+    f.commit()
+    assert dest.read_text(encoding="utf-8") == "data"
+
+
+def test_text_mode_overwrite(tmp_path: Path):
+    dest = tmp_path / "a.txt"
+    dest.write_text("old", encoding="utf-8")
+    with AtomicWriter(dest, text=True, overwrite=True, encoding="utf-8") as f:
+        f.write("new")
+    assert dest.read_text(encoding="utf-8") == "new"
+
+
 # --- overwrite semantics ---------------------------------------------------
 
 

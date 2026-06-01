@@ -163,15 +163,21 @@ exit, discard on an exception — or explicitly, like a file object.
 ```python
 from kaparoo.filesystem import AtomicWriter
 
-# Context manager: committed on success, discarded on error.
+# Binary (the default), as a context manager: commit on success, discard
+# on error.
 with AtomicWriter("out/data.bin") as f:
     f.write(payload)  # an exception here leaves out/ untouched
 
-# Explicit: write, then commit (or abort to discard).
-f = AtomicWriter("out/data.bin", overwrite=True)
-f.write(payload)
+# Text mode, explicitly: write, then commit (or abort to discard).
+f = AtomicWriter("out/report.json", text=True, encoding="utf-8")
+f.write(json.dumps(data))
 f.commit()  # returns the destination Path; idempotent
 ```
+
+The default is binary (`AtomicWriter[bytes]`); pass `text=True` for a text
+writer (`AtomicWriter[str]`) with optional `encoding` / `newline`. The type
+parameter follows the mode, so `write` and `file` are typed `bytes` or
+`str` accordingly.
 
 With `overwrite=False` (the default) an existing destination raises
 `FileExistsError` up front, and the commit creates the file atomically —
@@ -181,10 +187,8 @@ permissions. An uncommitted writer (an explicit instance dropped without
 `commit()`) discards its staged file on garbage collection, so a partial
 write is never promoted by accident.
 
-The staged file is binary (`wb`); for text, encode before writing or wrap
-`f.file` (the underlying handle). The committed file gets the usual
-umask-based permissions, and the destination's parent directory must
-already exist.
+The committed file gets the usual umask-based permissions, and the
+destination's parent directory must already exist.
 
 ## Platform notes
 

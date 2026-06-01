@@ -16,10 +16,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and a failed write leaves any existing file untouched. Usable as a context
   manager (commit on clean exit, discard on exception) *or* explicitly like
   a file object (`write` / `seek` / `tell` / `flush`, plus `commit` /
-  `abort`, `path`, `committed`, and the underlying `file`). `overwrite=False`
-  (default) fails fast on an existing destination and creates the file
-  atomically; `overwrite=True` replaces it, keeping its permissions. An
-  uncommitted writer discards its staged file on garbage collection.
+  `abort`, `path`, `committed`, and the underlying `file`). Binary by default
+  (`AtomicWriter[bytes]`); `text=True` gives a text writer
+  (`AtomicWriter[str]`) with optional `encoding` / `newline`, the type
+  parameter tracking the mode. `overwrite=False` (default) fails fast on an
+  existing destination and creates the file atomically; `overwrite=True`
+  replaces it, keeping its permissions. An uncommitted writer discards its
+  staged file on garbage collection.
 - `kaparoo.filesystem.utils.reserve_path` / `reserve_paths`: a guard (and
   its bulk form) for a path that should not yet exist, returning it
   (optionally stringified) so the caller can create something there.

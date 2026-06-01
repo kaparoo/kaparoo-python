@@ -8,16 +8,16 @@ import stat
 import tempfile
 import weakref
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast, overload
 
 if TYPE_CHECKING:
     from types import TracebackType
-    from typing import IO, Self
+    from typing import IO, Literal, Self
 
     from kaparoo.filesystem.types import StrPath
 
 
-def _discard(file: IO[bytes], temp_path: Path) -> None:
+def _discard(file: IO[str] | IO[bytes], temp_path: Path) -> None:
     """Close `file` and remove the staged temp file (the abort path).
 
     Lives at module level (not bound to the instance) so the
@@ -36,25 +36,30 @@ def _default_file_mode() -> int:
     return 0o666 & ~mask
 
 
-class AtomicWriter:
+class AtomicWriter[AnyStrT: (str, bytes)]:
     """Write a file safely: stage to a temp file, then commit by atomic move.
 
     Content is written to a temporary file in the destination's own directory
     and moved into place only on `commit`, so a reader never observes a
     half-written file and a failed write leaves any existing file untouched.
 
+    The default is binary (`AtomicWriter[bytes]`); pass `text=True` for a text
+    writer (`AtomicWriter[str]`) with optional `encoding` / `newline`. The
+    type parameter follows the mode, so `write` and `file` are typed `bytes`
+    or `str` accordingly.
+
     Usable as a context manager -- committing on a clean exit and discarding
     on an exception -- or explicitly, like a file object:
 
     Example:
         ```python
-        # Context manager: commit on success, discard on error.
+        # Binary, as a context manager: commit on success, discard on error.
         with AtomicWriter("out/data.bin") as f:
             f.write(payload)  # an exception here leaves out/ untouched
 
-        # Explicit: write, then commit (or abort to discard).
-        f = AtomicWriter("out/data.bin", overwrite=True)
-        f.write(payload)
+        # Text, explicitly: write, then commit (or abort to discard).
+        f = AtomicWriter("out/report.json", text=True, encoding="utf-8")
+        f.write(json.dumps(data))
         f.commit()
         ```
 
@@ -62,8 +67,7 @@ class AtomicWriter:
     fail-fast `FileExistsError`, and the commit creates the file atomically --
     it never clobbers a file that appeared meanwhile. With `overwrite=True`
     the destination is atomically replaced, inheriting its previous
-    permissions. The staged file is binary (`wb`); for text, encode before
-    writing.
+    permissions.
 
     The committed file gets the usual umask-based permissions (not the
     restrictive mode of the internal temp file). The destination's parent
@@ -80,13 +84,47 @@ class AtomicWriter:
         "_temp_path",
     )
 
-    def __init__(self, path: StrPath, *, overwrite: bool = False) -> None:
+    @overload
+    def __init__(
+        self: AtomicWriter[bytes],
+        path: StrPath,
+        *,
+        overwrite: bool = ...,
+        text: Literal[False] = ...,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: AtomicWriter[str],
+        path: StrPath,
+        *,
+        overwrite: bool = ...,
+        text: Literal[True],
+        encoding: str | None = ...,
+        newline: str | None = ...,
+    ) -> None: ...
+
+    def __init__(
+        self,
+        path: StrPath,
+        *,
+        overwrite: bool = False,
+        text: bool = False,
+        encoding: str | None = None,
+        newline: str | None = None,
+    ) -> None:
         """Open a staged writer for `path`.
 
         Args:
             path: The destination file path.
             overwrite: Whether to replace an existing file. When False, an
                 existing destination raises immediately. Defaults to False.
+            text: Whether to write text (`str`) instead of binary (`bytes`).
+                Defaults to False.
+            encoding: Text encoding (text mode only); `None` uses the platform
+                default, as with `open`. Defaults to None.
+            newline: Newline handling (text mode only), as with `open`.
+                Defaults to None.
 
         Raises:
             FileExistsError: If `overwrite` is False and `path` already exists.
@@ -103,8 +141,15 @@ class AtomicWriter:
         self._overwrite = overwrite
         self._committed = False
         self._temp_path = Path(name)
-        self._file: IO[bytes] = os.fdopen(fd, "wb")
-        self._finalizer = weakref.finalize(self, _discard, self._file, self._temp_path)
+        raw = (
+            os.fdopen(fd, "w", encoding=encoding, newline=newline)
+            if text
+            else os.fdopen(fd, "wb")
+        )
+        self._file = cast("IO[AnyStrT]", raw)
+        self._finalizer = weakref.finalize(
+            self, _discard, cast("IO[str] | IO[bytes]", self._file), self._temp_path
+        )
 
     @property
     def path(self) -> Path:
@@ -112,8 +157,8 @@ class AtomicWriter:
         return self._path
 
     @property
-    def file(self) -> IO[bytes]:
-        """The underlying open binary file object (full file API)."""
+    def file(self) -> IO[AnyStrT]:
+        """The underlying open file object (full file API)."""
         return self._file
 
     @property
@@ -121,8 +166,8 @@ class AtomicWriter:
         """Whether the staged content has been committed to `path`."""
         return self._committed
 
-    def write(self, data: bytes, /) -> int:
-        """Write `data` to the staged file and return the bytes written."""
+    def write(self, data: AnyStrT, /) -> int:
+        """Write `data` to the staged file and return the units written."""
         return self._file.write(data)
 
     def flush(self) -> None:
