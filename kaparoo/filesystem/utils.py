@@ -1,6 +1,13 @@
 from __future__ import annotations
 
-__all__ = ("stringify_path", "stringify_paths", "wrap_path", "wrap_paths")
+__all__ = (
+    "reserve_path",
+    "reserve_paths",
+    "stringify_path",
+    "stringify_paths",
+    "wrap_path",
+    "wrap_paths",
+)
 
 import os
 import platform
@@ -205,4 +212,140 @@ def wrap_paths(
         ValueError: If `append` is given and is an absolute path.
     """
     paths = [wrap_path(path, prepend=prepend, append=append) for path in paths]
+    return stringify_paths(paths) if stringify else paths
+
+
+@overload
+def reserve_path(
+    path: StrPath,
+    *,
+    exist_ok: bool = False,
+    make_parents: bool = False,
+    stringify: Literal[False] = False,
+) -> Path: ...
+
+
+@overload
+def reserve_path(
+    path: StrPath,
+    *,
+    exist_ok: bool = False,
+    make_parents: bool = False,
+    stringify: Literal[True],
+) -> str: ...
+
+
+@overload
+def reserve_path(
+    path: StrPath,
+    *,
+    exist_ok: bool = False,
+    make_parents: bool = False,
+    stringify: bool,
+) -> Path | str: ...
+
+
+def reserve_path(
+    path: StrPath,
+    *,
+    exist_ok: bool = False,
+    make_parents: bool = False,
+    stringify: bool = False,
+) -> Path | str:
+    """Reserve a path for creation: assert it is free, and return it.
+
+    Guards a destination before something is created there. The target is
+    never created or deleted -- only checked, and (with `make_parents`)
+    given an existing parent directory -- so the caller goes on to create
+    the target itself.
+
+    `exist_ok` mirrors `make_dir` / `Path.mkdir`: when True an existing path
+    is returned instead of raising, but nothing is removed, so a later write
+    still overwrites the target on its own. For a directory destination,
+    prefer `make_dir(..., exist_ok=...)`, which both guards and creates; for
+    an exclusive file create, `open(path, "x")` raises the same
+    `FileExistsError` directly.
+
+    Args:
+        path: The path that should not yet exist.
+        exist_ok: Whether to allow an already-existing path. Defaults to False.
+        make_parents: Whether to create the parent directory (with
+            `parents=True`) if it is missing. Defaults to False.
+        stringify: Whether to return the path as a string. Defaults to False.
+
+    Returns:
+        The path as a Path object or a string, depending on `stringify`.
+
+    Raises:
+        FileExistsError: If the path exists and `exist_ok` is False.
+    """
+    if (path := Path(path)).exists() and not exist_ok:
+        msg = f"path already exists: {path}"
+        raise FileExistsError(msg)
+    if make_parents:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    return stringify_path(path) if stringify else path
+
+
+@overload
+def reserve_paths(
+    paths: StrPaths,
+    *,
+    exist_ok: bool = False,
+    make_parents: bool = False,
+    stringify: Literal[False] = False,
+) -> Sequence[Path]: ...
+
+
+@overload
+def reserve_paths(
+    paths: StrPaths,
+    *,
+    exist_ok: bool = False,
+    make_parents: bool = False,
+    stringify: Literal[True],
+) -> Sequence[str]: ...
+
+
+@overload
+def reserve_paths(
+    paths: StrPaths,
+    *,
+    exist_ok: bool = False,
+    make_parents: bool = False,
+    stringify: bool,
+) -> Sequence[Path] | Sequence[str]: ...
+
+
+def reserve_paths(
+    paths: StrPaths,
+    *,
+    exist_ok: bool = False,
+    make_parents: bool = False,
+    stringify: bool = False,
+) -> Sequence[Path] | Sequence[str]:
+    """Reserve multiple paths for creation; the bulk form of `reserve_path`.
+
+    Each path is checked with the same `exist_ok` / `make_parents` policy.
+    The check is fail-fast: the first existing path raises and any
+    `make_parents` side effects from earlier paths are left in place (no
+    rollback), matching `make_dirs`. To resolve entries against a shared
+    base directory, compose with `wrap_paths(paths, prepend=root)` first.
+
+    Args:
+        paths: The paths that should not yet exist.
+        exist_ok: Whether to allow already-existing paths. Defaults to False.
+        make_parents: Whether to create each path's parent directory if it is
+            missing. Defaults to False.
+        stringify: Whether to return the paths as strings. Defaults to False.
+
+    Returns:
+        The paths as Path objects or strings, depending on `stringify`.
+
+    Raises:
+        FileExistsError: If any path exists and `exist_ok` is False.
+    """
+    paths = [
+        reserve_path(p, exist_ok=exist_ok, make_parents=make_parents) for p in paths
+    ]
     return stringify_paths(paths) if stringify else paths

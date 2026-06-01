@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 from kaparoo.filesystem.utils import (
+    reserve_path,
+    reserve_paths,
     stringify_path,
     stringify_paths,
     wrap_path,
@@ -122,3 +124,84 @@ def test_wrap_paths_rejects_absolute(
         wrap_paths([cwd_path], prepend=tmp_path)
     with pytest.raises(ValueError, match="cannot append an absolute path"):
         wrap_paths(tmp_dirnames, append=cwd_path)
+
+
+# --- reserve_path ----------------------------------------------------------
+
+
+@pytest.mark.parametrize("input_as_str", (True, False))
+@pytest.mark.parametrize("stringify", (True, False))
+def test_reserve_path_returns_expected_type(
+    tmp_path: Path, input_as_str: bool, stringify: bool
+):
+    target = tmp_path / "fresh"
+    target_str = _stringify(target)
+    path_in: str | Path = target_str if input_as_str else target
+    expected: str | Path = target_str if stringify else target
+
+    result = reserve_path(path_in, stringify=stringify)
+    assert isinstance(result, str if stringify else type(target))
+    assert result == expected
+
+
+def test_reserve_path_raises_when_present(tmp_file: Path, tmp_dir: Path):
+    # Any existing entry conflicts, regardless of its kind.
+    for existing in (tmp_file, tmp_dir):
+        with pytest.raises(FileExistsError, match="path already exists"):
+            reserve_path(existing)
+
+
+def test_reserve_path_exist_ok_permits_existing_non_destructively(
+    tmp_file: Path, tmp_dir: Path
+):
+    # Type-agnostic: an existing file *or* directory is permitted and left
+    # untouched.
+    for existing in (tmp_file, tmp_dir):
+        result = reserve_path(existing, exist_ok=True)
+        assert result == existing
+        assert existing.exists()  # nothing is deleted
+
+
+def test_reserve_path_make_parents_creates_parent_only(tmp_path: Path):
+    target = tmp_path / "nested" / "deeper" / "data.bin"
+    assert not target.parent.exists()
+
+    result = reserve_path(target, make_parents=True)
+    assert result == target
+    assert target.parent.is_dir()
+    assert not target.exists()  # only the parent is created, not the target
+
+
+def test_reserve_path_make_parents_noop_when_parent_exists(tmp_path: Path):
+    # An existing parent makes `make_parents` a no-op (exist_ok=True).
+    target = tmp_path / "data.bin"
+    assert reserve_path(target, make_parents=True) == target
+    assert not target.exists()
+
+
+# --- reserve_paths ---------------------------------------------------------
+
+
+def test_reserve_paths_returns_free_paths(tmp_path: Path):
+    targets = [tmp_path / "a.bin", tmp_path / "b.bin"]
+    assert reserve_paths(targets) == targets
+
+
+def test_reserve_paths_stringify(tmp_path: Path):
+    targets = [tmp_path / "a.bin", tmp_path / "b.bin"]
+    result = reserve_paths(targets, stringify=True)
+    assert result == [_stringify(p) for p in targets]
+    assert all(isinstance(p, str) for p in result)
+
+
+def test_reserve_paths_raises_when_any_present(tmp_path: Path, tmp_file: Path):
+    with pytest.raises(FileExistsError, match="path already exists"):
+        reserve_paths([tmp_path / "fresh.bin", tmp_file])
+
+
+def test_reserve_paths_exist_ok_and_make_parents(tmp_path: Path, tmp_file: Path):
+    fresh = tmp_path / "nested" / "new.bin"
+    result = reserve_paths([tmp_file, fresh], exist_ok=True, make_parents=True)
+    assert result == [tmp_file, fresh]
+    assert tmp_file.exists()  # exist_ok is non-destructive
+    assert fresh.parent.is_dir()

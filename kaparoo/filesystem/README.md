@@ -9,7 +9,8 @@
 - [`directory`](./directory.py) — `make_dir(s)`, `dir_empty(s)` /
   `dir_not_empty(s)` with validation, plus `_unsafe` variants that skip
   pre-checks
-- [`utils`](./utils.py) — `stringify_path(s)`, `wrap_path(s)`
+- [`utils`](./utils.py) — `stringify_path(s)`, `wrap_path(s)`,
+  `reserve_path(s)`
 - [`exceptions`](./exceptions.py) — `DirectoryNotFoundError`, `NotAFileError`
 - [`types`](./types.py) — `StrPath`, `StrPaths` type aliases
 - [`search/`](./search/) — composable filesystem search (own README)
@@ -64,6 +65,12 @@ from kaparoo.filesystem import (
 
 cache_dir = make_dir("var/cache", exist_ok=True)
 
+# Start from a clean slate: wipe an existing directory's contents and
+# recreate it empty. Destructive, and only ever wipes a *directory* (a
+# non-directory at the path still raises). `clean=True` makes `exist_ok`
+# moot, since the directory is removed and remade.
+run_dir = make_dir("out/run_42", clean=True)
+
 # Bulk creation with a shared root
 make_dirs(["logs", "tmp"], root="var", exist_ok=True)
 
@@ -106,6 +113,42 @@ stringify_paths(["data/a.txt", "data/b.txt"], after="data")  # ["a.txt", "b.txt"
 # Compose paths without joining manually
 wrap_path("logs", prepend="var", append="server.log")  # var/logs/server.log
 ```
+
+## Reserving a destination
+
+`reserve_path` guards a path that should *not* yet exist, so you don't
+clobber something when creating a new file or directory there. It only
+checks (and optionally creates the parent) — it never creates or deletes
+the target itself.
+
+```python
+from kaparoo.filesystem import reserve_path
+
+# Raises FileExistsError if out/run.json exists; otherwise creates the
+# missing parent directory and returns the path ready to write to.
+out = reserve_path("out/run.json", make_parents=True)
+out.write_text("{}")
+
+# `exist_ok` (named as in make_dir / Path.mkdir) is a non-destructive
+# bypass: it suppresses the conflict but deletes nothing, so a later write
+# overwrites in place.
+out = reserve_path("out/run.json", exist_ok=True)
+
+# `reserve_paths` is the bulk form (fail-fast on the first conflict). It
+# takes no `root`; compose with `wrap_paths` to share a base directory.
+from kaparoo.filesystem import reserve_paths, wrap_paths
+a, b = reserve_paths(wrap_paths(["a.bin", "b.bin"], prepend="out"))
+```
+
+For a *directory* destination, `make_dir(..., exist_ok=...)` both guards
+and creates it; for an exclusive *file* create, the stdlib `open(path,
+"x")` raises the same `FileExistsError` directly. Reach for `reserve_path`
+when you want the check (and parent setup) decoupled from the creation.
+
+`reserve_path` is intentionally **non-destructive** — it never removes an
+existing target. To start a directory from a clean slate, use the
+`clean` option on `make_dir` / `make_dirs` (see below), which is the only
+destructive operation here and is named to say so.
 
 ## Platform notes
 

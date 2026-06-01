@@ -14,6 +14,7 @@ __all__ = (
 )
 
 import os
+import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, overload
 
@@ -43,6 +44,7 @@ def make_dir(
     *,
     mode: int = 0o777,
     exist_ok: bool = False,
+    clean: bool = False,
     stringify: Literal[False] = False,
 ) -> Path: ...
 
@@ -53,6 +55,7 @@ def make_dir(
     *,
     mode: int = 0o777,
     exist_ok: bool = False,
+    clean: bool = False,
     stringify: Literal[True],
 ) -> str: ...
 
@@ -63,6 +66,7 @@ def make_dir(
     *,
     mode: int = 0o777,
     exist_ok: bool = False,
+    clean: bool = False,
     stringify: bool,
 ) -> Path | str: ...
 
@@ -72,6 +76,7 @@ def make_dir(
     *,
     mode: int = 0o777,
     exist_ok: bool = False,
+    clean: bool = False,
     stringify: bool = False,
 ) -> Path | str:
     """Recursively create a directory.
@@ -80,6 +85,11 @@ def make_dir(
         path: The directory path to create.
         mode: The mode to use when creating the directory. Defaults to 0o777.
         exist_ok: Whether to suppress OSError if the path already exists.
+            Defaults to False.
+        clean: Whether to recreate the directory empty when it already exists,
+            removing its contents first. Only an existing *directory* is wiped;
+            a non-directory still raises. Because the directory is removed and
+            remade, `clean=True` makes `exist_ok` moot. **Destructive.**
             Defaults to False.
         stringify: Whether to return the path as a string. Defaults to False.
 
@@ -91,13 +101,16 @@ def make_dir(
         ValueError: If `mode` is outside the range 0o1-0o7777
             (not checked on Windows, where the mode is ignored).
         NotADirectoryError: If the path exists but is not a directory.
-        OSError: If `exist_ok` is False and the path already exists.
+        OSError: If `exist_ok` is False, `clean` is False, and the path
+            already exists.
     """
     _validate_mode(mode)
     path = Path(path)
     if path.exists() and not path.is_dir():
         msg = f"not a directory: {path}"
         raise NotADirectoryError(msg)
+    if clean and path.is_dir():
+        shutil.rmtree(path)
     path.mkdir(mode=mode, parents=True, exist_ok=exist_ok)
     return stringify_path(path) if stringify else path
 
@@ -109,6 +122,7 @@ def make_dirs(
     root: StrPath | None = None,
     mode: int = 0o777,
     exist_ok: bool = False,
+    clean: bool = False,
     stringify: Literal[False] = False,
 ) -> Sequence[Path]: ...
 
@@ -120,6 +134,7 @@ def make_dirs(
     root: StrPath | None = None,
     mode: int = 0o777,
     exist_ok: bool = False,
+    clean: bool = False,
     stringify: Literal[True],
 ) -> Sequence[str]: ...
 
@@ -131,6 +146,7 @@ def make_dirs(
     root: StrPath | None = None,
     mode: int = 0o777,
     exist_ok: bool = False,
+    clean: bool = False,
     stringify: bool,
 ) -> Sequence[Path] | Sequence[str]: ...
 
@@ -141,6 +157,7 @@ def make_dirs(
     root: StrPath | None = None,
     mode: int = 0o777,
     exist_ok: bool = False,
+    clean: bool = False,
     stringify: bool = False,
 ) -> Sequence[Path] | Sequence[str]:
     """Recursively create directories.
@@ -150,6 +167,11 @@ def make_dirs(
         root: The root directory to prepend to each path. Defaults to None.
         mode: The mode to use when creating the directories. Defaults to 0o777.
         exist_ok: Whether to suppress OSError if any of the paths already exist.
+            Defaults to False.
+        clean: Whether to recreate each directory empty when it already exists,
+            removing its contents first. Only an existing *directory* is wiped;
+            a non-directory still raises. Because the directory is removed and
+            remade, `clean=True` makes `exist_ok` moot. **Destructive.**
             Defaults to False.
         stringify: Whether to return the paths as strings. Defaults to False.
 
@@ -163,13 +185,16 @@ def make_dirs(
         DirectoryNotFoundError: If `root` is provided and does not exist.
         NotADirectoryError: If `root` is provided and is not a directory.
         ValueError: If `root` is provided and any of the paths are absolute.
-        OSError: If `exist_ok` is False and any of the paths already exist.
+        OSError: If `exist_ok` is False, `clean` is False, and any of the
+            paths already exist.
         OSError: If any of the paths are not directories.
     """
     _validate_mode(mode)
     paths = _join_root_if_provided(paths, root)
     directories = [Path(p) for p in paths]
     for directory in directories:
+        if clean and directory.is_dir():
+            shutil.rmtree(directory)
         directory.mkdir(mode=mode, parents=True, exist_ok=exist_ok)
     return stringify_paths(directories) if stringify else directories
 

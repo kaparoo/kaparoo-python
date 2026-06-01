@@ -26,6 +26,8 @@ __all__ = (
     "make_dirs",
     "path_exists",
     "paths_exist",
+    "reserve_path",
+    "reserve_paths",
     "search_dirs",
     "search_files",
     "search_paths",
@@ -74,6 +76,8 @@ from kaparoo.filesystem.search import (
     search_paths,
 )
 from kaparoo.filesystem.utils import (
+    reserve_path,
+    reserve_paths,
     stringify_path,
     stringify_paths,
     wrap_path,

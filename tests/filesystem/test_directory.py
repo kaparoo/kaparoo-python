@@ -55,6 +55,39 @@ def test_make_dir_invalid_mode(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
             make_dir(tmp_path / "new", mode=bad_mode)
 
 
+def test_make_dir_clean_wipes_existing_contents(tmp_dir: Path):
+    # `clean=True` removes existing contents and recreates the directory.
+    (tmp_dir / "stale.txt").touch()
+    (tmp_dir / "sub").mkdir()
+    (tmp_dir / "sub" / "nested.txt").touch()
+
+    result = make_dir(tmp_dir, clean=True)
+    assert result.is_dir()
+    assert not any(result.iterdir())  # emptied
+
+
+def test_make_dir_clean_creates_when_missing(tmp_path: Path):
+    # `clean=True` on a missing path just creates it (nothing to wipe).
+    target = tmp_path / "fresh"
+    result = make_dir(target, clean=True)
+    assert result.is_dir()
+
+
+def test_make_dir_clean_makes_exist_ok_moot(tmp_dir: Path):
+    # An existing dir would raise with the default exist_ok=False, but
+    # `clean=True` recreates it instead of raising.
+    (tmp_dir / "stale.txt").touch()
+    result = make_dir(tmp_dir, clean=True)  # exist_ok left at default False
+    assert not any(result.iterdir())
+
+
+def test_make_dir_clean_still_rejects_non_directory(tmp_file: Path):
+    # `clean` never deletes a non-directory occupying the path.
+    with pytest.raises(NotADirectoryError):
+        make_dir(tmp_file, clean=True)
+    assert tmp_file.exists()  # the file is untouched
+
+
 # --- make_dirs -------------------------------------------------------------
 
 
@@ -91,6 +124,20 @@ def test_make_dirs_exist_ok_branches(tmp_dirs: list[Path]):
 
     with pytest.raises(FileExistsError):
         make_dirs(tmp_dirs)
+
+
+def test_make_dirs_clean_wipes_each_existing(tmp_path: Path, tmp_dirs: list[Path]):
+    for d in tmp_dirs:
+        (d / "stale.txt").touch()
+
+    result = make_dirs(tmp_dirs, clean=True)
+    assert all(d.is_dir() and not any(d.iterdir()) for d in result)
+
+
+def test_make_dirs_clean_creates_missing(tmp_path: Path):
+    targets = [tmp_path / "x", tmp_path / "y"]
+    result = make_dirs(targets, clean=True)
+    assert all(d.is_dir() for d in result)
 
 
 @pytest.mark.skipif(

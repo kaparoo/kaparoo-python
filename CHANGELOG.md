@@ -10,6 +10,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `kaparoo.filesystem.utils.reserve_path` / `reserve_paths`: a guard (and
+  its bulk form) for a path that should not yet exist, returning it
+  (optionally stringified) so the caller can create something there.
+  `exist_ok` (named as in `make_dir` / `Path.mkdir`) is a
+  **non-destructive** bypass (nothing is deleted) and `make_parents`
+  creates the parent directory when missing.
+  Raises `FileExistsError` on conflict. `reserve_paths` is fail-fast and
+  takes no `root` (compose with `wrap_paths(prepend=...)`). For directory
+  destinations prefer `make_dir(exist_ok=...)`; for exclusive file creation
+  the stdlib `open(path, "x")` suffices.
+- `clean` option on `make_dir` / `make_dirs`: when an existing *directory*
+  is present, remove its contents and recreate it empty (a fresh slate).
+  **Destructive**, and only ever wipes a directory -- a non-directory at
+  the path still raises `NotADirectoryError`. `clean=True` makes `exist_ok`
+  moot, since the directory is removed and remade.
 - `kaparoo.filesystem` directory checks `dir_not_empty`,
   `dir_not_empty_unsafe`, `dirs_not_empty`, and `dirs_not_empty_unsafe`,
   the negated counterparts of the `dir_empty` series. `dirs_not_empty`
