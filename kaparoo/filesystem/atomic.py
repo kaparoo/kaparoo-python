@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("AtomicWriter",)
+__all__ = ("AtomicFile",)
 
 import contextlib
 import os
@@ -21,7 +21,7 @@ def _discard(file: IO[str] | IO[bytes], temp_path: Path) -> None:
     """Close `file` and remove the staged temp file (the abort path).
 
     Lives at module level (not bound to the instance) so the
-    `weakref.finalize` registration does not keep the `AtomicWriter` alive.
+    `weakref.finalize` registration does not keep the `AtomicFile` alive.
     """
     file.close()  # idempotent
     temp_path.unlink(missing_ok=True)
@@ -36,30 +36,31 @@ def _default_file_mode() -> int:
     return 0o666 & ~mask
 
 
-class AtomicWriter[AnyStrT: (str, bytes)]:
+class AtomicFile[AnyStrT: (str, bytes)]:
     """Write a file safely: stage to a temp file, then commit by atomic move.
 
     Content is written to a temporary file in the destination's own directory
     and moved into place only on `commit`, so a reader never observes a
     half-written file and a failed write leaves any existing file untouched.
 
-    The default is binary (`AtomicWriter[bytes]`); pass `text=True` for a text
-    writer (`AtomicWriter[str]`) with optional `encoding` / `newline`. The
-    type parameter follows the mode, so `write` and `file` are typed `bytes`
-    or `str` accordingly.
+    The default is text (`AtomicFile[str]`) with optional `encoding` /
+    `newline`, as with `open`; pass `binary=True` for a binary writer
+    (`AtomicFile[bytes]`). The type parameter follows the mode, so `write`
+    and `file` are typed `str` or `bytes` accordingly.
 
     Usable as a context manager -- committing on a clean exit and discarding
     on an exception -- or explicitly, like a file object:
 
     Example:
         ```python
-        # Binary, as a context manager: commit on success, discard on error.
-        with AtomicWriter("out/data.bin") as f:
-            f.write(payload)  # an exception here leaves out/ untouched
+        # Text (the default), as a context manager: commit on success,
+        # discard on error.
+        with AtomicFile("out/report.json", encoding="utf-8") as f:
+            f.write(json.dumps(data))  # an exception here leaves out/ untouched
 
-        # Text, explicitly: write, then commit (or abort to discard).
-        f = AtomicWriter("out/report.json", text=True, encoding="utf-8")
-        f.write(json.dumps(data))
+        # Binary, explicitly: write, then commit (or abort to discard).
+        f = AtomicFile("out/data.bin", binary=True)
+        f.write(payload)
         f.commit()
         ```
 
@@ -86,22 +87,22 @@ class AtomicWriter[AnyStrT: (str, bytes)]:
 
     @overload
     def __init__(
-        self: AtomicWriter[bytes],
+        self: AtomicFile[str],
         path: StrPath,
         *,
         overwrite: bool = ...,
-        text: Literal[False] = ...,
+        binary: Literal[False] = ...,
+        encoding: str | None = ...,
+        newline: str | None = ...,
     ) -> None: ...
 
     @overload
     def __init__(
-        self: AtomicWriter[str],
+        self: AtomicFile[bytes],
         path: StrPath,
         *,
         overwrite: bool = ...,
-        text: Literal[True],
-        encoding: str | None = ...,
-        newline: str | None = ...,
+        binary: Literal[True],
     ) -> None: ...
 
     def __init__(
@@ -109,7 +110,7 @@ class AtomicWriter[AnyStrT: (str, bytes)]:
         path: StrPath,
         *,
         overwrite: bool = False,
-        text: bool = False,
+        binary: bool = False,
         encoding: str | None = None,
         newline: str | None = None,
     ) -> None:
@@ -119,7 +120,7 @@ class AtomicWriter[AnyStrT: (str, bytes)]:
             path: The destination file path.
             overwrite: Whether to replace an existing file. When False, an
                 existing destination raises immediately. Defaults to False.
-            text: Whether to write text (`str`) instead of binary (`bytes`).
+            binary: Whether to write binary (`bytes`) instead of text (`str`).
                 Defaults to False.
             encoding: Text encoding (text mode only); `None` uses the platform
                 default, as with `open`. Defaults to None.
@@ -142,9 +143,9 @@ class AtomicWriter[AnyStrT: (str, bytes)]:
         self._committed = False
         self._temp_path = Path(name)
         raw = (
-            os.fdopen(fd, "w", encoding=encoding, newline=newline)
-            if text
-            else os.fdopen(fd, "wb")
+            os.fdopen(fd, "wb")
+            if binary
+            else os.fdopen(fd, "w", encoding=encoding, newline=newline)
         )
         self._file = cast("IO[AnyStrT]", raw)
         self._finalizer = weakref.finalize(

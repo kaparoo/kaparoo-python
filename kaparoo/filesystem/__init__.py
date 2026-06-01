@@ -1,5 +1,5 @@
 __all__ = (
-    "AtomicWriter",
+    "AtomicFile",
     "DirectoryNotFoundError",
     "NotAFileError",
     "dir_empty",
@@ -38,7 +38,7 @@ __all__ = (
     "wrap_paths",
 )
 
-from kaparoo.filesystem.atomic import AtomicWriter
+from kaparoo.filesystem.atomic import AtomicFile
 from kaparoo.filesystem.directory import (
     dir_empty,
     dir_empty_unsafe,

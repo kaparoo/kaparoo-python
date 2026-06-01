@@ -11,7 +11,7 @@
   pre-checks
 - [`utils`](./utils.py) — `stringify_path(s)`, `wrap_path(s)`,
   `reserve_path(s)`
-- [`atomic`](./atomic.py) — `AtomicWriter`, a safe (atomic) file writer
+- [`atomic`](./atomic.py) — `AtomicFile`, a safe (atomic) file writer
   usable as a context manager or explicitly
 - [`exceptions`](./exceptions.py) — `DirectoryNotFoundError`, `NotAFileError`
 - [`types`](./types.py) — `StrPath`, `StrPaths` type aliases
@@ -154,30 +154,30 @@ destructive operation here and is named to say so.
 
 ## Safe (atomic) writes
 
-`AtomicWriter` saves a file safely: it stages the bytes in a temporary file
+`AtomicFile` saves a file safely: it stages the content in a temporary file
 in the destination's own directory and moves it into place only on commit.
 A reader never sees a half-written file, and a failed write leaves any
 existing file untouched. It works as a context manager — commit on a clean
 exit, discard on an exception — or explicitly, like a file object.
 
 ```python
-from kaparoo.filesystem import AtomicWriter
+from kaparoo.filesystem import AtomicFile
 
-# Binary (the default), as a context manager: commit on success, discard
+# Text (the default), as a context manager: commit on success, discard
 # on error.
-with AtomicWriter("out/data.bin") as f:
-    f.write(payload)  # an exception here leaves out/ untouched
+with AtomicFile("out/report.json", encoding="utf-8") as f:
+    f.write(json.dumps(data))  # an exception here leaves out/ untouched
 
-# Text mode, explicitly: write, then commit (or abort to discard).
-f = AtomicWriter("out/report.json", text=True, encoding="utf-8")
-f.write(json.dumps(data))
+# Binary mode, explicitly: write, then commit (or abort to discard).
+f = AtomicFile("out/data.bin", binary=True)
+f.write(payload)
 f.commit()  # returns the destination Path; idempotent
 ```
 
-The default is binary (`AtomicWriter[bytes]`); pass `text=True` for a text
-writer (`AtomicWriter[str]`) with optional `encoding` / `newline`. The type
-parameter follows the mode, so `write` and `file` are typed `bytes` or
-`str` accordingly.
+The default is text (`AtomicFile[str]`) with optional `encoding` / `newline`,
+as with `open`; pass `binary=True` for a binary writer (`AtomicFile[bytes]`).
+The type parameter follows the mode, so `write` and `file` are typed `str`
+or `bytes` accordingly.
 
 With `overwrite=False` (the default) an existing destination raises
 `FileExistsError` up front, and the commit creates the file atomically —
