@@ -73,13 +73,21 @@ class BaseTimer(ContextDecorator, ABC):
             raise ValueError(msg)
 
         self.unit = unit
-        self.scale = _SCALES[unit]
         self.ndigits = ndigits
 
         self._start_time: int = 0
         self._started: bool = False
         self._is_paused: bool = False
         self._pause_start: int = 0
+
+    @property
+    def scale(self) -> float:
+        """Nanosecond-to-`unit` multiplier, derived from `unit`.
+
+        Kept as a derived value so it can never drift out of sync with
+        `unit`.
+        """
+        return _SCALES[self.unit]
 
     def _apply_ndigits(self, value: float) -> float:
         """Round `value` to `ndigits` decimal places, or return it unchanged."""
@@ -160,6 +168,10 @@ class BaseTimer(ContextDecorator, ABC):
         Equivalent to calling `pause` on entry and `resume` on exit. The
         resume on exit is skipped if the user manually called `resume`
         inside the block, so paired pause/resume calls work safely.
+
+        Single-level only: pausing is a flag, not a depth counter, so
+        nesting `suspend` blocks (or calling `pause` inside one) raises
+        `RuntimeError` from the inner `pause`.
         """
         self.pause()
         try:
