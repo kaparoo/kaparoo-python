@@ -8,8 +8,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.5.0] - 2026-06-02
-
 ### Added
 
 - `kaparoo.data.sequences.TransformedSequence`: a lazy view that applies a
@@ -22,6 +20,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `WindowedSequence[T, M_in, M_out]`: `M_out` now defaults to `M_in` (PEP
   696), so the common case of `M_out == M_in` no longer requires the third
   type argument. Existing explicit three-argument usage is unaffected.
+
+## [0.5.0] - 2026-06-02
 
 ### Added
 
