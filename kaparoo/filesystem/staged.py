@@ -349,9 +349,9 @@ class StagedDirectory:
     staged directory is moved into place with a single rename, and an existing
     destination is a fail-fast `FileExistsError`. Replacing an existing one
     (`overwrite=True`) is *not* fully atomic -- the old directory is swapped
-    aside and then removed, leaving a brief window where the destination is
-    absent and, on a rare failure mid-swap, the previous contents in a sibling
-    ``<name>.old`` directory for recovery.
+    aside, the staged one moved in, then the old removed. A failed move
+    restores the original; only a crash *between* the two renames leaves the
+    previous contents in a sibling ``<name>.old`` directory for recovery.
 
     The committed directory gets the usual umask-based permissions. Pass
     `make_parents=True` to create the destination's parent if it is missing.
@@ -426,6 +426,8 @@ class StagedDirectory:
                 appeared after this builder opened.
             NotADirectoryError: If `overwrite` is True and the destination
                 exists but is not a directory.
+            OSError: If replacing an existing directory and moving the staged
+                one into place fails; the original is restored first.
         """
         if self._committed:
             return self._path
