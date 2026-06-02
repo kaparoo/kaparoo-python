@@ -4,6 +4,7 @@ __all__ = (
     "ConcatSequence",
     "DataSequence",
     "FileFolderSequence",
+    "FileListSequence",
     "SingleFileSequence",
     "SlicedSequence",
     "WindowedSequence",
@@ -18,6 +19,7 @@ from kaparoo.data.sequences.composers import (
 )
 from kaparoo.data.sequences.templates import (
     FileFolderSequence,
+    FileListSequence,
     SingleFileSequence,
 )
 from kaparoo.data.sequences.utils import generate_batches

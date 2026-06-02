@@ -8,6 +8,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `kaparoo.data.sequences.FileListSequence`: a "one file per item"
+  `DataSequence` over an explicit, ordered list of files. Unlike
+  `FileFolderSequence` it takes the files directly (no `root` discovery),
+  so they may live in unrelated directories -- or, on Windows, different
+  drives -- which `FileFolderSequence` cannot represent. Subclasses
+  implement only `load_file` / `get_meta`; the input order is preserved
+  verbatim (duplicates kept) and files are loaded lazily.
+
 ### Fixed
 
 - `make_dirs` now raises `NotADirectoryError` (matching `make_dir`) when a

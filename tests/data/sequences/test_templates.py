@@ -4,7 +4,11 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from kaparoo.data.sequences import FileFolderSequence, SingleFileSequence
+from kaparoo.data.sequences import (
+    FileFolderSequence,
+    FileListSequence,
+    SingleFileSequence,
+)
 from kaparoo.filesystem.exceptions import DirectoryNotFoundError, NotAFileError
 
 if TYPE_CHECKING:
@@ -30,6 +34,16 @@ class BytesFolder(FileFolderSequence[bytes]):
     def list_files(self, root: Path) -> list[Path]:
         glob_fn = root.rglob if self._recursive else root.glob
         return sorted(p for p in glob_fn(self._pattern) if p.is_file())
+
+    def get_meta(self, index: int) -> Path:
+        return self.get_file(index)
+
+    def load_file(self, path: Path) -> bytes:
+        return path.read_bytes()
+
+
+class BytesList(FileListSequence[bytes]):
+    """`FileListSequence` whose items are raw file bytes."""
 
     def get_meta(self, index: int) -> Path:
         return self.get_file(index)
@@ -178,6 +192,90 @@ def test_file_folder_missing_root_raises(unknown_path: Path):
 def test_file_folder_root_is_file_raises(tmp_file: Path):
     with pytest.raises(NotADirectoryError):
         BytesFolder(tmp_file)
+
+
+# --- FileListSequence -------------------------------------------------------
+
+
+def test_file_list_is_abstract(tmp_dir: Path):
+    with pytest.raises(TypeError, match="abstract"):
+        FileListSequence([tmp_dir / "a.bin"])  # ty: ignore[missing-argument]
+
+
+def test_file_list_preserves_given_order_and_duplicates(tmp_dir: Path):
+    a, b = tmp_dir / "a.bin", tmp_dir / "b.bin"
+    a.write_bytes(b"alpha")
+    b.write_bytes(b"beta")
+
+    # Deliberately unsorted, with a duplicate: order is kept verbatim.
+    data = BytesList([b, a, b])
+    assert len(data) == 3
+    assert data[0] == b"beta"
+    assert data[1] == b"alpha"
+    assert data[2] == b"beta"
+
+
+def test_file_list_spans_unrelated_directories(tmp_path: Path):
+    # The key gap over FileFolderSequence: files under no common root.
+    d1, d2 = tmp_path / "one", tmp_path / "two"
+    d1.mkdir()
+    d2.mkdir()
+    (d1 / "x.bin").write_bytes(b"x")
+    (d2 / "y.bin").write_bytes(b"y")
+
+    data = BytesList([d1 / "x.bin", d2 / "y.bin"])
+    assert [bytes(item) for item in data] == [b"x", b"y"]
+
+
+def test_file_list_get_file_and_files_snapshot(tmp_dir: Path):
+    a, b = tmp_dir / "a.bin", tmp_dir / "b.bin"
+    a.write_bytes(b"a")
+    b.write_bytes(b"b")
+    data = BytesList([a, b])
+
+    assert data.get_file(0) == a
+    assert isinstance(data.files, tuple)
+    assert data.files == (a, b)
+
+
+def test_file_list_metadata_is_path(tmp_dir: Path):
+    a = tmp_dir / "a.bin"
+    a.write_bytes(b"a")
+    assert BytesList([a]).get_meta(0) == a
+
+
+def test_file_list_accepts_str_paths(tmp_dir: Path):
+    a = tmp_dir / "a.bin"
+    a.write_bytes(b"a")
+    data = BytesList([str(a)])
+    assert data.get_file(0) == a
+    assert data[0] == b"a"
+
+
+def test_file_list_empty():
+    data = BytesList([])
+    assert len(data) == 0
+    assert data.files == ()
+
+
+def test_file_list_loads_lazily(tmp_dir: Path):
+    a = tmp_dir / "a.bin"
+    a.write_bytes(b"a")
+
+    loaded: list[Path] = []
+
+    class CountingList(FileListSequence[bytes]):
+        def get_meta(self, index: int) -> Path:
+            return self.get_file(index)
+
+        def load_file(self, path: Path) -> bytes:
+            loaded.append(path)
+            return path.read_bytes()
+
+    data = CountingList([a])
+    assert loaded == []  # nothing read at construction
+    _ = data[0]
+    assert loaded == [a]
 
 
 # --- SingleFileSequence -----------------------------------------------------

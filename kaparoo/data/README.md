@@ -9,7 +9,7 @@ small set of composers, and ready-to-subclass file-backed templates.
 - [`sequences/composers`](./sequences/composers.py) — `SlicedSequence`,
   `ConcatSequence`, `WindowedSequence`
 - [`sequences/templates`](./sequences/templates.py) — `FileFolderSequence`,
-  `SingleFileSequence`
+  `FileListSequence`, `SingleFileSequence`
 - [`sequences/utils`](./sequences/utils.py) — `generate_batches`
 
 All public symbols are re-exported from both `kaparoo.data` and
@@ -156,6 +156,30 @@ class GlobFolder(FileFolderSequence[bytes]):
         return path.read_bytes()
 
 folder = GlobFolder("data", pattern="*.png", recursive=True)
+```
+
+### `FileListSequence`
+
+Same "one file per item" contract as `FileFolderSequence`, but the files
+are given as an explicit list instead of discovered under a `root` — so
+they may live in unrelated directories (or, on Windows, different drives),
+which `FileFolderSequence` cannot represent. There is no `list_files`;
+subclasses implement only `load_file` and `get_meta`. The input order is
+preserved verbatim (duplicates kept) — sort it yourself if needed.
+
+```python
+from pathlib import Path
+from kaparoo.data.sequences import FileListSequence
+
+class BytesList(FileListSequence[bytes]):
+    def get_meta(self, index):
+        return self.get_file(index)
+
+    def load_file(self, path):
+        return path.read_bytes()
+
+# Files from anywhere, in the order given:
+data = BytesList(["images/a.png", "/other/disk/b.png"])
 ```
 
 ### `SingleFileSequence`
