@@ -16,10 +16,13 @@ __all__ = (
     "Mean",
     "Min",
     "Reduction",
+    "Std",
     "Sum",
     "UnweightedReduction",
+    "Var",
 )
 
+import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -106,6 +109,65 @@ class Mean(Reduction[tuple[float, float]]):
 
     def result(self, state: tuple[float, float]) -> float:
         return state[0] / state[1] if state[1] else float("nan")
+
+
+@dataclass(frozen=True)
+class Var(Reduction[tuple[float, float, float]]):
+    """Weighted population variance; state is `(weight, mean, M2)`.
+
+    Accumulated online (Welford) and merged exactly (Chan's parallel
+    algorithm), so it nests across loop levels like the other reductions.
+    Uses the population convention -- M2 over the total weight, as in
+    numpy's default `ddof=0` -- which stays well-defined under weighting.
+    Empty -> `nan`.
+    """
+
+    def identity(self) -> tuple[float, float, float]:
+        return (0.0, 0.0, 0.0)
+
+    def step(
+        self, state: tuple[float, float, float], value: float, weight: float
+    ) -> tuple[float, float, float]:
+        total, mean, m2 = state
+        total += weight
+        delta = value - mean
+        mean += (weight / total) * delta
+        m2 += weight * delta * (value - mean)
+        return (total, mean, m2)
+
+    def merge(
+        self,
+        a: tuple[float, float, float],
+        b: tuple[float, float, float],
+    ) -> tuple[float, float, float]:
+        total_a, mean_a, m2_a = a
+        total_b, mean_b, m2_b = b
+        total = total_a + total_b
+        if total == 0:
+            return (0.0, 0.0, 0.0)
+        delta = mean_b - mean_a
+        mean = mean_a + delta * total_b / total
+        m2 = m2_a + m2_b + delta * delta * total_a * total_b / total
+        return (total, mean, m2)
+
+    def result(self, state: tuple[float, float, float]) -> float:
+        total, _mean, m2 = state
+        return m2 / total if total else float("nan")
+
+
+@dataclass(frozen=True)
+class Std(Var):
+    """Weighted population standard deviation: the square root of `Var`.
+
+    Shares `Var`'s online, mergeable moments; only the final projection
+    differs. Empty -> `nan`.
+    """
+
+    def result(self, state: tuple[float, float, float]) -> float:
+        variance = super().result(state)
+        if math.isnan(variance):  # empty state
+            return variance
+        return max(variance, 0.0) ** 0.5
 
 
 @dataclass(frozen=True)

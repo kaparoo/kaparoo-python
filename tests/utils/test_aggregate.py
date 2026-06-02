@@ -14,7 +14,9 @@ from kaparoo.utils.aggregate import (
     Mean,
     Min,
     Reduction,
+    Std,
     Sum,
+    Var,
 )
 
 # --- Reductions: direct unit tests ------------------------------------------
@@ -93,6 +95,77 @@ def test_fold_finalize_and_merge():
     g = Fold(min, float("inf"))
     assert g.merge(3.0, 1.0) == 1.0
     assert g.result(g.identity()) == float("inf")  # no finalize -> raw state
+
+
+def _accumulate(reduction: Reduction[object], values: list[float]) -> object:
+    state = reduction.identity()
+    for v in values:
+        state = reduction.step(state, v, 1.0)
+    return state
+
+
+def test_var_population_value():
+    # Classic dataset: mean 5, population variance 4 (sum of sq. dev. 32 / 8).
+    var = Var()
+    assert var.result(_accumulate(var, [2, 4, 4, 4, 5, 5, 7, 9])) == 4.0
+
+
+def test_var_empty_is_nan():
+    var = Var()
+    assert math.isnan(var.result(var.identity()))
+
+
+def test_var_merge_matches_flat():
+    # Splitting the stream and merging the partial moments must equal the
+    # variance of the whole stream (Chan's parallel algorithm).
+    data = [2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0]
+    var = Var()
+    left = _accumulate(var, data[:3])
+    right = _accumulate(var, data[3:])
+    assert var.result(var.merge(left, right)) == pytest.approx(
+        var.result(_accumulate(var, data))
+    )
+
+
+def test_var_merge_of_empties_is_empty():
+    var = Var()
+    assert var.merge(var.identity(), var.identity()) == var.identity()
+
+
+def test_var_weight_equals_repetition():
+    # A value with weight n must match n unit-weight copies of it.
+    var = Var()
+    weighted = var.step(var.step(var.identity(), 2.0, 3.0), 8.0, 1.0)
+    expanded = _accumulate(var, [2.0, 2.0, 2.0, 8.0])
+    assert var.result(weighted) == pytest.approx(var.result(expanded))
+
+
+def test_std_is_sqrt_of_var():
+    std = Std()
+    assert std.result(_accumulate(std, [2, 4, 4, 4, 5, 5, 7, 9])) == 2.0  # sqrt(4)
+
+
+def test_std_empty_is_nan():
+    std = Std()
+    assert math.isnan(std.result(std.identity()))
+
+
+def test_var_std_nest_via_aggregator():
+    # epoch-level Var, merged into a run-level Var, equals the flat variance.
+    epochs = [[(1.0, 2), (3.0, 1)], [(2.0, 1), (5.0, 2)]]
+    run = Aggregator(Var())
+    for epoch in epochs:
+        ep = run.fresh()
+        for value, n in epoch:
+            ep.update({"x": value}, weight=n)
+        run.merge(ep)
+
+    flat = Var()
+    flat_state = flat.identity()
+    for epoch in epochs:
+        for value, n in epoch:
+            flat_state = flat.step(flat_state, value, n)
+    assert run.compute()["x"] == pytest.approx(flat.result(flat_state))
 
 
 # --- Aggregator -------------------------------------------------------------

@@ -8,9 +8,11 @@ __all__ = (
     "Reduction",
     "SegmentRecord",
     "SegmentTimer",
+    "Std",
     "Sum",
     "Timer",
     "UnweightedReduction",
+    "Var",
     "factory_if_none",
     "replace_if_none",
     "unwrap_or_default",
@@ -27,8 +29,10 @@ from kaparoo.utils.aggregate import (
     Mean,
     Min,
     Reduction,
+    Std,
     Sum,
     UnweightedReduction,
+    Var,
 )
 from kaparoo.utils.optional import (
     factory_if_none,

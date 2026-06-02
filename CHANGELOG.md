@@ -10,6 +10,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `kaparoo.utils.aggregate` (still experimental): `Var` and `Std` reductions
+  -- weighted population variance and standard deviation, accumulated online
+  (Welford) and merged exactly (Chan's parallel algorithm), so they nest
+  across loop levels like the other reductions.
 - `kaparoo.data.sequences.FileListSequence`: a "one file per item"
   `DataSequence` over an explicit, ordered list of files. Unlike
   `FileFolderSequence` it takes the files directly (no `root` discovery),

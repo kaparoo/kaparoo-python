@@ -164,6 +164,7 @@ print(run.compute())
 | Reduction | Result | Empty |
 | --- | --- | --- |
 | `Mean()` | weighted arithmetic mean | `nan` |
+| `Var()` / `Std()` | weighted population variance / std (Welford) | `nan` |
 | `Sum()` | sum of values (weight ignored) | `0.0` |
 | `Min()` / `Max()` | running min / max (weight ignored) | `nan` |
 | `Last()` | most recent value | `nan` |
@@ -177,8 +178,8 @@ import operator
 Aggregator(Fold(operator.mul, 1.0))           # running product
 ```
 
-For a reduction with richer state (weighted variance, RMS, ...), subclass
-`Reduction` (or `UnweightedReduction` when weight is irrelevant) and
+For a reduction with richer state (RMS, a weighted geometric mean, ...),
+subclass `Reduction` (or `UnweightedReduction` when weight is irrelevant) and
 implement `identity` / `step` (or `accumulate`) / `merge` / `result`. The
 `merge` method *is* the nesting behavior, so custom reductions nest as
 exactly as the built-ins.
