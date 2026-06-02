@@ -28,6 +28,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `StagedFile.commit` / `StagedDirectory.commit` now fsync the destination's
   parent directory after the move, so the committed result survives a crash
   on POSIX (a no-op where directories cannot be fsynced, e.g. Windows).
+- `StagedDirectory.commit` with `overwrite=True` now restores the original
+  directory if moving the staged one into place fails, instead of leaving
+  the destination missing with the old contents stranded under a `<name>.old`
+  name; the backup removal is best-effort.
 
 ## [0.4.0] - 2026-06-02
 

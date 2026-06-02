@@ -451,14 +451,21 @@ class StagedDirectory:
                 mode = stat.S_IMODE(self._path.stat().st_mode)
         self._workdir.chmod(mode)
         if exists:
-            # Replacing an existing directory. No portable atomic dir replace:
-            # swap the old one aside, move the staged one in, then remove the
-            # old. A failure between the renames leaves the previous contents
-            # in `<name>.old`.
+            # Replacing an existing directory. There is no portable atomic
+            # directory replace, so swap the old one aside, move the staged one
+            # in, then remove the old. If the second move fails, restore the
+            # original; removing the backup is best-effort (the destination is
+            # already correct). A crash *between* the two moves is the residual
+            # non-atomic window -- the previous contents remain in a sibling
+            # `<name>.old` directory for manual recovery.
             backup = self._path.with_name(f"{self._workdir.name}.old")
             self._path.rename(backup)
-            self._workdir.rename(self._path)
-            shutil.rmtree(backup)
+            try:
+                self._workdir.rename(self._path)
+            except OSError:
+                backup.rename(self._path)
+                raise
+            shutil.rmtree(backup, ignore_errors=True)
         else:
             self._workdir.rename(self._path)
         _fsync_parent(self._path)

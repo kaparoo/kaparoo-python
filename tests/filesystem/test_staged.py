@@ -464,6 +464,42 @@ def test_dir_overwrite_true_replaces_nonempty(tmp_path: Path):
     assert list(tmp_path.glob("*.old")) == []  # backup removed
 
 
+def test_dir_overwrite_restores_original_when_move_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    # If moving the staged directory into place fails after the original was
+    # swapped aside, the original must be restored (not stranded in `.old`).
+    dest = tmp_path / "dataset"
+    dest.mkdir()
+    (dest / "old.txt").write_text("old", encoding="utf-8")
+
+    d = StagedDirectory(dest, overwrite=True)
+    (d.workdir / "new.txt").write_text("new", encoding="utf-8")
+
+    real_rename = staged.Path.rename
+    state = {"failed": False}
+
+    def failing_rename(self: staged.Path, target: object) -> None:
+        # Fail only the first staged->dest move; let the restore (also -> dest)
+        # and the dest->backup swap proceed.
+        if not state["failed"] and staged.Path(target) == dest:  # type: ignore[arg-type]
+            state["failed"] = True
+            msg = "move failed"
+            raise OSError(msg)
+        return real_rename(self, target)
+
+    monkeypatch.setattr(staged.Path, "rename", failing_rename)
+
+    with pytest.raises(OSError, match="move failed"):
+        d.commit()
+
+    assert dest.is_dir()
+    assert (dest / "old.txt").read_text(encoding="utf-8") == "old"  # restored
+    assert not (dest / "new.txt").exists()  # staged content not promoted
+    assert not d.committed
+    d.abort()  # clean up the staging directory
+
+
 def test_dir_overwrite_on_file_raises(tmp_path: Path):
     # overwrite=True cannot replace a non-directory with a directory; reject
     # before the swap so the existing file is left intact.
