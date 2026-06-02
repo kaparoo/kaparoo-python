@@ -19,6 +19,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `make_dir(clean=True)` / `make_dirs(clean=True)` reject a symlink with
   `NotADirectoryError` rather than failing deep inside `shutil.rmtree`;
   cleaning never operates through a link.
+- `reserve_path` / `reserve_paths` treat a symlink -- including a broken
+  one, which `Path.exists` reports as absent -- as occupying the path.
 
 ## [0.4.0] - 2026-06-02
 

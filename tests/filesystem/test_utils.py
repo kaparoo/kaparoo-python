@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import platform
 from typing import TYPE_CHECKING
 
 import pytest
@@ -177,6 +178,28 @@ def test_reserve_path_make_parents_noop_when_parent_exists(tmp_path: Path):
     target = tmp_path / "data.bin"
     assert reserve_path(target, make_parents=True) == target
     assert not target.exists()
+
+
+def test_reserve_path_make_parents_raises_when_ancestor_is_file(tmp_file: Path):
+    # A file occupying an ancestor makes parent creation impossible.
+    with pytest.raises(OSError):  # noqa: PT011 - platform varies (NotADirectoryError/...)
+        reserve_path(tmp_file / "sub" / "x.bin", make_parents=True)
+
+
+@pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason="symlink creation requires privilege on Windows",
+)
+def test_reserve_path_treats_broken_symlink_as_occupied(tmp_path: Path):
+    # A broken symlink still takes the name even though `Path.exists` reports
+    # it absent, so `reserve_path` must treat it as a conflict.
+    link = tmp_path / "dangling"
+    link.symlink_to(tmp_path / "nonexistent-target")
+    assert not link.exists()  # broken -> exists() is False
+
+    with pytest.raises(FileExistsError):
+        reserve_path(link)
+    assert reserve_path(link, exist_ok=True) == link  # exist_ok still bypasses
 
 
 # --- reserve_paths ---------------------------------------------------------

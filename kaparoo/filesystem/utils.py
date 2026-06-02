@@ -266,6 +266,10 @@ def reserve_path(
     an exclusive file create, `open(path, "x")` raises the same
     `FileExistsError` directly.
 
+    A symlink counts as occupying the path -- including a *broken* one,
+    which `Path.exists` alone reports as absent yet still takes the name
+    (so `open(path, "x")` would fail). Such a path is treated as existing.
+
     Args:
         path: The path that should not yet exist.
         exist_ok: Whether to allow an already-existing path. Defaults to False.
@@ -277,9 +281,13 @@ def reserve_path(
         The path as a Path object or a string, depending on `stringify`.
 
     Raises:
-        FileExistsError: If the path exists and `exist_ok` is False.
+        FileExistsError: If the path exists (or is a symlink) and `exist_ok`
+            is False.
+        OSError: If `make_parents` is True and the parent cannot be created
+            (e.g. an ancestor along the path is a file).
     """
-    if (path := Path(path)).exists() and not exist_ok:
+    path = Path(path)
+    if (path.exists() or path.is_symlink()) and not exist_ok:
         msg = f"path already exists: {path}"
         raise FileExistsError(msg)
     if make_parents:
