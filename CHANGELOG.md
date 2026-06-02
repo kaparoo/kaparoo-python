@@ -21,6 +21,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   cleaning never operates through a link.
 - `reserve_path` / `reserve_paths` treat a symlink -- including a broken
   one, which `Path.exists` reports as absent -- as occupying the path.
+- `StagedFile.commit` (with `overwrite=False`) no longer fails outright on a
+  filesystem without hardlink support (FAT/exFAT, some network mounts): it
+  falls back to an existence check plus replace instead of losing the staged
+  content to a raw `OSError`.
 
 ## [0.4.0] - 2026-06-02
 

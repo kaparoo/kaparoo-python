@@ -229,6 +229,43 @@ def test_commit_raises_if_destination_appears_after_init(tmp_path: Path):
     assert list(tmp_path.glob("*.tmp")) == []
 
 
+@pytest.fixture()
+def no_hardlink_support(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Simulate a filesystem without hardlinks (FAT/exFAT, some network FS)."""
+    import pathlib
+
+    def raiser(self: pathlib.Path, *args: object, **kwargs: object) -> None:
+        msg = "hardlinks unsupported"
+        raise OSError(msg)
+
+    monkeypatch.setattr(pathlib.Path, "hardlink_to", raiser)
+
+
+@pytest.mark.usefixtures("no_hardlink_support")
+def test_commit_falls_back_to_replace_without_hardlink_support(tmp_path: Path):
+    # The non-FileExistsError OSError from a no-hardlink filesystem must not
+    # lose the staged content: commit falls back to replace.
+    dest = tmp_path / "data.txt"
+    with StagedFile(dest, encoding="utf-8") as f:
+        f.write("hello")
+    assert dest.read_text(encoding="utf-8") == "hello"
+    assert list(tmp_path.glob("*.tmp")) == []  # temp moved, not left behind
+
+
+@pytest.mark.usefixtures("no_hardlink_support")
+def test_commit_fallback_refuses_to_clobber_concurrent_file(tmp_path: Path):
+    # Even on the fallback path, an existing destination is not overwritten
+    # when overwrite is False.
+    dest = tmp_path / "data.txt"
+    f = StagedFile(dest, encoding="utf-8")  # dest absent here
+    f.write("mine")
+    dest.write_text("theirs", encoding="utf-8")  # appeared concurrently
+    with pytest.raises(FileExistsError, match="overwrite=True"):
+        f.commit()
+    assert dest.read_text(encoding="utf-8") == "theirs"  # not clobbered
+    assert list(tmp_path.glob("*.tmp")) == []
+
+
 # --- garbage-collection cleanup --------------------------------------------
 
 

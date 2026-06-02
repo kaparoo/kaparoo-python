@@ -87,10 +87,13 @@ class StagedFile[AnyStrT: (str, bytes)]:
         ```
 
     With `overwrite=False` (the default) an existing destination is a
-    fail-fast `FileExistsError`, and the commit creates the file atomically --
-    it never clobbers a file that appeared meanwhile. With `overwrite=True`
-    the destination is atomically replaced, inheriting its previous
-    permissions.
+    fail-fast `FileExistsError`, and the commit creates the file atomically
+    via a hardlink -- it never clobbers a file that appeared meanwhile. On a
+    filesystem without hardlink support (FAT/exFAT, some network mounts) the
+    commit falls back to a best-effort existence check plus replace, leaving
+    a small window where a file appearing concurrently could be clobbered.
+    With `overwrite=True` the destination is atomically replaced, inheriting
+    its previous permissions.
 
     The committed file gets the usual umask-based permissions (not the
     restrictive mode of the internal temp file). The destination's parent
@@ -254,15 +257,25 @@ class StagedFile[AnyStrT: (str, bytes)]:
         if self._overwrite:
             self._temp_path.replace(self._path)
         else:
+            # Atomic exclusive create via hardlink where supported. A
+            # filesystem without hardlinks (FAT/exFAT, some network mounts)
+            # raises a non-`FileExistsError` `OSError`; fall back to a
+            # best-effort existence check plus `replace` (which leaves a
+            # small TOCTOU window where a file appearing meanwhile could be
+            # clobbered -- unavoidable without an atomic no-clobber move).
             try:
                 self._path.hardlink_to(self._temp_path)
-            except FileExistsError:
-                msg = (
-                    f"file already exists, pass overwrite=True to replace: {self._path}"
-                )
-                raise FileExistsError(msg) from None
-            finally:
-                self._temp_path.unlink(missing_ok=True)
+            except OSError as exc:
+                if isinstance(exc, FileExistsError) or self._path.exists():
+                    self._temp_path.unlink(missing_ok=True)
+                    msg = (
+                        "file already exists, pass overwrite=True to replace: "
+                        f"{self._path}"
+                    )
+                    raise FileExistsError(msg) from None
+                self._temp_path.replace(self._path)
+            else:
+                self._temp_path.unlink()
         self._committed = True
         self._finalizer.detach()
         return self._path
