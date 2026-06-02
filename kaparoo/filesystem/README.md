@@ -69,8 +69,8 @@ cache_dir = make_dir("var/cache", exist_ok=True)
 
 # Start from a clean slate: wipe an existing directory's contents and
 # recreate it empty. Destructive, and only ever wipes a *directory* (a
-# non-directory at the path still raises). `clean=True` makes `exist_ok`
-# moot, since the directory is removed and remade.
+# non-directory -- or a symlink -- at the path still raises). `clean=True`
+# makes `exist_ok` moot, since the directory is removed and remade.
 run_dir = make_dir("out/run_42", clean=True)
 
 # Bulk creation with a shared root

@@ -88,6 +88,24 @@ def test_make_dir_clean_still_rejects_non_directory(tmp_file: Path):
     assert tmp_file.exists()  # the file is untouched
 
 
+@pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason="symlink creation requires privilege on Windows",
+)
+def test_make_dir_clean_rejects_symlink(tmp_path: Path):
+    # `clean` must refuse a symlink: wiping has to operate on a real
+    # directory, never through a link (which would reach the link's target).
+    target = tmp_path / "target"
+    target.mkdir()
+    (target / "keep.txt").touch()
+    link = tmp_path / "link"
+    link.symlink_to(target, target_is_directory=True)
+
+    with pytest.raises(NotADirectoryError):
+        make_dir(link, clean=True)
+    assert (target / "keep.txt").exists()  # the link's target is untouched
+
+
 # --- make_dirs -------------------------------------------------------------
 
 
@@ -138,6 +156,30 @@ def test_make_dirs_clean_creates_missing(tmp_path: Path):
     targets = [tmp_path / "x", tmp_path / "y"]
     result = make_dirs(targets, clean=True)
     assert all(d.is_dir() for d in result)
+
+
+def test_make_dirs_rejects_non_directory_before_creating(
+    tmp_path: Path, tmp_file: Path
+):
+    # A file in the list raises NotADirectoryError (matching `make_dir`, which
+    # previously diverged with FileExistsError), and validation happens before
+    # any directory is created.
+    ok = tmp_path / "ok"
+    with pytest.raises(NotADirectoryError):
+        make_dirs([ok, tmp_file])
+    assert not ok.exists()  # nothing created before the bad entry was rejected
+
+
+def test_make_dirs_clean_validates_before_wiping(tmp_path: Path, tmp_file: Path):
+    # A bad entry later in the list must not cause earlier directories to be
+    # wiped: every path is validated before any destructive operation runs.
+    existing = tmp_path / "data"
+    existing.mkdir()
+    (existing / "keep.txt").touch()
+
+    with pytest.raises(NotADirectoryError):
+        make_dirs([existing, tmp_file], clean=True)
+    assert (existing / "keep.txt").exists()  # earlier directory not wiped
 
 
 @pytest.mark.skipif(

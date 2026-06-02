@@ -8,6 +8,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `make_dirs` now raises `NotADirectoryError` (matching `make_dir`) when a
+  path exists but is not a directory, instead of the divergent
+  `FileExistsError` that `mkdir` produced.
+- `make_dir` / `make_dirs` validate every path *before* any directory is
+  wiped or created, so a deterministically bad entry (e.g. a file in the
+  list) no longer leaves earlier directories already cleaned or created.
+- `make_dir(clean=True)` / `make_dirs(clean=True)` reject a symlink with
+  `NotADirectoryError` rather than failing deep inside `shutil.rmtree`;
+  cleaning never operates through a link.
+
 ## [0.4.0] - 2026-06-02
 
 ### Added
