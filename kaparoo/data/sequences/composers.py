@@ -1,15 +1,20 @@
 from __future__ import annotations
 
-__all__ = ("ConcatSequence", "SlicedSequence", "WindowedSequence")
+__all__ = (
+    "ConcatSequence",
+    "SlicedSequence",
+    "TransformedSequence",
+    "WindowedSequence",
+)
 
 from abc import abstractmethod
 from bisect import bisect_right
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from kaparoo.data.sequences.base import DataSequence
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
 
 class SlicedSequence[T, M](DataSequence[T, M]):
@@ -57,6 +62,61 @@ class SlicedSequence[T, M](DataSequence[T, M]):
 
     def get_meta(self, index: int) -> M:
         return self._source.get_meta(self._indices[index])
+
+
+class TransformedSequence[T_in, M_in, T_out = T_in, M_out = M_in](
+    DataSequence[T_out, M_out]
+):
+    """A view of `source` with `transform` applied lazily to each item.
+
+    `transform` is called on demand in `get_item`; nothing is loaded or
+    converted at construction time. `get_meta` passes through
+    `source.get_meta` unchanged by default -- override it in a subclass
+    when `M_out` differs from `M_in`.
+
+    Type Parameters:
+        T_in: Item type of `source`.
+        M_in: Metadata type of `source`.
+        T_out: Item type after the transform. Defaults to `T_in`.
+        M_out: Metadata type exposed by this view. Defaults to `M_in`.
+            When `M_out != M_in`, override `get_meta` in a subclass;
+            the default passthrough is only safe when `M_out == M_in`.
+
+    Example:
+        >>> # Item-only transform; metadata passes through unchanged.
+        >>> normalized = TransformedSequence(image_folder, normalize)
+
+        >>> # Meta transform via subclassing:
+        >>> class Augmented(TransformedSequence[ndarray, Path, ndarray, AugMeta]):
+        ...     def get_meta(self, index: int) -> AugMeta:
+        ...         return AugMeta(
+        ...             path=self.source.get_meta(index),
+        ...             applied="normalize",
+        ...         )
+    """
+
+    def __init__(
+        self,
+        source: DataSequence[T_in, M_in],
+        transform: Callable[[T_in], T_out],
+    ) -> None:
+        self._source = source
+        self._transform = transform
+
+    @property
+    def source(self) -> DataSequence[T_in, M_in]:
+        """The wrapped sequence."""
+        return self._source
+
+    def __len__(self) -> int:
+        return len(self._source)
+
+    def get_item(self, index: int) -> T_out:
+        return self._transform(self._source.get_item(index))
+
+    def get_meta(self, index: int) -> M_out:
+        # Passthrough by default. Override when M_out != M_in.
+        return cast("M_out", self._source.get_meta(index))
 
 
 class ConcatSequence[T, M](DataSequence[T, M]):
@@ -112,7 +172,7 @@ class ConcatSequence[T, M](DataSequence[T, M]):
         return source.get_meta(local)
 
 
-class WindowedSequence[T, M_in, M_out](DataSequence[tuple[T, ...], M_out]):
+class WindowedSequence[T, M_in, M_out = M_in](DataSequence[tuple[T, ...], M_out]):
     """An abstract sliding-window view over `source`.
 
     Each item is a tuple of `size` items from `source`, starting at
@@ -130,8 +190,8 @@ class WindowedSequence[T, M_in, M_out](DataSequence[tuple[T, ...], M_out]):
         T: Item type of `source` (also the per-frame type within each
             window).
         M_in: Metadata type of `source` (per-frame metadata).
-        M_out: Metadata type of the window. Determined by the
-            subclass's `get_meta` return.
+        M_out: Metadata type of the window. Defaults to `M_in`.
+            Determined by the subclass's `get_meta` return.
 
     Args:
         source: The sequence to window over.

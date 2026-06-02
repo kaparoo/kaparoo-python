@@ -7,7 +7,7 @@ small set of composers, and ready-to-subclass file-backed templates.
 
 - [`sequences/base`](./sequences/base.py) — `DataSequence[T, M]` abstract base
 - [`sequences/composers`](./sequences/composers.py) — `SlicedSequence`,
-  `ConcatSequence`, `WindowedSequence`
+  `TransformedSequence`, `ConcatSequence`, `WindowedSequence`
 - [`sequences/templates`](./sequences/templates.py) — `FileFolderSequence`,
   `FileListSequence`, `SingleFileSequence`
 - [`sequences/utils`](./sequences/utils.py) — `generate_batches`
@@ -83,18 +83,49 @@ combined = ConcatSequence(train_a, train_b, train_c)
 len(combined)  # == len(train_a) + len(train_b) + len(train_c)
 ```
 
+### `TransformedSequence`
+
+A lazy view that applies a `transform` callable to each item of
+`source`. The transform is called on demand in `get_item` -- nothing
+is computed at construction. `get_meta` passes through `source.get_meta`
+unchanged by default; override it in a subclass when `M_out` differs
+from `M_in`.
+
+```python
+from kaparoo.data.sequences import TransformedSequence
+
+# Item transform only -- metadata type is unchanged.
+normalized = TransformedSequence(image_folder, normalize_fn)
+
+# Meta transform via subclassing:
+class Augmented(TransformedSequence[ndarray, Path, ndarray, AugMeta]):
+    def get_meta(self, index: int) -> AugMeta:
+        return AugMeta(path=self.source.get_meta(index), applied="normalize")
+```
+
+Chaining two `TransformedSequence` instances applies the transforms in
+order:
+
+```python
+resized    = TransformedSequence(raw, resize)
+normalized = TransformedSequence(resized, normalize)
+```
+
+`T_out` and `M_out` default to `T_in` and `M_in` respectively (PEP 696),
+so you only need to specify them when the type actually changes.
+
 ### `WindowedSequence`
 
 An abstract sliding-window view: each item is a `tuple[T, ...]` of
 `size` frames from `source`. Per-frame `M_in` and window-level
-`M_out` are independent type parameters, so subclasses decide how
-metadata aggregates.
+`M_out` are independent type parameters (`M_out` defaults to `M_in`),
+so subclasses decide how metadata aggregates.
 
 ```python
 from pathlib import Path
 from kaparoo.data.sequences import WindowedSequence
 
-class FirstFrameMeta(WindowedSequence[bytes, Path, Path]):
+class FirstFrameMeta(WindowedSequence[bytes, Path]):
     def get_meta(self, index):
         # window's metadata is its first frame's metadata
         index = self._normalize_index(index)

@@ -5,6 +5,7 @@ import pytest
 from kaparoo.data.sequences import (
     ConcatSequence,
     SlicedSequence,
+    TransformedSequence,
     WindowedSequence,
 )
 from tests.data.sequences.helpers import (
@@ -356,3 +357,80 @@ def test_windowed_composition_with_sliced(src: ListDataSequence[str, int]):
     assert every_other[0] == ("a", "b", "c")
     assert every_other[1] == ("c", "d", "e")
     assert every_other[3] == ("g", "h", "i")
+
+
+# --- TransformedSequence ----------------------------------------------------
+
+
+def test_transformed_applies_transform(src: ListDataSequence[str, int]):
+    t = TransformedSequence(src, str.upper)
+    assert t.get_item(0) == "A"
+    assert t.get_item(4) == "E"
+    assert len(t) == len(src)
+
+
+def test_transformed_meta_passthrough(src: ListDataSequence[str, int]):
+    # Default get_meta delegates to source unchanged.
+    t = TransformedSequence(src, str.upper)
+    for i in range(len(src)):
+        assert t.get_meta(i) == src.get_meta(i)
+
+
+def test_transformed_source_property(src: ListDataSequence[str, int]):
+    t = TransformedSequence(src, str.upper)
+    assert t.source is src
+
+
+def test_transformed_loads_lazily(src: ListDataSequence[str, int]):
+    calls: list[str] = []
+
+    def recording_transform(x: str) -> str:
+        calls.append(x)
+        return x.upper()
+
+    TransformedSequence(src, recording_transform)
+    assert calls == []  # nothing called at construction
+
+
+def test_transformed_negative_and_slice_indexing(src: ListDataSequence[str, int]):
+    t = TransformedSequence(src, str.upper)
+    assert t[-1] == "J"
+    assert list(t[0:3]) == ["A", "B", "C"]
+
+
+def test_transformed_meta_override_is_type_safe():
+    # Subclass overrides get_meta to produce a different type, while
+    # get_item keeps the transform from the base.
+    base = ListDataSequence(["x", "y", "z"], [10, 20, 30])
+
+    class PrefixedMeta(TransformedSequence[str, int, str, str]):
+        def get_meta(self, index: int) -> str:
+            return f"meta:{self.source.get_meta(index)}"
+
+    t = PrefixedMeta(base, str.upper)
+    assert t.get_item(0) == "X"  # transform applied
+    assert t.get_meta(0) == "meta:10"  # overridden meta
+    assert t.get_meta(2) == "meta:30"
+
+
+def test_transformed_chaining():
+    src = ListDataSequence(["a", "b", "c"], [0, 1, 2])
+    upper = TransformedSequence(src, str.upper)
+    exclaimed = TransformedSequence(upper, lambda s: s + "!")
+    assert list(exclaimed) == ["A!", "B!", "C!"]
+    assert exclaimed.get_meta(0) == 0  # meta passes through both layers
+
+
+def test_transformed_composition_with_sliced(src: ListDataSequence[str, int]):
+    t = TransformedSequence(src, str.upper)
+    sliced = SlicedSequence(t, [0, 2, 4])
+    assert list(sliced) == ["A", "C", "E"]
+    assert sliced.get_meta(1) == 2
+
+
+def test_transformed_composition_with_concat():
+    a = ListDataSequence(["a", "b"], [0, 1])
+    b = ListDataSequence(["c", "d"], [2, 3])
+    t = TransformedSequence(ConcatSequence(a, b), str.upper)
+    assert list(t) == ["A", "B", "C", "D"]
+    assert t.get_meta(3) == 3

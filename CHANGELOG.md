@@ -12,6 +12,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `kaparoo.data.sequences.TransformedSequence`: a lazy view that applies a
+  `transform` callable to each item of `source`. `get_meta` passes through
+  `source.get_meta` by default (`M_out = M_in`); override in a subclass when
+  `M_out` differs. `T_out` and `M_out` default to `T_in` / `M_in` (PEP 696).
+
+### Changed
+
+- `WindowedSequence[T, M_in, M_out]`: `M_out` now defaults to `M_in` (PEP
+  696), so the common case of `M_out == M_in` no longer requires the third
+  type argument. Existing explicit three-argument usage is unaffected.
+
+### Added
+
 - `kaparoo.utils.aggregate` (still experimental): `Var` and `Std` reductions
   -- weighted population variance and standard deviation, accumulated online
   (Welford) and merged exactly (Chan's parallel algorithm), so they nest
