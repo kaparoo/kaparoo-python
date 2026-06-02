@@ -25,6 +25,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   filesystem without hardlink support (FAT/exFAT, some network mounts): it
   falls back to an existence check plus replace instead of losing the staged
   content to a raw `OSError`.
+- `StagedFile.commit` / `StagedDirectory.commit` now fsync the destination's
+  parent directory after the move, so the committed result survives a crash
+  on POSIX (a no-op where directories cannot be fsynced, e.g. Windows).
 
 ## [0.4.0] - 2026-06-02
 

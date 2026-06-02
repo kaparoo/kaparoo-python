@@ -58,6 +58,23 @@ def _default_dir_mode() -> int:
     return _umask_default(0o777)
 
 
+def _fsync_parent(path: Path) -> None:
+    """Best-effort fsync of `path`'s parent directory entry.
+
+    Makes a just-completed rename/link into `path` durable across a crash on
+    POSIX (the file's own data is fsynced separately). A no-op where a
+    directory cannot be opened for fsync, e.g. Windows.
+    """
+    try:
+        fd = os.open(path.parent, os.O_RDONLY)
+    except OSError:
+        return
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
 class StagedFile[AnyStrT: (str, bytes)]:
     """Write a file safely: stage to a temp file, then commit by atomic move.
 
@@ -276,6 +293,7 @@ class StagedFile[AnyStrT: (str, bytes)]:
                 self._temp_path.replace(self._path)
             else:
                 self._temp_path.unlink()
+        _fsync_parent(self._path)
         self._committed = True
         self._finalizer.detach()
         return self._path
@@ -443,6 +461,7 @@ class StagedDirectory:
             shutil.rmtree(backup)
         else:
             self._workdir.rename(self._path)
+        _fsync_parent(self._path)
         self._committed = True
         self._finalizer.detach()
         return self._path

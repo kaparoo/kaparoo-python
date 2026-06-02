@@ -7,11 +7,13 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from kaparoo.filesystem import staged
 from kaparoo.filesystem.staged import (
     StagedDirectory,
     StagedFile,
     _default_dir_mode,
     _default_file_mode,
+    _fsync_parent,
 )
 
 if TYPE_CHECKING:
@@ -307,6 +309,31 @@ def test_overwrite_preserves_existing_mode(tmp_path: Path):
         f.write("new")
     assert stat.S_IMODE(dest.stat().st_mode) == 0o640
     assert dest.read_text(encoding="utf-8") == "new"
+
+
+# --- durability (parent fsync) ---------------------------------------------
+
+
+def test_fsync_parent_fsyncs_then_closes(monkeypatch: pytest.MonkeyPatch):
+    # Success path forced via monkeypatch so it runs even on Windows, which
+    # cannot open a directory for fsync.
+    events: list[tuple[str, int]] = []
+    monkeypatch.setattr(staged.os, "open", lambda _p, _flags: 4242)
+    monkeypatch.setattr(staged.os, "fsync", lambda fd: events.append(("fsync", fd)))
+    monkeypatch.setattr(staged.os, "close", lambda fd: events.append(("close", fd)))
+
+    _fsync_parent(staged.Path("any") / "child")
+    assert events == [("fsync", 4242), ("close", 4242)]
+
+
+def test_fsync_parent_ignores_unopenable_directory(monkeypatch: pytest.MonkeyPatch):
+    # A directory that cannot be opened (e.g. on Windows) is a silent no-op.
+    def boom(_p: object, _flags: object) -> int:
+        msg = "cannot open directory"
+        raise OSError(msg)
+
+    monkeypatch.setattr(staged.os, "open", boom)
+    _fsync_parent(staged.Path("any") / "child")  # must not raise
 
 
 # --- re-export -------------------------------------------------------------
