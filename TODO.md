@@ -5,27 +5,6 @@ item to a CHANGELOG entry once it lands.
 
 ---
 
-## 🚀 Next release (0.6.0)
-
-Unreleased commits since v0.5.0 (the last two are unpushed):
-
-- `db3d0bf` ✨ `TransformedSequence` + `WindowedSequence[M_out = M_in]` default
-- `2958710` ♻️ `FileFolderSequence` is now a subclass of `FileListSequence`
-- `3c49cca` ✨ `ZippedSequence` (element-wise pairing; `strict` option)
-
-**Steps** (follow AGENTS.md procedure):
-
-1. Bump `version` in `pyproject.toml` to `0.6.0`; run `uv sync --group dev`.
-2. Move `[Unreleased]` content in `CHANGELOG.md` into a dated `[0.6.0]` section.
-3. Commit `🔖 Release version 0.6.0`.
-4. `git push origin main` — wait for 3-OS CI to go green (`gh run watch`).
-5. Push annotated tag `v0.6.0` → publish workflow triggers.
-6. Verify TestPyPI artifact: `uv run --isolated --no-project --default-index https://test.pypi.org/simple/ --with 'kaparoo-python==0.6.0' python -c "..."`.
-7. Approve the `pypi` environment in GitHub Actions UI.
-8. Create GitHub Release with CHANGELOG body and attach sdist + wheel.
-
----
-
 ## 🧮 `kaparoo.utils.aggregate` — stabilization
 
 ### `Stored` reduction (deferred — add when concrete need arises)
@@ -95,4 +74,4 @@ explicitly or add per-metric weight tracking if a concrete case demands it.
 
 ---
 
-*Last updated: 2026-06-02*
+*Last updated: 2026-06-04*
