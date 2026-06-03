@@ -6,8 +6,8 @@ __all__ = (
     "Mean",
     "Min",
     "Reduction",
-    "SegmentRecord",
-    "SegmentTimer",
+    "SpanRecord",
+    "SpanTimer",
     "Std",
     "Sum",
     "Timer",
@@ -42,4 +42,4 @@ from kaparoo.utils.optional import (
     unwrap_or_factories,
     unwrap_or_factory,
 )
-from kaparoo.utils.timer import SegmentRecord, SegmentTimer, Timer
+from kaparoo.utils.timer import SpanRecord, SpanTimer, Timer

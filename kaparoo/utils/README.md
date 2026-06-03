@@ -4,7 +4,7 @@ Small, focused helpers — not enough material for their own packages.
 
 ## Modules
 
-- [`timer`](./timer.py) — `Timer`, `SegmentTimer`, `SegmentRecord`
+- [`timer`](./timer.py) — `Timer`, `SpanTimer`, `SpanRecord`
 - [`aggregate`](./aggregate.py) — `Aggregator` + the `Reduction` family
   (`Mean`, `Sum`, `Min`, `Max`, `Last`, `Fold`)
 - [`optional`](./optional.py) — helpers for `T | None` values
@@ -47,29 +47,29 @@ with Timer("ms") as t:
     do_work()
 ```
 
-## SegmentTimer
+## SpanTimer
 
-`SegmentTimer` extends `Timer` with named time *segments*. Each segment
-is a `SegmentRecord` (a `TypedDict` with `label`, `duration`,
+`SpanTimer` extends `Timer` with named time *spans*. Each span
+is a `SpanRecord` (a `TypedDict` with `label`, `duration`,
 `total_time`) and is produced in one of two ways:
 
 - **`lap(label)` — split.** Each lap's `duration` is the time since the
   previous lap (or the start), so every instant belongs to exactly one
-  segment.
+  span.
 - **`measure(label)` — stopwatch.** Times only the wrapped block; time
-  spent outside any `measure` block is attributed to no segment.
+  spent outside any `measure` block is attributed to no span.
 
 ```python
-from kaparoo.utils.timer import SegmentTimer
+from kaparoo.utils.timer import SpanTimer
 
-with SegmentTimer("ms", ndigits=1) as st:
+with SpanTimer("ms", ndigits=1) as st:
     step_a()
     st.lap("A")               # split: time since start
     idle()                    # NOT counted by the next measure
     with st.measure("B"):     # stopwatch: only this block
         step_b()
 
-# Per-segment details:
+# Per-span details:
 for record in st.records:
     print(record["label"], record["duration"])
 
@@ -80,7 +80,7 @@ print(st.elapsed)   # total wall time of the `with` block
 
 ### `lap` vs `measure`
 
-`lap` splits the timeline into contiguous segments — the gap before a
+`lap` splits the timeline into contiguous spans — the gap before a
 lap is folded into that lap. `measure` brackets a region and ignores
 everything outside it, so untimed work between blocks is excluded from
 `summary`. Pick `lap` for back-to-back phases, `measure` for discrete
@@ -88,16 +88,16 @@ operations interleaved with untimed work. Pauses inside either are
 excluded; a `measure` block that raises records nothing.
 
 `measure` doubles as a decorator (every decorated call records one
-segment, as long as the timer is running when it is called):
+span, as long as the timer is running when it is called):
 
 ```python
-st = SegmentTimer("ms")
+st = SpanTimer("ms")
 
 @st.measure("load")
 def load() -> None: ...
 
 with st:
-    load()        # records a "load" segment each call
+    load()        # records a "load" span each call
 ```
 
 ### Same-label policies
@@ -111,7 +111,7 @@ with st:
 The policy applies to both `lap` and `measure`:
 
 ```python
-with SegmentTimer(on_same_label="separate") as st:
+with SpanTimer(on_same_label="separate") as st:
     st.lap("A")
     st.lap("A")   # recorded as "A (2)"
     st.lap("A")   # recorded as "A (3)"

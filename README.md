@@ -44,7 +44,7 @@ hook for custom filter kinds.
 
 ### [`kaparoo.utils`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/utils)
 
-`Timer` / `SegmentTimer` context-manager-and-decorator timers (with
+`Timer` / `SpanTimer` context-manager-and-decorator timers (with
 `lap`-split and `measure`-block timings); `Aggregator` for nested,
 pluggable metric aggregation (the batch → epoch → run pattern;
 experimental); plus a small family of helpers for working with

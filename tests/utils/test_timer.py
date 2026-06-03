@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from kaparoo.utils.timer import SegmentRecord, SegmentTimer, Timer
+from kaparoo.utils.timer import SpanRecord, SpanTimer, Timer
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -202,13 +202,13 @@ def test_timer_elapsed_default_is_zero():
     assert Timer().elapsed == 0.0
 
 
-# --- SegmentTimer ---------------------------------------------------------------
+# --- SpanTimer ---------------------------------------------------------------
 
 
-def test_segment_timer_basic(fake_clock):
+def test_span_timer_basic(fake_clock):
     # enter=0, A=100ms, B=250ms, C=400ms, finalize=500ms
     fake_clock(0, 100_000_000, 250_000_000, 400_000_000, 500_000_000)
-    with SegmentTimer("ms") as st:
+    with SpanTimer("ms") as st:
         st.lap("A")
         st.lap("B")
         st.lap("C")
@@ -223,59 +223,59 @@ def test_segment_timer_basic(fake_clock):
     assert st.elapsed == 500.0
 
 
-def test_segment_timer_summary_aggregates_duplicates(fake_clock):
+def test_span_timer_summary_aggregates_duplicates(fake_clock):
     # enter=0, A=100ms, B=250ms, A=350ms, finalize=500ms
     fake_clock(0, 100_000_000, 250_000_000, 350_000_000, 500_000_000)
-    with SegmentTimer("ms") as st:
+    with SpanTimer("ms") as st:
         st.lap("A")
         st.lap("B")
         st.lap("A")
     assert st.summary == {"A": 200.0, "B": 150.0}
 
 
-def test_segment_timer_summary_excludes_trailing_time(fake_clock):
+def test_span_timer_summary_excludes_trailing_time(fake_clock):
     # The 400ms gap between the last lap and exit does NOT show up in summary
     # (summary only aggregates explicit duration values).
     fake_clock(0, 100_000_000, 500_000_000)
-    with SegmentTimer("ms") as st:
+    with SpanTimer("ms") as st:
         st.lap("A")
     assert st.summary == {"A": 100.0}
     assert st.elapsed == 500.0
 
 
-def test_segment_timer_summary_ndigits_rounds_sum(fake_clock):
+def test_span_timer_summary_ndigits_rounds_sum(fake_clock):
     # 100.111111 + 100.111111 = 200.222222 -> rounded to 200.22
     fake_clock(0, 100_111_111, 200_222_222, 300_000_000)
-    with SegmentTimer("ms", ndigits=2) as st:
+    with SpanTimer("ms", ndigits=2) as st:
         st.lap("A")
         st.lap("A")
     assert st.summary == {"A": 200.22}
 
 
-def test_segment_timer_invalid_on_same_label():
+def test_span_timer_invalid_on_same_label():
     with pytest.raises(ValueError, match="on_same_label must be one of"):
-        SegmentTimer(on_same_label="invalid")  # ty: ignore[invalid-argument-type]
+        SpanTimer(on_same_label="invalid")  # ty: ignore[invalid-argument-type]
 
 
-def test_segment_timer_merge_keeps_label_as_is(fake_clock):
+def test_span_timer_merge_keeps_label_as_is(fake_clock):
     fake_clock(0, 100, 200, 300)
-    with SegmentTimer() as st:
+    with SpanTimer() as st:
         st.lap("A")
         st.lap("A")
     assert [r["label"] for r in st.records] == ["A", "A"]
 
 
-def test_segment_timer_reject_raises(fake_clock):
+def test_span_timer_reject_raises(fake_clock):
     fake_clock(0, 100, 200)
-    with SegmentTimer(on_same_label="reject") as st:
+    with SpanTimer(on_same_label="reject") as st:
         st.lap("A")
         with pytest.raises(ValueError, match="already used"):
             st.lap("A")
 
 
-def test_segment_timer_reject_failed_lap_not_recorded(fake_clock):
+def test_span_timer_reject_failed_lap_not_recorded(fake_clock):
     fake_clock(0, 100, 200)
-    with SegmentTimer(on_same_label="reject") as st:
+    with SpanTimer(on_same_label="reject") as st:
         st.lap("A")
         with pytest.raises(ValueError, match="already used"):
             st.lap("A")  # raises before append
@@ -283,20 +283,20 @@ def test_segment_timer_reject_failed_lap_not_recorded(fake_clock):
     assert len(st.records) == 1
 
 
-def test_segment_timer_separate_suffix(fake_clock):
+def test_span_timer_separate_suffix(fake_clock):
     fake_clock(0, 100, 200, 300, 400)
-    with SegmentTimer(on_same_label="separate") as st:
+    with SpanTimer(on_same_label="separate") as st:
         st.lap("A")
         st.lap("A")
         st.lap("A")
     assert [r["label"] for r in st.records] == ["A", "A (2)", "A (3)"]
 
 
-def test_segment_timer_pause_resume_excludes_interval(fake_clock):
+def test_span_timer_pause_resume_excludes_interval(fake_clock):
     # enter=0, A=100ms, pause=200ms, resume=400ms (pause_dur=200ms),
     # B=500ms, finalize=600ms
     fake_clock(0, 100_000_000, 200_000_000, 400_000_000, 500_000_000, 600_000_000)
-    with SegmentTimer("ms") as st:
+    with SpanTimer("ms") as st:
         st.lap("A")
         st.pause()
         st.resume()
@@ -309,18 +309,18 @@ def test_segment_timer_pause_resume_excludes_interval(fake_clock):
     assert st.elapsed == 400.0  # 600 - 200
 
 
-def test_segment_timer_lap_while_paused_raises(fake_clock):
+def test_span_timer_lap_while_paused_raises(fake_clock):
     fake_clock(0, 100_000_000, 200_000_000, 300_000_000)
-    with SegmentTimer() as st:
+    with SpanTimer() as st:
         st.pause()
         with pytest.raises(RuntimeError, match="while paused"):
             st.lap("X")
 
 
-def test_segment_timer_reuse_resets_state(fake_clock):
+def test_span_timer_reuse_resets_state(fake_clock):
     # First `with` uses 3 ticks (enter, lap, finalize); second uses the same.
     fake_clock(0, 100, 200, 300, 400, 500)
-    st = SegmentTimer(on_same_label="reject")
+    st = SpanTimer(on_same_label="reject")
     with st:
         st.lap("X")
     assert len(st.records) == 1
@@ -329,45 +329,45 @@ def test_segment_timer_reuse_resets_state(fake_clock):
     assert len(st.records) == 1
 
 
-def test_segment_timer_empty_run(fake_clock):
+def test_span_timer_empty_run(fake_clock):
     fake_clock(0, 100_000_000)
-    with SegmentTimer("ms") as st:
+    with SpanTimer("ms") as st:
         pass
     assert st.records == []
     assert st.summary == {}
     assert st.elapsed == 100.0
 
 
-def test_segment_timer_post_exit_lap_raises(fake_clock):
+def test_span_timer_post_exit_lap_raises(fake_clock):
     fake_clock(0, 100)
-    st = SegmentTimer()
+    st = SpanTimer()
     with st:
         pass
     with pytest.raises(RuntimeError, match="not been started"):
         st.lap("X")
 
 
-def test_segment_record_typeddict_construction():
-    record: SegmentRecord = {"label": "test", "duration": 1.0, "total_time": 2.0}
+def test_span_record_typeddict_construction():
+    record: SpanRecord = {"label": "test", "duration": 1.0, "total_time": 2.0}
     assert record == {"label": "test", "duration": 1.0, "total_time": 2.0}
 
 
-def test_segment_timer_defaults_are_empty():
+def test_span_timer_defaults_are_empty():
     # Documented defaults before the first `__enter__`.
-    st = SegmentTimer()
+    st = SpanTimer()
     assert st.elapsed == 0.0
     assert st.records == []
     assert st.summary == {}
 
 
-# --- SegmentTimer.measure ---------------------------------------------------
+# --- SpanTimer.measure ---------------------------------------------------
 
 
-def test_segment_timer_measure_records_block_only(fake_clock):
+def test_span_timer_measure_records_block_only(fake_clock):
     # enter=0, setup gap (untimed), block start=100ms, block end=250ms,
-    # finalize=300ms. The 0->100 gap is excluded from the "A" segment.
+    # finalize=300ms. The 0->100 gap is excluded from the "A" span.
     fake_clock(0, 100_000_000, 250_000_000, 300_000_000)
-    with SegmentTimer("ms") as st:  # noqa: SIM117
+    with SpanTimer("ms") as st:  # noqa: SIM117
         with st.measure("A"):
             pass
     assert st.records[0]["label"] == "A"
@@ -377,11 +377,11 @@ def test_segment_timer_measure_records_block_only(fake_clock):
     assert st.elapsed == 300.0
 
 
-def test_segment_timer_measure_excludes_time_between_blocks(fake_clock):
+def test_span_timer_measure_excludes_time_between_blocks(fake_clock):
     # Two blocks with untimed gaps before, between, and after; summary sums
     # only the wrapped spans (100 + 150), well under elapsed (600).
     fake_clock(0, 100_000_000, 200_000_000, 350_000_000, 500_000_000, 600_000_000)
-    with SegmentTimer("ms") as st:
+    with SpanTimer("ms") as st:
         with st.measure("A"):
             pass
         with st.measure("B"):
@@ -390,10 +390,10 @@ def test_segment_timer_measure_excludes_time_between_blocks(fake_clock):
     assert st.elapsed == 600.0
 
 
-def test_segment_timer_measure_as_decorator(fake_clock):
+def test_span_timer_measure_as_decorator(fake_clock):
     # enter=0, block start=100ms, block end=300ms, finalize=400ms.
     fake_clock(0, 100_000_000, 300_000_000, 400_000_000)
-    st = SegmentTimer("ms")
+    st = SpanTimer("ms")
 
     @st.measure("load")
     def load() -> None:
@@ -405,11 +405,11 @@ def test_segment_timer_measure_as_decorator(fake_clock):
     assert st.elapsed == 400.0
 
 
-def test_segment_timer_measure_excludes_pause(fake_clock):
+def test_span_timer_measure_excludes_pause(fake_clock):
     # enter=0, block start=100ms, pause=200ms, resume=400ms (pause_dur=200ms),
     # block end=500ms, finalize=600ms. duration excludes the 200ms pause.
     fake_clock(0, 100_000_000, 200_000_000, 400_000_000, 500_000_000, 600_000_000)
-    with SegmentTimer("ms") as st:  # noqa: SIM117
+    with SpanTimer("ms") as st:  # noqa: SIM117
         with st.measure("A"):
             st.pause()
             st.resume()
@@ -418,10 +418,10 @@ def test_segment_timer_measure_excludes_pause(fake_clock):
     assert st.elapsed == 400.0  # 600 - 200 pause
 
 
-def test_segment_timer_measure_not_recorded_on_exception(fake_clock):
+def test_span_timer_measure_not_recorded_on_exception(fake_clock):
     # enter=0, block start=100ms, body raises (no lap recorded), finalize=300ms.
     fake_clock(0, 100_000_000, 300_000_000)
-    with SegmentTimer("ms") as st:
+    with SpanTimer("ms") as st:
         msg = "boom"
         with pytest.raises(ValueError, match="boom"):  # noqa: SIM117
             with st.measure("A"):
@@ -429,28 +429,28 @@ def test_segment_timer_measure_not_recorded_on_exception(fake_clock):
         assert st.records == []  # nothing recorded on a failed block
 
 
-def test_segment_timer_measure_while_paused_raises(fake_clock):
+def test_span_timer_measure_while_paused_raises(fake_clock):
     # enter=0, pause=100ms, then __exit__ resume=200ms, finalize=300ms.
     fake_clock(0, 100_000_000, 200_000_000, 300_000_000)
-    with SegmentTimer("ms") as st:
+    with SpanTimer("ms") as st:
         st.pause()
         with pytest.raises(RuntimeError, match="while paused"):  # noqa: SIM117
             with st.measure("A"):
                 pass
 
 
-def test_segment_timer_measure_unstarted_raises():
-    st = SegmentTimer()
+def test_span_timer_measure_unstarted_raises():
+    st = SpanTimer()
     with pytest.raises(RuntimeError, match="not been started"):  # noqa: SIM117
         with st.measure("A"):
             pass
 
 
-def test_segment_timer_measure_respects_on_same_label(fake_clock):
+def test_span_timer_measure_respects_on_same_label(fake_clock):
     # First block records "A"; the second reuses "A" under reject and raises
-    # on exit, leaving only the first segment.
+    # on exit, leaving only the first span.
     fake_clock(0, 100_000_000, 200_000_000, 300_000_000, 400_000_000)
-    with SegmentTimer("ms", on_same_label="reject") as st:
+    with SpanTimer("ms", on_same_label="reject") as st:
         with st.measure("A"):
             pass
         with pytest.raises(ValueError, match="already used"):  # noqa: SIM117
@@ -460,11 +460,11 @@ def test_segment_timer_measure_respects_on_same_label(fake_clock):
     assert st.records[0]["label"] == "A"
 
 
-def test_segment_timer_lap_and_measure_mixed(fake_clock):
+def test_span_timer_lap_and_measure_mixed(fake_clock):
     # lap("A") splits from start; the 100->250 gap before measure("B") is
     # dropped; lap("C") resumes from B's end.
     fake_clock(0, 100_000_000, 250_000_000, 400_000_000, 500_000_000, 600_000_000)
-    with SegmentTimer("ms") as st:
+    with SpanTimer("ms") as st:
         st.lap("A")
         with st.measure("B"):
             pass

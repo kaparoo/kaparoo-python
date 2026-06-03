@@ -8,6 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Renamed `SegmentTimer` -> `SpanTimer` and `SegmentRecord` -> `SpanRecord`
+  (module `kaparoo.utils.timer`). "Span" fits both `lap` (contiguous spans)
+  and `measure` (arbitrary spans) without implying a partition, and avoids
+  the "periodic timer" reading of *interval*. The `lap` / `measure` methods,
+  the `duration` field, and all behavior are unchanged. **Breaking**: update
+  imports from `SegmentTimer` / `SegmentRecord` to `SpanTimer` / `SpanRecord`.
+
 ## [0.6.0] - 2026-06-04
 
 ### Added

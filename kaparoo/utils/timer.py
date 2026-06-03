@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("SegmentRecord", "SegmentTimer", "Timer")
+__all__ = ("SpanRecord", "SpanTimer", "Timer")
 
 import time
 from abc import ABC, abstractmethod
@@ -22,20 +22,20 @@ _SCALES: dict[str, float] = {"s": 1e-9, "ms": 1e-6, "us": 1e-3, "ns": 1.0}
 _LABEL_POLICIES: frozenset[str] = frozenset({"merge", "separate", "reject"})
 
 
-class SegmentRecord(TypedDict):
-    """A single timing record produced by `SegmentTimer`.
+class SpanRecord(TypedDict):
+    """A single timing record produced by `SpanTimer`.
 
-    A segment is produced either by `lap` (the span since the previous
+    A span is produced either by `lap` (the span since the previous
     lap) or by `measure` (the span of a wrapped block).
 
     Attributes:
-        label: The segment's name. May carry a " (N)" suffix when produced
+        label: The span's name. May carry a " (N)" suffix when produced
             under `on_same_label="separate"`.
-        duration: Length of this segment, in the timer's `unit` and rounded
+        duration: Length of this span, in the timer's `unit` and rounded
             by `ndigits` if given. For `lap`, the time since the previous
             lap (or the timer start); for `measure`, the wrapped block's
             duration.
-        total_time: Time elapsed from the timer start to this segment's end,
+        total_time: Time elapsed from the timer start to this span's end,
             in the timer's `unit` and rounded by `ndigits` if given.
     """
 
@@ -45,14 +45,14 @@ class SegmentRecord(TypedDict):
 
 
 class BaseTimer(ContextDecorator, ABC):
-    """Abstract base for `Timer` and `SegmentTimer`.
+    """Abstract base for `Timer` and `SpanTimer`.
 
     Provides the shared timing machinery: unit/precision formatting,
     `pause`/`resume`/`suspend`, and a context-manager protocol that
     auto-resumes a paused timer on exit. Subclasses implement `_finalize`
     to record their final result, and may override the `_reset` hook to
     clear per-`with`-block state. Not part of the public API -- prefer
-    `Timer` or `SegmentTimer`.
+    `Timer` or `SpanTimer`.
 
     An instance is reusable but **not reentrant**: a single instance must
     not be nested within itself -- including as a decorator on a recursive
@@ -249,30 +249,30 @@ class Timer(BaseTimer):
         self.elapsed = self._format_time(elapsed_ns)
 
 
-class SegmentTimer(BaseTimer):
-    """A timer recording named time segments within one `with` block.
+class SpanTimer(BaseTimer):
+    """A timer recording named time spans within one `with` block.
 
-    Usable as a context manager or as a decorator. Segments are recorded
+    Usable as a context manager or as a decorator. Spans are recorded
     in two complementary ways:
 
         - `lap(label)` splits the timeline: each lap's `duration` is the
           time since the previous lap (or the start), so every instant is
-          attributed to exactly one segment.
+          attributed to exactly one span.
         - `measure(label)` brackets a region (as a `with` block or a
           decorator): only the wrapped span is recorded, and time spent
-          outside any `measure` block is attributed to no segment.
+          outside any `measure` block is attributed to no span.
 
     Both feed the same `records` / `summary`, honour `on_same_label`, and
     exclude paused intervals.
 
     Attributes:
         on_same_label: The same-label handling policy (see `__init__`).
-        records: The recorded segments, in call order.
+        records: The recorded spans, in call order.
         elapsed: The total measured duration, from start to exit.
             Defaults to 0.0 until the first exit.
 
     Example:
-        with SegmentTimer("ms", ndigits=1) as st:
+        with SpanTimer("ms", ndigits=1) as st:
             step_a()
             st.lap("A")              # split: time since start
             with st.measure("B"):    # block: only this region
@@ -288,7 +288,7 @@ class SegmentTimer(BaseTimer):
         ndigits: int | None = None,
         on_same_label: LabelPolicy = "merge",
     ) -> None:
-        """Initialize the lap timer.
+        """Initialize the span timer.
 
         Args:
             unit: The time unit for reported values. One of "s", "ms", "us",
@@ -313,7 +313,7 @@ class SegmentTimer(BaseTimer):
             raise ValueError(msg)
 
         self.on_same_label = on_same_label
-        self.records: list[SegmentRecord] = []
+        self.records: list[SpanRecord] = []
         self.elapsed: float = 0.0
 
         self._last_time: int = 0
@@ -323,8 +323,8 @@ class SegmentTimer(BaseTimer):
     def summary(self) -> dict[str, float]:
         """Per-label sum of `duration` across `records`.
 
-        Only recorded segments count: time outside every `lap` / `measure`
-        segment (e.g. after the last `lap`, or between `measure` blocks) is
+        Only recorded spans count: time outside every `lap` / `measure`
+        span (e.g. after the last `lap`, or between `measure` blocks) is
         not included. Each record's `duration` is already rounded by
         `ndigits` (when set); this property sums those rounded values and
         rounds the sum once more.
@@ -377,11 +377,11 @@ class SegmentTimer(BaseTimer):
             else label
         )
 
-    def _make_record(self, label: str) -> SegmentRecord:
+    def _make_record(self, label: str) -> SpanRecord:
         """Build a record stamped with the current time and advance `_last_time`."""
         current_time = time.perf_counter_ns()
 
-        record: SegmentRecord = {
+        record: SpanRecord = {
             "label": label,
             "duration": self._format_time(current_time - self._last_time),
             "total_time": self._format_time(current_time - self._start_time),
@@ -415,12 +415,12 @@ class SegmentTimer(BaseTimer):
 
     @contextmanager
     def measure(self, label: str = "Block") -> Iterator[None]:
-        """Record a segment covering only the wrapped block (stopwatch style).
+        """Record a span covering only the wrapped block (stopwatch style).
 
-        Unlike `lap`, which splits the timeline into contiguous segments,
+        Unlike `lap`, which splits the timeline into contiguous spans,
         `measure` times only the wrapped region; time spent outside any
-        `measure` block is attributed to no segment. Pauses inside the
-        block are excluded. A segment is recorded only on clean exit -- if
+        `measure` block is attributed to no span. Pauses inside the
+        block are excluded. A span is recorded only on clean exit -- if
         the block raises, nothing is recorded and the exception propagates.
         Repeated labels follow `on_same_label`, exactly as `lap`. Do not
         nest `measure` blocks: each resets the shared baseline, so an outer
@@ -428,23 +428,23 @@ class SegmentTimer(BaseTimer):
 
         Because `contextmanager` results are also `ContextDecorator`s, the
         returned object doubles as a decorator (every decorated call
-        records one segment, provided the timer is running when called):
+        records one span, provided the timer is running when called):
 
-            st = SegmentTimer("ms")
+            st = SpanTimer("ms")
 
             @st.measure("load")
             def load() -> None: ...
 
             with st:
-                load()                    # records a "load" segment
+                load()                    # records a "load" span
                 with st.measure("parse"):
-                    parse()               # records a "parse" segment
+                    parse()               # records a "parse" span
 
         Args:
-            label: The segment's name. Defaults to "Block".
+            label: The span's name. Defaults to "Block".
 
         Yields:
-            None. The wrapped block runs while the segment is timed.
+            None. The wrapped block runs while the span is timed.
 
         Raises:
             RuntimeError: If the timer has not been started, or is paused on
