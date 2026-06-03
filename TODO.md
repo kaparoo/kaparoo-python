@@ -7,9 +7,11 @@ item to a CHANGELOG entry once it lands.
 
 ## 🚀 Next release (0.6.0)
 
-One unpushed commit since v0.5.0:
+Unreleased commits since v0.5.0 (the last two are unpushed):
 
 - `db3d0bf` ✨ `TransformedSequence` + `WindowedSequence[M_out = M_in]` default
+- `2958710` ♻️ `FileFolderSequence` is now a subclass of `FileListSequence`
+- `3c49cca` ✨ `ZippedSequence` (element-wise pairing; `strict` option)
 
 **Steps** (follow AGENTS.md procedure):
 
@@ -21,27 +23,6 @@ One unpushed commit since v0.5.0:
 6. Verify TestPyPI artifact: `uv run --isolated --no-project --default-index https://test.pypi.org/simple/ --with 'kaparoo-python==0.6.0' python -c "..."`.
 7. Approve the `pypi` environment in GitHub Actions UI.
 8. Create GitHub Release with CHANGELOG body and attach sdist + wheel.
-
----
-
-## 📦 `kaparoo.data.sequences` — planned
-
-### `ZippedSequence` (identified, not started)
-
-Element-wise zip of two sequences — the "paired image + label" pattern
-that `ConcatSequence` (end-to-end) cannot express.
-
-Design sketch:
-
-```python
-class ZippedSequence[T1, T2, M1, M2](DataSequence[tuple[T1, T2], tuple[M1, M2]]):
-    def __init__(self, a: DataSequence[T1, M1], b: DataSequence[T2, M2]) -> None:
-        ...  # raises ValueError if len(a) != len(b)
-```
-
-- Fail-fast on mismatched lengths at construction.
-- Metadata tuple `(M1, M2)` is the natural default; customize via subclassing.
-- No dependency.
 
 ---
 

@@ -46,16 +46,17 @@ hook for custom filter kinds.
 
 `Timer` / `SegmentTimer` context-manager-and-decorator timers (with
 `lap`-split and `measure`-block timings); `Aggregator` for nested,
-pluggable metric aggregation (the batch → epoch → run pattern); plus a
-small family of helpers for working with `Optional[T]` values
-(`replace_if_none`, `unwrap_or_default`, ...).
+pluggable metric aggregation (the batch → epoch → run pattern;
+experimental); plus a small family of helpers for working with
+`Optional[T]` values (`replace_if_none`, `unwrap_or_default`, ...).
 
 ### [`kaparoo.data`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/data)
 
 Building blocks for dataset code: `DataSequence[T, M]` ABC (item +
 metadata), composers (`SlicedSequence`, `ConcatSequence`,
-`WindowedSequence`), file-backed templates (`FileFolderSequence`,
-`SingleFileSequence`), and `generate_batches`.
+`TransformedSequence`, `WindowedSequence`, `ZippedSequence`), file-backed
+templates (`FileFolderSequence`, `FileListSequence`, `SingleFileSequence`),
+and `generate_batches`.
 
 ## 🎯 Quick example
 
