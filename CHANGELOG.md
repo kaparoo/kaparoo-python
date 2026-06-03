@@ -14,6 +14,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `transform` callable to each item of `source`. `get_meta` passes through
   `source.get_meta` by default (`M_out = M_in`); override in a subclass when
   `M_out` differs. `T_out` and `M_out` default to `T_in` / `M_in` (PEP 696).
+- `kaparoo.data.sequences.ZippedSequence`: element-wise zip of two
+  sequences — item `i` is `(first[i], second[i])` and metadata `i` is
+  `(M1, M2)` (the "paired image + label" pattern `ConcatSequence` cannot
+  express). `strict=True` (default) requires equal lengths and raises
+  `ValueError` on a mismatch; `strict=False` truncates to the shorter
+  length like the builtin `zip`. `get_items` / `get_metas` bulk-delegate to
+  each source. For three or more, nest the pairs.
 
 ### Changed
 

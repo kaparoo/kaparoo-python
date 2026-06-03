@@ -9,6 +9,7 @@ __all__ = (
     "SlicedSequence",
     "TransformedSequence",
     "WindowedSequence",
+    "ZippedSequence",
     "generate_batches",
 )
 
@@ -18,6 +19,7 @@ from kaparoo.data.sequences.composers import (
     SlicedSequence,
     TransformedSequence,
     WindowedSequence,
+    ZippedSequence,
 )
 from kaparoo.data.sequences.templates import (
     FileFolderSequence,

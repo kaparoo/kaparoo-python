@@ -7,6 +7,7 @@ from kaparoo.data.sequences import (
     SlicedSequence,
     TransformedSequence,
     WindowedSequence,
+    ZippedSequence,
 )
 from tests.data.sequences.helpers import (
     AllMetasWindow,
@@ -434,3 +435,88 @@ def test_transformed_composition_with_concat():
     t = TransformedSequence(ConcatSequence(a, b), str.upper)
     assert list(t) == ["A", "B", "C", "D"]
     assert t.get_meta(3) == 3
+
+
+# --- ZippedSequence ---------------------------------------------------------
+
+
+@pytest.fixture()
+def images() -> ListDataSequence[str, int]:
+    return ListDataSequence(items=["a", "b", "c"], metas=[10, 11, 12])
+
+
+@pytest.fixture()
+def labels() -> ListDataSequence[int, str]:
+    return ListDataSequence(items=[0, 1, 2], metas=["x", "y", "z"])
+
+
+def test_zipped_basic_item_and_len(
+    images: ListDataSequence[str, int], labels: ListDataSequence[int, str]
+):
+    zipped = ZippedSequence(images, labels)
+    assert len(zipped) == 3
+    assert zipped[0] == ("a", 0)
+    assert zipped[2] == ("c", 2)
+
+
+def test_zipped_metadata_pair(
+    images: ListDataSequence[str, int], labels: ListDataSequence[int, str]
+):
+    zipped = ZippedSequence(images, labels)
+    assert zipped.get_meta(1) == (11, "y")
+    assert zipped.get_pair(0) == (("a", 0), (10, "x"))
+
+
+def test_zipped_length_mismatch_raises():
+    a = ListDataSequence(["a", "b"], [0, 1])
+    b = ListDataSequence([0, 1, 2], ["x", "y", "z"])
+    with pytest.raises(ValueError, match="differ in length"):
+        ZippedSequence(a, b)
+
+
+def test_zipped_batch_items_and_metas(
+    images: ListDataSequence[str, int], labels: ListDataSequence[int, str]
+):
+    zipped = ZippedSequence(images, labels)
+    assert zipped.get_items([2, 0]) == [("c", 2), ("a", 0)]
+    assert zipped.get_metas([2, 0]) == [(12, "z"), (10, "x")]
+    # `__getitem__` slicing routes through `get_items`.
+    assert list(zipped[0:2]) == [("a", 0), ("b", 1)]
+
+
+def test_zipped_negative_index_delegates(
+    images: ListDataSequence[str, int], labels: ListDataSequence[int, str]
+):
+    zipped = ZippedSequence(images, labels)
+    assert zipped[-1] == ("c", 2)
+    assert zipped.get_meta(-1) == (12, "z")
+
+
+def test_zipped_source_properties(
+    images: ListDataSequence[str, int], labels: ListDataSequence[int, str]
+):
+    zipped = ZippedSequence(images, labels)
+    assert zipped.first is images
+    assert zipped.second is labels
+
+
+def test_zipped_nesting_for_three(
+    images: ListDataSequence[str, int], labels: ListDataSequence[int, str]
+):
+    extra = ListDataSequence(items=[1.0, 2.0, 3.0], metas=[None, None, None])
+    triple = ZippedSequence(images, ZippedSequence(labels, extra))
+    assert triple[0] == ("a", (0, 1.0))
+
+
+def test_zipped_strict_false_truncates_to_shorter():
+    a = ListDataSequence(items=["a", "b", "c", "d"], metas=[0, 1, 2, 3])
+    b = ListDataSequence(items=[10, 11], metas=["x", "y"])
+    zipped = ZippedSequence(a, b, strict=False)
+    assert len(zipped) == 2
+    assert list(zipped) == [("a", 10), ("b", 11)]
+    # Negative and out-of-range resolve against the truncated length, so the
+    # pair stays aligned rather than delegating to each source's own length.
+    assert zipped[-1] == ("b", 11)
+    assert zipped.get_metas([1, 0]) == [(1, "y"), (0, "x")]
+    with pytest.raises(IndexError):
+        zipped[2]

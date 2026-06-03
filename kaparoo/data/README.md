@@ -7,7 +7,8 @@ small set of composers, and ready-to-subclass file-backed templates.
 
 - [`sequences/base`](./sequences/base.py) — `DataSequence[T, M]` abstract base
 - [`sequences/composers`](./sequences/composers.py) — `SlicedSequence`,
-  `TransformedSequence`, `ConcatSequence`, `WindowedSequence`
+  `TransformedSequence`, `ConcatSequence`, `WindowedSequence`,
+  `ZippedSequence`
 - [`sequences/templates`](./sequences/templates.py) — `FileFolderSequence`,
   `FileListSequence`, `SingleFileSequence`
 - [`sequences/utils`](./sequences/utils.py) — `generate_batches`
@@ -139,6 +140,27 @@ windows.get_meta(0)   # frames.get_meta(0)
 
 `size`, `step`, `skip` follow the same semantics as
 [`generate_batches`](#generate_batches).
+
+### `ZippedSequence`
+
+Element-wise zip of two sequences — item `i` is `(first[i], second[i])`
+and metadata `i` is the `(M1, M2)` tuple. This is the "paired image +
+label" pattern that `ConcatSequence` (end-to-end) cannot express. With
+`strict=True` (the default) the lengths must match or construction raises
+`ValueError`; pass `strict=False` to truncate to the shorter length, like
+the builtin `zip`. For a different combined metadata shape, subclass and
+override `get_meta`.
+
+```python
+from kaparoo.data.sequences import ZippedSequence
+
+pairs = ZippedSequence(images, labels)
+pairs[0]            # (images[0], labels[0])
+pairs.get_meta(0)   # (images.get_meta(0), labels.get_meta(0))
+```
+
+For three or more, nest: `ZippedSequence(a, ZippedSequence(b, c))` yields
+`(a[i], (b[i], c[i]))`.
 
 ## Templates
 

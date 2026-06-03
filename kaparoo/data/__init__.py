@@ -7,6 +7,7 @@ __all__ = (
     "SlicedSequence",
     "TransformedSequence",
     "WindowedSequence",
+    "ZippedSequence",
     "generate_batches",
 )
 
@@ -19,5 +20,6 @@ from kaparoo.data.sequences import (
     SlicedSequence,
     TransformedSequence,
     WindowedSequence,
+    ZippedSequence,
     generate_batches,
 )

@@ -5,6 +5,7 @@ __all__ = (
     "SlicedSequence",
     "TransformedSequence",
     "WindowedSequence",
+    "ZippedSequence",
 )
 
 from abc import abstractmethod
@@ -279,3 +280,115 @@ class WindowedSequence[T, M_in, M_out = M_in](DataSequence[tuple[T, ...], M_out]
     @abstractmethod
     def get_meta(self, index: int) -> M_out:
         raise NotImplementedError
+
+
+class ZippedSequence[T1, T2, M1 = None, M2 = None](
+    DataSequence[tuple[T1, T2], tuple[M1, M2]]
+):
+    """Element-wise zip of two sequences.
+
+    Item `i` is `(first[i], second[i])` and metadata `i` is
+    `(first.get_meta(i), second.get_meta(i))` -- the "paired image + label"
+    pattern that `ConcatSequence` (end-to-end) cannot express.
+
+    With `strict=True` (the default) the two sequences must have the same
+    length; a mismatch raises `ValueError` at construction. With
+    `strict=False` the view is truncated to the shorter length, like the
+    builtin `zip`. For a different combined-metadata shape, subclass and
+    override `get_meta`.
+
+    Type Parameters:
+        T1: Item type of the first source.
+        T2: Item type of the second source.
+        M1: Metadata type of the first source. Defaults to `None`.
+        M2: Metadata type of the second source. Defaults to `None`.
+
+    Args:
+        first: The first sequence.
+        second: The second sequence.
+        strict: When True (default), require equal lengths and raise on a
+            mismatch. When False, truncate to the shorter length.
+
+    Raises:
+        ValueError: If `strict` is True and the sequences differ in length.
+
+    Example:
+        >>> pairs = ZippedSequence(images, labels)
+        >>> pairs[0]  # (images[0], labels[0])
+        >>> pairs.get_meta(0)  # (images.get_meta(0), labels.get_meta(0))
+    """
+
+    def __init__(
+        self,
+        first: DataSequence[T1, M1],
+        second: DataSequence[T2, M2],
+        *,
+        strict: bool = True,
+    ) -> None:
+        if strict and len(first) != len(second):
+            msg = f"sequences differ in length: {len(first)} != {len(second)}"
+            raise ValueError(msg)
+        self._first = first
+        self._second = second
+        self._length = len(first) if strict else min(len(first), len(second))
+
+    @property
+    def first(self) -> DataSequence[T1, M1]:
+        """The first wrapped sequence."""
+        return self._first
+
+    @property
+    def second(self) -> DataSequence[T2, M2]:
+        """The second wrapped sequence."""
+        return self._second
+
+    def __len__(self) -> int:
+        return self._length
+
+    def _normalize_index(self, index: int) -> int:
+        """Normalize a possibly-negative index and validate range.
+
+        Indices resolve against the zipped length (the shorter source when
+        `strict=False`), so they address the same position in both sources.
+
+        Raises:
+            IndexError: If `index` is outside `[-len(self), len(self))`.
+        """
+        n = self._length
+        original = index
+        if index < 0:
+            index += n
+        if not 0 <= index < n:
+            msg = f"index {original} out of range for length {n}"
+            raise IndexError(msg)
+        return index
+
+    def get_item(self, index: int) -> tuple[T1, T2]:
+        index = self._normalize_index(index)
+        return self._first.get_item(index), self._second.get_item(index)
+
+    def get_items(self, indices: Sequence[int]) -> Sequence[tuple[T1, T2]]:
+        # Normalize, then bulk-delegate so each source's `get_items`
+        # optimization is used.
+        normalized = [self._normalize_index(i) for i in indices]
+        return list(
+            zip(
+                self._first.get_items(normalized),
+                self._second.get_items(normalized),
+                strict=True,
+            )
+        )
+
+    def get_meta(self, index: int) -> tuple[M1, M2]:
+        index = self._normalize_index(index)
+        return self._first.get_meta(index), self._second.get_meta(index)
+
+    def get_metas(self, indices: Sequence[int]) -> Sequence[tuple[M1, M2]]:
+        normalized = [self._normalize_index(i) for i in indices]
+        return list(
+            zip(
+                self._first.get_metas(normalized),
+                self._second.get_metas(normalized),
+                strict=True,
+            )
+        )
