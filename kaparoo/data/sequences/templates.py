@@ -14,11 +14,92 @@ if TYPE_CHECKING:
     from kaparoo.filesystem.types import StrPath, StrPaths
 
 
-class FileFolderSequence[T, M = Path](DataSequence[T, M]):
-    """A folder-rooted `DataSequence` whose items live in individual files.
+class FileListSequence[T, M = Path](DataSequence[T, M]):
+    """A `DataSequence` over an explicit, ordered list of files.
 
-    The base class handles file discovery, indexing, and root-relative
-    path bookkeeping. Subclasses are responsible for three things:
+    Items live one-per-file; subclasses implement `load_file` and `get_meta`.
+    The files are given directly rather than discovered under a `root`, so
+    they may live in unrelated directories -- or, on Windows, on different
+    drives. (`FileFolderSequence` is the special case where the list is
+    discovered under a single root and stored relative to it.)
+
+    The given order is preserved verbatim and duplicates are kept; sort the
+    input yourself (`sorted(files, key=...)`) if a particular order is
+    needed. Paths are not checked for existence at construction; `load_file`
+    is called lazily on each `get_item`.
+
+    The base exposes:
+
+    - `files: tuple[Path, ...]` — full paths as an immutable snapshot.
+    - `get_file(index) -> Path` — full path of the i-th file.
+
+    Type Parameters:
+        T: Item type returned by `get_item`.
+        M: Per-item metadata type. Defaults to `Path`; override when the
+            metadata is something else (label, line number, ...).
+
+    Args:
+        files: The file paths to expose, in order.
+
+    Example:
+        >>> from pathlib import Path
+        >>> class BytesList(FileListSequence[bytes]):
+        ...     def get_meta(self, index: int) -> Path:
+        ...         return self.get_file(index)
+        ...
+        ...     def load_file(self, path: Path) -> bytes:
+        ...         return path.read_bytes()
+        >>>
+        >>> data = BytesList(["images/a.png", "/other/b.png"])
+    """
+
+    def __init__(self, files: StrPaths) -> None:
+        self._files = list(stringify_paths(files))
+
+    def __len__(self) -> int:
+        return len(self._files)
+
+    @property
+    def files(self) -> tuple[Path, ...]:
+        """Immutable snapshot of the full file paths, in order.
+
+        Returns a fresh `tuple[Path, ...]` on each access.
+        """
+        return tuple(self.get_file(i) for i in range(len(self)))
+
+    def get_file(self, index: int) -> Path:
+        """Full Path of the file at `index`."""
+        return Path(self._files[index])
+
+    def get_item(self, index: int) -> T:
+        return self.load_file(self.get_file(index))
+
+    @abstractmethod
+    def get_meta(self, index: int) -> M:
+        raise NotImplementedError
+
+    @abstractmethod
+    def load_file(self, path: Path) -> T:
+        """Decode a single file into an item of type `T`.
+
+        Called lazily on each `get_item` -- not at construction time.
+        Subclasses may freely use external libraries (PIL, librosa,
+        cv2, ...) to decode.
+        """
+        raise NotImplementedError
+
+
+class FileFolderSequence[T, M = Path](FileListSequence[T, M]):
+    """A `FileListSequence` whose file list is discovered under a root.
+
+    The special case of `FileListSequence` where every file lives under one
+    base directory. The list is produced by `list_files(root)`, validated to
+    be under `root`, and stored in root-relative form so memory stays low for
+    large datasets and the paths survive a `root` relocation; `get_file`
+    transparently re-prepends `root`. `load_file`, `get_item`, `files`, and
+    `__len__` are inherited unchanged.
+
+    Subclasses are responsible for three things:
 
     - **`list_files(self, root)`** (abstract): return the full `Path`
       of every file to expose, in the desired order. Called once from
@@ -33,16 +114,9 @@ class FileFolderSequence[T, M = Path](DataSequence[T, M]):
       to `Path` and `get_meta(i)` can be the one-liner
       `return self.get_file(i)`.
 
-    The base exposes:
+    The base adds, on top of `FileListSequence`:
 
     - `root: Path` — the base directory.
-    - `files: tuple[Path, ...]` — full paths as an immutable snapshot.
-    - `get_file(index) -> Path` — full path of the i-th file.
-
-    Paths are kept internally in their root-relative form so that
-    memory stays low for large datasets and the sequence survives
-    `root` relocations; the conversion is transparent to subclasses
-    and external callers.
 
     Parameterized subclasses:
         When a subclass needs instance-level options (e.g. `pattern`,
@@ -94,47 +168,19 @@ class FileFolderSequence[T, M = Path](DataSequence[T, M]):
 
     def __init__(self, root: StrPath) -> None:
         self._root = ensure_dir_exists(root)
-        self._files = list(
-            stringify_paths(self.list_files(self._root), after=self._root)
-        )
-
-    def __len__(self) -> int:
-        return len(self._files)
+        # `after=root` makes each path root-relative and raises ValueError if
+        # any file is not under `root`. The base then stores the relative
+        # form; `get_file` re-prepends `root`.
+        super().__init__(stringify_paths(self.list_files(self._root), after=self._root))
 
     @property
     def root(self) -> Path:
         """The base directory the sequence was constructed from."""
         return self._root
 
-    @property
-    def files(self) -> tuple[Path, ...]:
-        """Immutable snapshot of the full file paths this sequence exposes.
-
-        Returns a fresh `tuple[Path, ...]` on each access, in the order
-        established by `list_files`.
-        """
-        return tuple(self.get_file(i) for i in range(len(self)))
-
     def get_file(self, index: int) -> Path:
         """Full Path of the file at `index`."""
         return wrap_path(self._files[index], prepend=self._root)
-
-    def get_item(self, index: int) -> T:
-        return self.load_file(self.get_file(index))
-
-    @abstractmethod
-    def get_meta(self, index: int) -> M:
-        raise NotImplementedError
-
-    @abstractmethod
-    def load_file(self, path: Path) -> T:
-        """Decode a single file into an item of type `T`.
-
-        Called lazily on each `get_item` -- not at construction time.
-        Subclasses may freely use external libraries (PIL, librosa,
-        cv2, ...) to decode.
-        """
-        raise NotImplementedError
 
     @abstractmethod
     def list_files(self, root: Path) -> list[Path]:
@@ -145,82 +191,6 @@ class FileFolderSequence[T, M = Path](DataSequence[T, M]):
         `ValueError` otherwise. May read instance state set before
         `super().__init__(root)` -- see the class docstring's
         "Parameterized subclasses" note.
-        """
-        raise NotImplementedError
-
-
-class FileListSequence[T, M = Path](DataSequence[T, M]):
-    """A `DataSequence` over an explicit, ordered list of files.
-
-    Like `FileFolderSequence`, items live one-per-file and subclasses
-    implement `load_file` and `get_meta`. Unlike it, the files are given
-    directly rather than discovered under a `root`, so they may live in
-    unrelated directories -- or, on Windows, on different drives -- which
-    `FileFolderSequence` cannot represent (it stores paths relative to one
-    root). There is no `list_files`: the input list *is* the listing.
-
-    The given order is preserved verbatim and duplicates are kept; sort the
-    input yourself (`sorted(files, key=...)`) if a particular order is
-    needed. Paths are not checked for existence at construction; `load_file`
-    is called lazily on each `get_item`.
-
-    The base exposes:
-
-    - `files: tuple[Path, ...]` — full paths as an immutable snapshot.
-    - `get_file(index) -> Path` — full path of the i-th file.
-
-    Type Parameters:
-        T: Item type returned by `get_item`.
-        M: Per-item metadata type. Defaults to `Path`; override when the
-            metadata is something else (label, line number, ...).
-
-    Args:
-        files: The file paths to expose, in order.
-
-    Example:
-        >>> from pathlib import Path
-        >>> class BytesList(FileListSequence[bytes]):
-        ...     def get_meta(self, index: int) -> Path:
-        ...         return self.get_file(index)
-        ...
-        ...     def load_file(self, path: Path) -> bytes:
-        ...         return path.read_bytes()
-        >>>
-        >>> data = BytesList(["images/a.png", "/other/b.png"])
-    """
-
-    def __init__(self, files: StrPaths) -> None:
-        self._files = list(stringify_paths(files))
-
-    def __len__(self) -> int:
-        return len(self._files)
-
-    @property
-    def files(self) -> tuple[Path, ...]:
-        """Immutable snapshot of the full file paths, in the given order.
-
-        Returns a fresh `tuple[Path, ...]` on each access.
-        """
-        return tuple(self.get_file(i) for i in range(len(self)))
-
-    def get_file(self, index: int) -> Path:
-        """Full Path of the file at `index`."""
-        return Path(self._files[index])
-
-    def get_item(self, index: int) -> T:
-        return self.load_file(self.get_file(index))
-
-    @abstractmethod
-    def get_meta(self, index: int) -> M:
-        raise NotImplementedError
-
-    @abstractmethod
-    def load_file(self, path: Path) -> T:
-        """Decode a single file into an item of type `T`.
-
-        Called lazily on each `get_item` -- not at construction time.
-        Subclasses may freely use external libraries (PIL, librosa,
-        cv2, ...) to decode.
         """
         raise NotImplementedError
 

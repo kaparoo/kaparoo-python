@@ -20,6 +20,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `WindowedSequence[T, M_in, M_out]`: `M_out` now defaults to `M_in` (PEP
   696), so the common case of `M_out == M_in` no longer requires the third
   type argument. Existing explicit three-argument usage is unaffected.
+- `FileFolderSequence` is now a subclass of `FileListSequence` — the folder
+  case is just a `FileListSequence` whose list is discovered under a `root`
+  and stored root-relative. Its API and behavior are unchanged (paths are
+  still kept relative and `get_file` re-prepends `root`), but
+  `isinstance(seq, FileListSequence)` is now True for folder sequences.
 
 ## [0.5.0] - 2026-06-02
 
