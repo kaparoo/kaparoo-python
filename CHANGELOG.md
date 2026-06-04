@@ -8,6 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-06-04
+
 ### Added
 
 - `kaparoo.filesystem.utils.ensure_file_extension`: a pure (no filesystem)
