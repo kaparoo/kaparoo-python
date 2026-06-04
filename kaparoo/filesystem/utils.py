@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, overload
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterable, Sequence
     from typing import Literal
 
     from kaparoo.filesystem.types import StrPath, StrPaths
@@ -360,37 +360,52 @@ def reserve_paths(
     return stringify_paths(paths) if stringify else paths
 
 
-def ensure_file_extension(path: StrPath, ext: str, *, add: bool = False) -> Path:
+def ensure_file_extension(
+    path: StrPath, ext: str | Iterable[str], *, add: bool = False
+) -> Path:
     """Return `path` as a `Path`, requiring a case-insensitive `.<ext>` suffix.
 
-    A pure path check that never touches the filesystem. The leading dot on
-    `ext` is optional, so `"bin"` and `".bin"` behave the same. Only the final
-    suffix is considered: a multi-part name like `archive.tar.gz` matches
-    `ext="gz"`, not `ext="tar.gz"`.
+    A pure path check that never touches the filesystem. `ext` is a single
+    extension or an iterable of acceptable ones (e.g. `("jpg", "jpeg")`); the
+    leading dot on each is optional, so `"bin"` and `".bin"` behave the same.
+    Only the final suffix is considered: `archive.tar.gz` matches `ext="gz"`,
+    not `ext="tar.gz"`.
 
     `add` mirrors `make` on `ensure_dir_exists`: when False (the default) a
     path with no suffix raises like any other mismatch; when True, the missing
-    `.<ext>` is appended instead (`np.save`-style). A *wrong* suffix always
-    raises, regardless of `add`.
+    suffix is appended -- the *first* of `ext` when several are given, so pass
+    an ordered list/tuple if that matters. A *wrong* suffix always raises,
+    regardless of `add`.
 
     Args:
         path: The path to check.
-        ext: The required extension, with or without a leading dot.
-        add: Whether to append `.<ext>` when `path` has no suffix, instead of
-            raising. Defaults to False.
+        ext: The required extension, or an iterable of acceptable ones, each
+            with or without a leading dot.
+        add: Whether to append the (first) extension when `path` has no
+            suffix, instead of raising. Defaults to False.
 
     Returns:
-        The path as a Path object, guaranteed to end in `.<ext>`.
+        The path as a Path object, guaranteed to end in an accepted `.<ext>`.
 
     Raises:
-        ValueError: If `path`'s final suffix is not `.<ext>` -- except the
-            no-suffix case, which `add=True` resolves by appending.
+        ValueError: If `ext` is empty, or `path`'s final suffix is none of the
+            accepted extensions -- except the no-suffix case resolved by
+            `add=True`.
     """
-    ext = ext.removeprefix(".")
+    exts = [ext] if isinstance(ext, str) else list(ext)
+    exts = [e.removeprefix(".") for e in exts]
+
+    if not exts:
+        msg = "ext must name at least one extension"
+        raise ValueError(msg)
+
     path = Path(path)
     if add and not path.suffix:
-        return path.with_suffix(f".{ext}")
-    if path.suffix.lower() != f".{ext.lower()}":
-        msg = f"{path.name} must have a .{ext} extension (got {path.suffix!r})"
+        return path.with_suffix(f".{exts[0]}")
+
+    if path.suffix.lower() not in {f".{e.lower()}" for e in exts}:
+        wanted = " / ".join(f".{e}" for e in exts)
+        msg = f"{path.name} must have a {wanted} extension (got {path.suffix!r})"
         raise ValueError(msg)
+
     return path

@@ -117,11 +117,11 @@ wrap_path("logs", prepend="var", append="server.log")  # var/logs/server.log
 ```
 
 `ensure_file_extension` is a pure (no filesystem) extension check: it
-requires a `.<ext>` final suffix, raising `ValueError` otherwise. `add=True`
-mirrors `make` on `ensure_dir_exists` — it appends `.<ext>` when the path
-has no suffix (`np.save`-style) instead of raising; a *wrong* suffix still
-raises. The leading dot on `ext` is optional and the match is
-case-insensitive.
+requires a `.<ext>` final suffix, raising `ValueError` otherwise. `ext` may
+be a single extension or an iterable of acceptable ones; the leading dot is
+optional and the match is case-insensitive. `add=True` mirrors `make` on
+`ensure_dir_exists` — it appends the (first) extension when the path has no
+suffix (`np.save`-style) instead of raising; a *wrong* suffix still raises.
 
 ```python
 from kaparoo.filesystem import ensure_file_extension
@@ -129,6 +129,9 @@ from kaparoo.filesystem import ensure_file_extension
 ensure_file_extension("data.bin", "bin")             # Path("data.bin")
 ensure_file_extension("data.txt", "bin")             # ValueError
 ensure_file_extension("out/00000_phase", "bin")      # ValueError (no suffix)
+
+# Any of several accepted extensions:
+ensure_file_extension("img.jpeg", ("jpg", "jpeg", "png"))  # Path("img.jpeg")
 
 ensure_file_extension("out/00000_phase", "bin", add=True)  # Path("out/00000_phase.bin")
 ensure_file_extension("out/data.txt", "bin", add=True)     # ValueError (wrong suffix)

@@ -12,10 +12,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - `kaparoo.filesystem.utils.ensure_file_extension`: a pure (no filesystem)
   extension check requiring a case-insensitive `.<ext>` final suffix
-  (raising `ValueError` otherwise). `add=True` (mirroring `make` on
-  `ensure_dir_exists`) appends `.<ext>` when the path has no suffix instead
-  of raising (`np.save`-style); a wrong suffix still raises. The leading dot
-  on `ext` is optional.
+  (raising `ValueError` otherwise). `ext` may be a single extension or an
+  iterable of acceptable ones (e.g. `("jpg", "jpeg")`). `add=True` (mirroring
+  `make` on `ensure_dir_exists`) appends the first extension when the path
+  has no suffix instead of raising (`np.save`-style); a wrong suffix still
+  raises. The leading dot on `ext` is optional.
 
 ### Changed
 

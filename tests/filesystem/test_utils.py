@@ -268,6 +268,33 @@ def test_ensure_file_extension_accepts_str_and_pathlike(tmp_path: Path):
     assert ensure_file_extension(src, "json") == src
 
 
+def test_ensure_file_extension_accepts_any_of_several():
+    # An iterable of acceptable extensions: match any one.
+    assert ensure_file_extension("a.jpg", ("jpg", "jpeg", "png")).name == "a.jpg"
+    assert ensure_file_extension("a.JPEG", ("jpg", "jpeg")).name == "a.JPEG"
+    assert ensure_file_extension("a.yaml", [".yml", ".yaml"]).name == "a.yaml"
+
+
+def test_ensure_file_extension_rejects_when_none_match():
+    with pytest.raises(ValueError, match=r"must have a \.jpg / \.png extension"):
+        ensure_file_extension("a.gif", ("jpg", "png"))
+
+
+def test_ensure_file_extension_str_not_iterated_as_chars():
+    # A str `ext` is one extension, not the iterable of its characters.
+    with pytest.raises(ValueError, match=r"must have a \.bin extension"):
+        ensure_file_extension("a.b", "bin")
+
+
+def test_ensure_file_extension_add_appends_first_of_several():
+    assert ensure_file_extension("a", ("jpeg", "jpg"), add=True).name == "a.jpeg"
+
+
+def test_ensure_file_extension_empty_ext_raises():
+    with pytest.raises(ValueError, match="at least one extension"):
+        ensure_file_extension("a.bin", [])
+
+
 # --- ensure_file_extension(add=True) (np.save-style append) -----------------
 
 
