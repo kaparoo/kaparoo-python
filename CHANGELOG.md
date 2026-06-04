@@ -8,6 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `kaparoo.filesystem.utils.ensure_file_extension` / `with_file_extension`:
+  pure (no filesystem) extension helpers. `ensure_file_extension` requires a
+  case-insensitive `.<ext>` suffix (raising `ValueError` otherwise);
+  `with_file_extension` appends `.<ext>` when the path has no suffix and
+  validates it otherwise (`np.save`-style). The leading dot on `ext` is
+  optional and only the final suffix is considered.
+
 ### Changed
 
 - Renamed `SegmentTimer` -> `SpanTimer` and `SegmentRecord` -> `SpanRecord`

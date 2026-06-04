@@ -10,7 +10,7 @@
   `dir_not_empty(s)` with validation, plus `_unsafe` variants that skip
   pre-checks
 - [`utils`](./utils.py) — `stringify_path(s)`, `wrap_path(s)`,
-  `reserve_path(s)`
+  `reserve_path(s)`, `ensure_file_extension` / `with_file_extension`
 - [`staged`](./staged.py) — `StagedFile` / `StagedDirectory`, safe
   (atomic) writers usable as a context manager or explicitly
 - [`exceptions`](./exceptions.py) — `DirectoryNotFoundError`, `NotAFileError`
@@ -114,6 +114,21 @@ stringify_paths(["data/a.txt", "data/b.txt"], after="data")  # ["a.txt", "b.txt"
 
 # Compose paths without joining manually
 wrap_path("logs", prepend="var", append="server.log")  # var/logs/server.log
+```
+
+`ensure_file_extension` / `with_file_extension` are pure (no filesystem)
+extension checks. `ensure_*` requires a `.<ext>` suffix; `with_*` appends
+it when absent (`np.save`-style). The leading dot on `ext` is optional and
+the match is case-insensitive.
+
+```python
+from kaparoo.filesystem import ensure_file_extension, with_file_extension
+
+ensure_file_extension("data.bin", "bin")        # Path("data.bin")
+ensure_file_extension("data.txt", "bin")        # ValueError
+
+with_file_extension("out/00000_phase", "bin")   # Path("out/00000_phase.bin")
+with_file_extension("out/data.bin", "bin")      # Path("out/data.bin")
 ```
 
 ## Reserving a destination

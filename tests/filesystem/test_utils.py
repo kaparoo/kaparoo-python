@@ -6,10 +6,12 @@ from typing import TYPE_CHECKING
 import pytest
 
 from kaparoo.filesystem.utils import (
+    ensure_file_extension,
     reserve_path,
     reserve_paths,
     stringify_path,
     stringify_paths,
+    with_file_extension,
     wrap_path,
     wrap_paths,
 )
@@ -228,3 +230,62 @@ def test_reserve_paths_exist_ok_and_make_parents(tmp_path: Path, tmp_file: Path)
     assert result == [tmp_file, fresh]
     assert tmp_file.exists()  # exist_ok is non-destructive
     assert fresh.parent.is_dir()
+
+
+# --- ensure_file_extension -------------------------------------------------
+
+
+def test_ensure_file_extension_accepts_matching():
+    assert ensure_file_extension("out/data.bin", "bin").as_posix() == "out/data.bin"
+
+
+def test_ensure_file_extension_is_case_insensitive():
+    assert ensure_file_extension("out/DATA.BIN", "bin").name == "DATA.BIN"
+    assert ensure_file_extension("out/data.bin", "BIN").name == "data.bin"
+
+
+def test_ensure_file_extension_leading_dot_in_ext_is_optional():
+    # ".bin" and "bin" behave the same.
+    assert ensure_file_extension("a.bin", ".bin").name == "a.bin"
+
+
+def test_ensure_file_extension_rejects_wrong_or_missing():
+    with pytest.raises(ValueError, match=r"must have a \.bin extension"):
+        ensure_file_extension("a.txt", "bin")
+    with pytest.raises(ValueError, match=r"must have a \.bin extension"):
+        ensure_file_extension("a", "bin")  # no extension
+
+
+def test_ensure_file_extension_only_final_suffix():
+    # Only the last component counts: ".tar.gz" matches "gz", not "tar.gz".
+    assert ensure_file_extension("a.tar.gz", "gz").name == "a.tar.gz"
+    with pytest.raises(ValueError, match=r"must have a \.tar\.gz extension"):
+        ensure_file_extension("a.tar.gz", "tar.gz")
+
+
+def test_ensure_file_extension_accepts_str_and_pathlike(tmp_path: Path):
+    src = tmp_path / "x.json"
+    assert ensure_file_extension(str(src), "json") == src
+    assert ensure_file_extension(src, "json") == src
+
+
+# --- with_file_extension ---------------------------------------------------
+
+
+def test_with_file_extension_appends_when_absent():
+    result = with_file_extension("out/00000_phase", "bin")
+    assert result.as_posix() == "out/00000_phase.bin"
+
+
+def test_with_file_extension_keeps_matching():
+    assert with_file_extension("out/data.bin", "bin").name == "data.bin"
+    assert with_file_extension("out/data.BIN", "bin").name == "data.BIN"  # case-insens.
+
+
+def test_with_file_extension_appends_with_optional_leading_dot():
+    assert with_file_extension("out/x", ".bin").name == "x.bin"
+
+
+def test_with_file_extension_rejects_wrong_existing_suffix():
+    with pytest.raises(ValueError, match=r"must have a \.bin extension"):
+        with_file_extension("out/x.txt", "bin")

@@ -16,6 +16,7 @@ __all__ = (
     "ensure_dir_exists",
     "ensure_dirs_exist",
     "ensure_file_exists",
+    "ensure_file_extension",
     "ensure_files_exist",
     "ensure_path_exists",
     "ensure_paths_exist",
@@ -35,6 +36,7 @@ __all__ = (
     "search_paths",
     "stringify_path",
     "stringify_paths",
+    "with_file_extension",
     "wrap_path",
     "wrap_paths",
 )
@@ -79,10 +81,12 @@ from kaparoo.filesystem.search import (
 )
 from kaparoo.filesystem.staged import StagedDirectory, StagedFile
 from kaparoo.filesystem.utils import (
+    ensure_file_extension,
     reserve_path,
     reserve_paths,
     stringify_path,
     stringify_paths,
+    with_file_extension,
     wrap_path,
     wrap_paths,
 )
