@@ -10,7 +10,7 @@
   `dir_not_empty(s)` with validation, plus `_unsafe` variants that skip
   pre-checks
 - [`utils`](./utils.py) — `stringify_path(s)`, `wrap_path(s)`,
-  `reserve_path(s)`, `ensure_file_extension` / `with_file_extension`
+  `reserve_path(s)`, `ensure_file_extension`
 - [`staged`](./staged.py) — `StagedFile` / `StagedDirectory`, safe
   (atomic) writers usable as a context manager or explicitly
 - [`exceptions`](./exceptions.py) — `DirectoryNotFoundError`, `NotAFileError`
@@ -116,19 +116,22 @@ stringify_paths(["data/a.txt", "data/b.txt"], after="data")  # ["a.txt", "b.txt"
 wrap_path("logs", prepend="var", append="server.log")  # var/logs/server.log
 ```
 
-`ensure_file_extension` / `with_file_extension` are pure (no filesystem)
-extension checks. `ensure_*` requires a `.<ext>` suffix; `with_*` appends
-it when absent (`np.save`-style). The leading dot on `ext` is optional and
-the match is case-insensitive.
+`ensure_file_extension` is a pure (no filesystem) extension check: it
+requires a `.<ext>` final suffix, raising `ValueError` otherwise. `add=True`
+mirrors `make` on `ensure_dir_exists` — it appends `.<ext>` when the path
+has no suffix (`np.save`-style) instead of raising; a *wrong* suffix still
+raises. The leading dot on `ext` is optional and the match is
+case-insensitive.
 
 ```python
-from kaparoo.filesystem import ensure_file_extension, with_file_extension
+from kaparoo.filesystem import ensure_file_extension
 
-ensure_file_extension("data.bin", "bin")        # Path("data.bin")
-ensure_file_extension("data.txt", "bin")        # ValueError
+ensure_file_extension("data.bin", "bin")             # Path("data.bin")
+ensure_file_extension("data.txt", "bin")             # ValueError
+ensure_file_extension("out/00000_phase", "bin")      # ValueError (no suffix)
 
-with_file_extension("out/00000_phase", "bin")   # Path("out/00000_phase.bin")
-with_file_extension("out/data.bin", "bin")      # Path("out/data.bin")
+ensure_file_extension("out/00000_phase", "bin", add=True)  # Path("out/00000_phase.bin")
+ensure_file_extension("out/data.txt", "bin", add=True)     # ValueError (wrong suffix)
 ```
 
 ## Reserving a destination

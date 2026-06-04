@@ -11,7 +11,6 @@ from kaparoo.filesystem.utils import (
     reserve_paths,
     stringify_path,
     stringify_paths,
-    with_file_extension,
     wrap_path,
     wrap_paths,
 )
@@ -269,23 +268,25 @@ def test_ensure_file_extension_accepts_str_and_pathlike(tmp_path: Path):
     assert ensure_file_extension(src, "json") == src
 
 
-# --- with_file_extension ---------------------------------------------------
+# --- ensure_file_extension(add=True) (np.save-style append) -----------------
 
 
-def test_with_file_extension_appends_when_absent():
-    result = with_file_extension("out/00000_phase", "bin")
+def test_ensure_file_extension_add_appends_when_absent():
+    result = ensure_file_extension("out/00000_phase", "bin", add=True)
     assert result.as_posix() == "out/00000_phase.bin"
 
 
-def test_with_file_extension_keeps_matching():
-    assert with_file_extension("out/data.bin", "bin").name == "data.bin"
-    assert with_file_extension("out/data.BIN", "bin").name == "data.BIN"  # case-insens.
+def test_ensure_file_extension_add_keeps_matching():
+    assert ensure_file_extension("out/data.bin", "bin", add=True).name == "data.bin"
+    # case-insensitive
+    assert ensure_file_extension("out/data.BIN", "bin", add=True).name == "data.BIN"
 
 
-def test_with_file_extension_appends_with_optional_leading_dot():
-    assert with_file_extension("out/x", ".bin").name == "x.bin"
+def test_ensure_file_extension_add_with_optional_leading_dot():
+    assert ensure_file_extension("out/x", ".bin", add=True).name == "x.bin"
 
 
-def test_with_file_extension_rejects_wrong_existing_suffix():
+def test_ensure_file_extension_add_still_rejects_wrong_suffix():
+    # `add` only resolves the missing-suffix case; a wrong suffix still raises.
     with pytest.raises(ValueError, match=r"must have a \.bin extension"):
-        with_file_extension("out/x.txt", "bin")
+        ensure_file_extension("out/x.txt", "bin", add=True)

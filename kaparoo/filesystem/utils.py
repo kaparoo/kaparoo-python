@@ -6,7 +6,6 @@ __all__ = (
     "reserve_paths",
     "stringify_path",
     "stringify_paths",
-    "with_file_extension",
     "wrap_path",
     "wrap_paths",
 )
@@ -361,7 +360,7 @@ def reserve_paths(
     return stringify_paths(paths) if stringify else paths
 
 
-def ensure_file_extension(path: StrPath, ext: str) -> Path:
+def ensure_file_extension(path: StrPath, ext: str, *, add: bool = False) -> Path:
     """Return `path` as a `Path`, requiring a case-insensitive `.<ext>` suffix.
 
     A pure path check that never touches the filesystem. The leading dot on
@@ -369,45 +368,29 @@ def ensure_file_extension(path: StrPath, ext: str) -> Path:
     suffix is considered: a multi-part name like `archive.tar.gz` matches
     `ext="gz"`, not `ext="tar.gz"`.
 
+    `add` mirrors `make` on `ensure_dir_exists`: when False (the default) a
+    path with no suffix raises like any other mismatch; when True, the missing
+    `.<ext>` is appended instead (`np.save`-style). A *wrong* suffix always
+    raises, regardless of `add`.
+
     Args:
         path: The path to check.
         ext: The required extension, with or without a leading dot.
-
-    Returns:
-        The path as a Path object.
-
-    Raises:
-        ValueError: If `path`'s final suffix is not `.<ext>`.
-    """
-    ext = ext.removeprefix(".")
-    path = Path(path)
-    if path.suffix.lower() != f".{ext.lower()}":
-        msg = f"{path.name} must have a .{ext} extension (got {path.suffix!r})"
-        raise ValueError(msg)
-    return path
-
-
-def with_file_extension(path: StrPath, ext: str) -> Path:
-    """Return `path` as a `Path` ending in `.<ext>`, appending it if absent.
-
-    `np.save`-style: a path with no suffix gets `.<ext>` appended, while a path
-    that already has one must match `.<ext>` (case-insensitive) or a
-    `ValueError` is raised. A pure path operation that never touches the
-    filesystem. The leading dot on `ext` is optional, and only the final
-    suffix is considered (see `ensure_file_extension`).
-
-    Args:
-        path: The destination path, with or without an extension.
-        ext: The expected extension, with or without a leading dot.
+        add: Whether to append `.<ext>` when `path` has no suffix, instead of
+            raising. Defaults to False.
 
     Returns:
         The path as a Path object, guaranteed to end in `.<ext>`.
 
     Raises:
-        ValueError: If `path` has a final suffix other than `.<ext>`.
+        ValueError: If `path`'s final suffix is not `.<ext>` -- except the
+            no-suffix case, which `add=True` resolves by appending.
     """
     ext = ext.removeprefix(".")
     path = Path(path)
-    if not path.suffix:
+    if add and not path.suffix:
         return path.with_suffix(f".{ext}")
-    return ensure_file_extension(path, ext)
+    if path.suffix.lower() != f".{ext.lower()}":
+        msg = f"{path.name} must have a .{ext} extension (got {path.suffix!r})"
+        raise ValueError(msg)
+    return path

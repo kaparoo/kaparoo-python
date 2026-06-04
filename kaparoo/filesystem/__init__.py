@@ -36,7 +36,6 @@ __all__ = (
     "search_paths",
     "stringify_path",
     "stringify_paths",
-    "with_file_extension",
     "wrap_path",
     "wrap_paths",
 )
@@ -86,7 +85,6 @@ from kaparoo.filesystem.utils import (
     reserve_paths,
     stringify_path,
     stringify_paths,
-    with_file_extension,
     wrap_path,
     wrap_paths,
 )
