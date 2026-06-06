@@ -41,21 +41,20 @@ explicitly or add per-metric weight tracking if a concrete case demands it.
 
 ## 🌳 `kaparoo.filesystem.hierarchy`
 
-### Scaffolder & the search bridge (the remaining spec operations)
+### Scaffolder (the remaining spec operation)
 
-`match` / `match_map` (`match.py`) and `validate` (`validate.py`) have
-landed: `match` maps each on-disk path to its spec node(s) honoring `depth`
-and descending through `Group`s, and `validate` returns a conformance
-report (`matched` / `unexpected` / `missing` / `violations`). The
-`required`-enumerable policy was settled as **"at least one present"**, and
-`unexpected` as **"not matched and not an ancestor of a match"** (so an
-unspecified directory's contents count). The operations still to write —
-free functions, nodes as pure value objects, reusing `search`'s traversal
-and `stringify_path` where helpful:
+`match` / `match_map` (`match.py`), `validate`, and `conforms`
+(`validate.py`) have landed: `match` maps each on-disk path to its spec
+node(s) honoring `depth` and descending through `Group`s; `validate`
+returns a conformance report (`matched` / `unexpected` / `missing` /
+`violations`); `conforms(spec)` builds a `search` predicate accepting a
+path that realizes *any* entry in the spec (file by name, directory by name
++ conforming subtree). Settled policies: `required`-enumerable is **"at
+least one present"**; `unexpected` is **"not matched and not an ancestor of
+a match"**; `conforms` matches **any node** in the spec, not just the top.
+The operation still to write — a free function, nodes as pure value
+objects, reusing `search`'s traversal and `stringify_path` where helpful:
 
-- `conforms(tree, root)` — a `search` predicate ("keep spec-conforming
-  paths"); the find-with-spec bridge. (Likely `validate(...).ok` per
-  candidate, or a lighter check.)
 - `scaffold(tree, root)` — write op: create the tree from `Expandable`
   names (and `required`).
 

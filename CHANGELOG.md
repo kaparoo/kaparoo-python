@@ -56,9 +56,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a `"node"`-discriminated dict (`to_dict` / `Node.from_dict`, mirroring
   the filter registry), so specs can be stored as JSON. The package
   depends on `kaparoo.filters` but nothing in `kaparoo.filesystem.search`.
-  This first cut is the representation plus name-level semantics and two
-  read-only disk operations, `match` and `validate` (below); `scaffold` is
-  not implemented yet.
+  This first cut is the representation plus name-level semantics and the
+  read-only disk operations `match`, `validate`, and `conforms` (below);
+  `scaffold` is not implemented yet.
 - `kaparoo.filesystem.hierarchy.match(tree, root)`: the first operation
   that applies a spec to a real filesystem. It maps each on-disk path
   under `root` (the container) to the spec node(s) it matches — by name
@@ -83,6 +83,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   last three are empty. A `required` enumerable name (`OneOf` / `Template`)
   is satisfied by at least one present match. Also exports the
   `ValidationReport` and `Violation` result types.
+- `kaparoo.filesystem.hierarchy.conforms(spec)`: builds a path predicate (a
+  `search` predicate) that accepts a path realizing *any* entry in `spec` —
+  a file matching a `File` node's name, or a directory matching a
+  `Directory` node's name whose subtree conforms (via `validate`). One spec
+  thus acts as a catalogue of acceptable sub-structures; because files (and
+  childless directories) match by name and type regardless of position, it
+  answers "a well-formed instance of something `spec` describes?", not "in
+  the right place?". (File attribute conditions, planned, will tighten the
+  file case.)
 
 ### Changed
 

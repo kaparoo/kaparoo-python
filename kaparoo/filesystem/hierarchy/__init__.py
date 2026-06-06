@@ -10,6 +10,7 @@ __all__ = (
     "Together",
     "ValidationReport",
     "Violation",
+    "conforms",
     "match",
     "match_map",
     "validate",
@@ -22,5 +23,6 @@ from kaparoo.filesystem.hierarchy.match import match, match_map
 from kaparoo.filesystem.hierarchy.validate import (
     ValidationReport,
     Violation,
+    conforms,
     validate,
 )

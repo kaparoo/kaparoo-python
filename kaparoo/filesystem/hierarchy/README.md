@@ -6,9 +6,10 @@ and files as immutable objects, with names drawn from the
 run of regularly-named siblings.
 
 > **Scope.** Today this package is the *representation* plus name-level
-> semantics (filter `matches` and, where applicable, `expand`) and two
-> read-only disk operations, [`match`](#matching-match) and
-> [`validate`](#validation-validate). The remaining operation it is
+> semantics (filter `matches` and, where applicable, `expand`) and the
+> read-only disk operations [`match`](#matching-match),
+> [`validate`](#validation-validate), and
+> [`conforms`](#filtering-paths-conforms). The remaining operation it is
 > designed to drive — scaffolding a new tree on disk — is not implemented
 > yet.
 
@@ -315,6 +316,33 @@ so anything below an *unspecified* directory counts too (describe the
 contents, or accept them with a wildcard like `File(Glob("*"))`, to keep
 them out of the report). A `required` enumerable name (`OneOf` / `Template`)
 is satisfied by *at least one* present match.
+
+## Filtering paths: `conforms`
+
+`conforms(spec)` builds a path predicate (a `search` predicate) that
+accepts a path when it realizes *any* entry in `spec` — so one spec doubles
+as a catalogue of acceptable sub-structures:
+
+```python
+from kaparoo.filesystem.search import search_paths
+from kaparoo.filesystem.hierarchy import Directory, File, conforms
+from kaparoo.filters import Glob
+
+spec = Directory("dataset", [
+    File("metadata.json"),
+    Directory("images", [File(Glob("*.png"))]),
+])
+keep = conforms(spec)
+search_paths("/data", predicate=keep)   # keep only paths spec recognizes
+```
+
+A path realizes an entry when it is a **file** matching a `File` node's
+name, or a **directory** matching a `Directory` node's name *whose subtree
+conforms* (via `validate`). Because files (and childless directories) are
+accepted by name and type regardless of position, `conforms` answers "is
+this a well-formed instance of something `spec` describes?" — not "is it in
+the right place?". (File *attribute* conditions — size, mtime, … — are a
+planned feature that will tighten the file case.)
 
 ## See also
 

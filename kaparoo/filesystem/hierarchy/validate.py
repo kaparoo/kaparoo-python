@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-__all__ = ("ValidationReport", "Violation", "validate")
+__all__ = ("ValidationReport", "Violation", "conforms", "validate")
 
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
 
-from kaparoo.filesystem.hierarchy.entry import Directory, Entry
+from kaparoo.filesystem.hierarchy.entry import Directory, Entry, File
 from kaparoo.filesystem.hierarchy.group import Exclusive, Group, Together
 from kaparoo.filesystem.hierarchy.match import match_map
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Callable, Iterable, Iterator
 
     from kaparoo.filesystem.hierarchy.base import Node
     from kaparoo.filesystem.types import StrPath
@@ -69,23 +69,66 @@ def validate(tree: Node, root: StrPath) -> ValidationReport:
     `Together` constraints are `violations`. A `required` enumerable name
     (`OneOf` / `Template`) is satisfied by *at least one* present match.
     """
-    root_path = Path(root)
-    matched = match_map(tree, root_path)
+    return _build_report((tree,), Path(root))
+
+
+def conforms(spec: Node) -> Callable[[StrPath], bool]:
+    """Build a path predicate: does a path conform to *any* part of `spec`?
+
+    Returns a `Callable[[Path], bool]` (a `search` predicate) that accepts a
+    path when it realizes *some* entry anywhere in `spec` -- so one spec
+    doubles as a catalogue of acceptable sub-structures. A path realizes an
+    entry when:
+
+    - the entry is a `File` and the path is a file whose name matches (file
+      *attribute* conditions are a planned feature and will tighten this);
+    - the entry is a `Directory` and the path is a directory whose name
+      matches *and* whose subtree conforms (via `validate`).
+
+    Because files (and childless directories) are accepted by name and type
+    regardless of where they sit, the predicate answers "is this a
+    well-formed instance of something `spec` describes?", not "is it in the
+    right place?".
+    """
+    entries = tuple(node for node in _walk_nodes(spec) if isinstance(node, Entry))
+
+    def check(path: StrPath) -> bool:
+        candidate = Path(path)
+        return any(_node_conforms(entry, candidate) for entry in entries)
+
+    return check
+
+
+def _node_conforms(entry: Entry, path: Path) -> bool:
+    """Whether `path` realizes `entry` (a file match, or a conforming dir)."""
+    if isinstance(entry, File):
+        # Attribute conditions (size, mtime, ...) will be checked here too.
+        return path.is_file() and entry.name.matches(path.name)
+    directory = cast("Directory", entry)
+    if not (path.is_dir() and directory.name.matches(path.name)):
+        return False
+    return _build_report(directory.children, path).ok
+
+
+def _build_report(top_nodes: tuple[Node, ...], root_path: Path) -> ValidationReport:
+    """Validate `top_nodes` matched directly under `root_path`."""
+    matched = _merge_matched(top_nodes, root_path)
     present: set[Node] = {node for nodes in matched.values() for node in nodes}
 
     missing: list[Node] = []
     violations: list[Violation] = []
-    for node in _walk_nodes(tree):
-        if isinstance(node, Entry):
-            if node.required and node not in present:
-                missing.append(node)
-        else:
-            group = cast("Group", node)
-            violation, group_missing = _check_group(group, present)
-            if violation is not None:
-                violations.append(violation)
-            if group_missing:
-                missing.append(group)
+    for top in top_nodes:
+        for node in _walk_nodes(top):
+            if isinstance(node, Entry):
+                if node.required and node not in present:
+                    missing.append(node)
+            else:
+                group = cast("Group", node)
+                violation, group_missing = _check_group(group, present)
+                if violation is not None:
+                    violations.append(violation)
+                if group_missing:
+                    missing.append(group)
 
     return ValidationReport(
         matched=matched,
@@ -93,6 +136,17 @@ def validate(tree: Node, root: StrPath) -> ValidationReport:
         missing=tuple(missing),
         violations=tuple(violations),
     )
+
+
+def _merge_matched(
+    top_nodes: tuple[Node, ...], root_path: Path
+) -> dict[Path, tuple[Node, ...]]:
+    """Union the `match_map` of each top node, by path (spec order kept)."""
+    merged: dict[Path, tuple[Node, ...]] = {}
+    for node in top_nodes:
+        for path, nodes in match_map(node, root_path).items():
+            merged[path] = merged.get(path, ()) + nodes
+    return merged
 
 
 def _check_group(group: Group, present: set[Node]) -> tuple[Violation | None, bool]:
