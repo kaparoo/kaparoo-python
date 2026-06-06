@@ -15,11 +15,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   sugar for `Literal`, `children` accept any iterable) compose into a
   tree whose node names are `kaparoo.filters` filters — so the full
   filter DSL (`Glob`, `Regex`, `And` / `Or` / `Not`, ...) describes which
-  siblings a node matches. Two filters defined here add an `Expandable`
-  capability (`expand`) that enumerates the names a pattern stands for:
-  `Literal` (one name) and `Template` (`template.format(value)` over
-  `values`); they also round-trip through the filter registry (kinds
-  `"literal"` / `"template"`). Nodes are immutable value objects (`==`,
+  siblings a node matches. A `list[str]` name is sugar for a `OneOf`, so
+  one node can stand for several literally-named siblings that share a
+  structure (`Directory(["train", "val"], layout)`). Three filters
+  defined here add an `Expandable` capability (`expand`) that enumerates
+  the names a pattern stands for: `Literal` (one name), `OneOf` (an
+  explicit set), and `Template` (`template.format(value)` over `values`);
+  they also round-trip through the filter registry (kinds `"literal"` /
+  `"one_of"` / `"template"`). Nodes are immutable value objects (`==`,
   `hash`, `repr`). The package depends on `kaparoo.filters` but nothing
   in `kaparoo.filesystem.search`. This first cut is the representation
   plus name-level semantics; disk operations (scaffold / validate /

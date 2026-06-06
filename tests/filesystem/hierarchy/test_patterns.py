@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from kaparoo.filesystem.hierarchy import Expandable, Literal, Template
+import pytest
+
+from kaparoo.filesystem.hierarchy import Expandable, Literal, OneOf, Template
 from kaparoo.filters import Filter, Glob
 
 
@@ -64,6 +66,40 @@ class TestTemplate:
             "values": [0, 1, 2],
         }
         assert Filter.from_dict(template.to_dict()) == template
+
+
+class TestOneOf:
+    def test_is_an_expandable_filter(self) -> None:
+        one_of = OneOf(["train", "val"])
+        assert isinstance(one_of, Filter)
+        assert isinstance(one_of, Expandable)
+
+    def test_matches_any_of_the_names(self) -> None:
+        one_of = OneOf(["train", "val", "test"])
+        assert one_of.matches("train")
+        assert one_of.matches("test")
+        assert not one_of.matches("predict")
+
+    def test_expand_yields_each_name(self) -> None:
+        assert list(OneOf(["train", "val"]).expand()) == ["train", "val"]
+
+    def test_deduplicates_preserving_order(self) -> None:
+        one_of = OneOf(["a", "b", "a", "c", "b"])
+        assert one_of.names == ("a", "b", "c")
+        assert list(one_of.expand()) == ["a", "b", "c"]
+
+    def test_empty_names_raise(self) -> None:
+        with pytest.raises(ValueError, match="at least one name"):
+            OneOf([])
+
+    def test_serialization_round_trips(self) -> None:
+        one_of = OneOf(["train", "val"])
+        assert one_of.to_dict() == {"kind": "one_of", "names": ["train", "val"]}
+        assert Filter.from_dict(one_of.to_dict()) == one_of
+
+    def test_equal_ignoring_duplicate_input(self) -> None:
+        assert OneOf(["a", "b"]) == OneOf(["a", "b", "a"])
+        assert OneOf(["a", "b"]) != OneOf(["a", "c"])
 
 
 class TestValueSemantics:

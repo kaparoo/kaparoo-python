@@ -6,8 +6,14 @@ __all__ = (
     "Expandable",
     "File",
     "Literal",
+    "OneOf",
     "Template",
 )
 
 from kaparoo.filesystem.hierarchy.nodes import Directory, Entry, File
-from kaparoo.filesystem.hierarchy.patterns import Expandable, Literal, Template
+from kaparoo.filesystem.hierarchy.patterns import (
+    Expandable,
+    Literal,
+    OneOf,
+    Template,
+)

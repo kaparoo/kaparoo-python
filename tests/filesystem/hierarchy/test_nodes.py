@@ -1,12 +1,17 @@
 from __future__ import annotations
 
-from kaparoo.filesystem.hierarchy import Directory, File, Literal, Template
+from kaparoo.filesystem.hierarchy import Directory, File, Literal, OneOf, Template
 from kaparoo.filters import Glob
 
 
 class TestFile:
     def test_bare_str_name_is_sugar_for_literal(self) -> None:
         assert File("metadata.json").name == Literal("metadata.json")
+
+    def test_list_name_is_sugar_for_one_of(self) -> None:
+        assert File(["README.md", "README.rst"]).name == OneOf(
+            ["README.md", "README.rst"]
+        )
 
     def test_filter_name_is_passed_through(self) -> None:
         name = Glob("*.png")
@@ -35,6 +40,15 @@ class TestDirectory:
 
     def test_name_sugar_applies(self) -> None:
         assert Directory("images").name == Literal("images")
+
+    def test_list_name_shares_children_across_siblings(self) -> None:
+        layout = [Directory("images", [File(Glob("*.png"))]), File("labels.json")]
+        grouped = Directory(["train", "val"], layout)
+        name = grouped.name
+        assert isinstance(name, OneOf)
+        assert name == OneOf(["train", "val"])
+        assert list(name.expand()) == ["train", "val"]
+        assert grouped.children == tuple(layout)
 
     def test_equal_by_name_and_children(self) -> None:
         assert Directory("d", [File("a")]) == Directory("d", [File("a")])

@@ -13,9 +13,10 @@ run of regularly-named siblings.
 
 ## Nodes
 
-Build a tree from two node types. A bare `str` name is sugar for
-`Literal`, and a directory's `children` accepts any iterable (frozen to a
-tuple, order preserved).
+Build a tree from two node types. As name sugar, a bare `str` becomes a
+`Literal` and a `list[str]` becomes a `OneOf` (one node standing for
+several literally-named siblings that share a structure). A directory's
+`children` accepts any iterable (frozen to a tuple, order preserved).
 
 | Class | Role |
 | --- | --- |
@@ -66,17 +67,33 @@ the `Expandable` capability, which is what scaffolding will require.
 | Class | `matches` | `expand` |
 | --- | --- | --- |
 | [`Literal`](./patterns.py) | name equals the value | the one name |
+| [`OneOf`](./patterns.py) | name is one of an explicit set | each name in the set |
 | [`Template`](./patterns.py) | name is in the enumerated set | `template.format(value)` per value |
 
 ```python
-from kaparoo.filesystem.hierarchy import Expandable, Literal, Template
+from kaparoo.filesystem.hierarchy import Expandable, Literal, OneOf, Template
 from kaparoo.filters import Glob
 
 list(Template("shard_{:03d}", range(3)).expand())  # ['shard_000', 'shard_001', 'shard_002']
+list(OneOf(["train", "val", "test"]).expand())     # ['train', 'val', 'test']
 list(Literal("data.bin").expand())                 # ['data.bin']
 
 isinstance(Glob("*.png"), Expandable)              # False — open-ended, cannot scaffold
 isinstance(Literal("data.bin"), Expandable)        # True
+```
+
+One node can stand for several literally-named siblings that share a
+structure — `list[str]` sugar makes this concise:
+
+```python
+from kaparoo.filesystem.hierarchy import Directory, File
+from kaparoo.filters import Glob
+
+# both `train/` and `val/` get the same layout
+Directory(["train", "val"], [
+    Directory("images", [File(Glob("*.png"))]),
+    File("labels.json"),
+])
 ```
 
 `Template` materializes `values` to a tuple at construction and applies a

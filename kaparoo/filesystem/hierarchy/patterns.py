@@ -3,6 +3,7 @@ from __future__ import annotations
 __all__ = (
     "Expandable",
     "Literal",
+    "OneOf",
     "Template",
 )
 
@@ -59,6 +60,48 @@ class Literal(Filter, Expandable):
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         return cls(name=data["name"])
+
+
+@register_filter("one_of")
+@dataclass(frozen=True)
+class OneOf(Filter, Expandable):
+    """A filter matching and enumerating an explicit set of `names`.
+
+    The `Expandable` counterpart of `kaparoo.filters.EqualsAny`: it
+    matches a name that is one of `names`, and expands to each. Use it for
+    a fixed run of literally-named siblings that share a structure --
+    `OneOf(["train", "val", "test"])`. The bare-`list[str]` form accepted
+    by node constructors (`Directory(["train", "val"], ...)`) is sugar for
+    `OneOf(["train", "val"])`.
+
+    `names` is materialized to a tuple at construction and deduplicated
+    (first occurrence wins); matching is case-sensitive.
+
+    Raises:
+        ValueError: If `names` is empty.
+    """
+
+    names: Iterable[str]
+
+    def __post_init__(self) -> None:
+        names = tuple(dict.fromkeys(self.names))
+        if not names:
+            msg = "OneOf requires at least one name."
+            raise ValueError(msg)
+        object.__setattr__(self, "names", names)
+
+    def matches(self, target: str) -> bool:
+        return target in self.names
+
+    def expand(self) -> Iterator[str]:
+        yield from self.names
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"kind": "one_of", "names": list(self.names)}
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        return cls(names=data["names"])
 
 
 @register_filter("template")
