@@ -7,6 +7,7 @@ from kaparoo.filesystem.hierarchy import (
     Entry,
     Exclusive,
     File,
+    Group,
     Literal,
     Node,
     OneOf,
@@ -155,10 +156,15 @@ class TestDepth:
 
 
 class TestExclusive:
-    def test_is_a_node_but_not_an_entry(self) -> None:
+    def test_is_a_group_node_but_not_an_entry(self) -> None:
         ex = Exclusive(File("setup.py"), File("pyproject.toml"))
         assert isinstance(ex, Node)
+        assert isinstance(ex, Group)
         assert not isinstance(ex, Entry)
+
+    def test_entries_flatten_the_alternatives(self) -> None:
+        ex = Exclusive([File("a"), File("b")], File("c"))
+        assert ex.entries == (File("a"), File("b"), File("c"))
 
     def test_single_entry_alternatives(self) -> None:
         ex = Exclusive(File("setup.py"), File("pyproject.toml"))
@@ -219,14 +225,19 @@ class TestExclusive:
 
 
 class TestTogether:
-    def test_is_a_node_but_not_an_entry(self) -> None:
+    def test_is_a_group_node_but_not_an_entry(self) -> None:
         together = Together(File("weights.bin"), File("weights.index"))
         assert isinstance(together, Node)
+        assert isinstance(together, Group)
         assert not isinstance(together, Entry)
 
     def test_members(self) -> None:
         together = Together(File("cert.pem"), File("key.pem"))
         assert together.members == (File("cert.pem"), File("key.pem"))
+
+    def test_entries_are_the_members(self) -> None:
+        together = Together(File("a"), File("b"))
+        assert together.entries == together.members == (File("a"), File("b"))
 
     def test_files_and_directories_both_accepted(self) -> None:
         together = Together(Directory("src"), File("setup.cfg"))
@@ -265,3 +276,18 @@ class TestTogether:
         assert repr(Together(File("a"), File("b"), required=True)) == (
             "Together(File(Literal(name='a')), File(Literal(name='b')), required=True)"
         )
+
+
+class TestGroup:
+    def test_entries_are_not_groups(self) -> None:
+        assert not isinstance(File("a"), Group)
+        assert not isinstance(Directory("d"), Group)
+
+    def test_required_is_shared_across_constraint_kinds(self) -> None:
+        for group in (
+            Exclusive(File("a"), File("b"), required=True),
+            Together(File("a"), File("b"), required=True),
+        ):
+            assert isinstance(group, Group)
+            assert group.required is True
+            assert group.entries == (File("a"), File("b"))

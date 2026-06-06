@@ -25,7 +25,8 @@ several literally-named siblings that share a structure). A directory's
 | [`Entry`](./nodes.py) | abstract base of `File` / `Directory` (carries `name`) |
 | [`Exclusive`](./nodes.py) | a mutual-exclusion constraint among siblings |
 | [`Together`](./nodes.py) | a co-occurrence (all-or-nothing) constraint among siblings |
-| [`Node`](./nodes.py) | abstract base of everything in `children` (`Entry`, `Exclusive`, `Together`) |
+| [`Group`](./nodes.py) | abstract base of the constraint nodes (`Exclusive`, `Together`) |
+| [`Node`](./nodes.py) | abstract base of everything in `children` (`Entry` or `Group`) |
 
 ```python
 from kaparoo.filesystem.hierarchy import Directory, File, Template
@@ -147,6 +148,16 @@ the dual of `Exclusive`; the two compose by sitting side by side in
 `children` — an `Exclusive` between sides, plus a `Together` that makes
 one side co-occur. Like the rest of the representation, the validation
 that enforces it is not implemented yet.
+
+Both constraints share a `Group` base that carries `required` and an
+`entries` property — the entries the constraint references, flattened in
+order — so a tree walk can descend uniformly through any constraint
+without special-casing its shape:
+
+```python
+Exclusive([File("a"), File("b")], File("c")).entries  # (File("a"), File("b"), File("c"))
+Together(File("x"), File("y")).entries                # (File("x"), File("y"))
+```
 
 ## Enumeration: `Expandable`
 

@@ -6,6 +6,7 @@ __all__ = (
     "Exclusive",
     "Expandable",
     "File",
+    "Group",
     "Literal",
     "Node",
     "OneOf",
@@ -18,6 +19,7 @@ from kaparoo.filesystem.hierarchy.nodes import (
     Entry,
     Exclusive,
     File,
+    Group,
     Node,
     Together,
 )

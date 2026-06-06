@@ -5,6 +5,7 @@ __all__ = (
     "Entry",
     "Exclusive",
     "File",
+    "Group",
     "Node",
     "Together",
 )
@@ -223,7 +224,42 @@ def _normalize_alternative(alternative: Entry | Iterable[Entry]) -> tuple[Entry,
     return tuple(alternative)
 
 
-class Exclusive(Node):
+class Group(Node, ABC):
+    """A constraint over a group of sibling entries.
+
+    The shared base of `Exclusive` (mutual exclusion) and `Together`
+    (co-occurrence). A group is a `Node` but not an `Entry` -- it has no
+    name of its own, only the entries it constrains. Every group carries a
+    keyword-only `required` flag (whether the empty, none-present case is
+    forbidden; its precise meaning is defined by each subclass) and
+    exposes the entries it references through `entries`, regardless of how
+    they are structured internally. Groups are constraints for *matching*
+    / *validation*, which is not implemented yet -- this is representation
+    only.
+    """
+
+    __slots__ = ("_required",)
+
+    def __init__(self, *, required: bool = False) -> None:
+        self._required = required
+
+    @property
+    def required(self) -> bool:
+        """Whether the empty (none-present) case is forbidden.
+
+        The exact meaning is subclass-specific: for `Exclusive`, at least
+        one alternative must be present; for `Together`, every member.
+        """
+        return self._required
+
+    @property
+    @abstractmethod
+    def entries(self) -> tuple[Entry, ...]:
+        """The entries this constraint references, flattened in order."""
+        raise NotImplementedError
+
+
+class Exclusive(Group):
     """A mutual-exclusion constraint among sibling alternatives.
 
     Placed in a `Directory`'s `children`, `Exclusive` declares that the
@@ -240,10 +276,10 @@ class Exclusive(Node):
     default) no alternative present is also allowed; `required=True`
     additionally requires at least one alternative to be present.
 
-    `Exclusive` is a `Node` but not an `Entry`: it has no name of its own,
-    only the entries grouped in its alternatives. It is a constraint for
-    *matching* / *validation*, which is not implemented yet -- this is
-    representation only.
+    `Exclusive` is a `Group` (a `Node`, not an `Entry`): it has no name of
+    its own, only the entries grouped in its alternatives, reachable via
+    `entries`. It is a constraint for *matching* / *validation*, which is
+    not implemented yet -- this is representation only.
 
     Args:
         *alternatives: Two or more alternatives, each an `Entry` or an
@@ -256,7 +292,7 @@ class Exclusive(Node):
             alternative is empty.
     """
 
-    __slots__ = ("_alternatives", "_required")
+    __slots__ = ("_alternatives",)
 
     def __init__(
         self,
@@ -271,7 +307,7 @@ class Exclusive(Node):
             msg = "each Exclusive alternative must be non-empty."
             raise ValueError(msg)
         self._alternatives = normalized
-        self._required = required
+        super().__init__(required=required)
 
     @property
     def alternatives(self) -> tuple[tuple[Entry, ...], ...]:
@@ -279,9 +315,8 @@ class Exclusive(Node):
         return self._alternatives
 
     @property
-    def required(self) -> bool:
-        """Whether at least one alternative must be present (vs at most one)."""
-        return self._required
+    def entries(self) -> tuple[Entry, ...]:
+        return tuple(entry for alt in self._alternatives for entry in alt)
 
     def _key(self) -> tuple[object, ...]:
         return (self._alternatives, self._required)
@@ -295,7 +330,7 @@ class Exclusive(Node):
         return f"Exclusive({', '.join(parts)})"
 
 
-class Together(Node):
+class Together(Group):
     """A co-occurrence constraint: sibling entries that exist as a unit.
 
     Placed in a `Directory`'s `children`, `Together` declares its
@@ -308,10 +343,10 @@ class Together(Node):
     With `required=False` (the default) all-absent is allowed;
     `required=True` additionally requires every member present.
 
-    Like `Exclusive`, `Together` is a `Node` but not an `Entry` -- it has
-    no name of its own, only the entries it groups. It is a constraint for
-    *matching* / *validation*, which is not implemented yet -- this is
-    representation only.
+    Like `Exclusive`, `Together` is a `Group` (a `Node`, not an `Entry`)
+    -- it has no name of its own, only the entries it groups, reachable
+    via `entries`. It is a constraint for *matching* / *validation*, which
+    is not implemented yet -- this is representation only.
 
     Args:
         *members: Two or more entries that must coexist.
@@ -322,14 +357,14 @@ class Together(Node):
         ValueError: If fewer than two members are given.
     """
 
-    __slots__ = ("_members", "_required")
+    __slots__ = ("_members",)
 
     def __init__(self, *members: Entry, required: bool = False) -> None:
         if len(members) < 2:
             msg = "Together requires at least two members."
             raise ValueError(msg)
         self._members = members
-        self._required = required
+        super().__init__(required=required)
 
     @property
     def members(self) -> tuple[Entry, ...]:
@@ -337,9 +372,8 @@ class Together(Node):
         return self._members
 
     @property
-    def required(self) -> bool:
-        """Whether every member must be present (vs all or none)."""
-        return self._required
+    def entries(self) -> tuple[Entry, ...]:
+        return self._members
 
     def _key(self) -> tuple[object, ...]:
         return (self._members, self._required)
