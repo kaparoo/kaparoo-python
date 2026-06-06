@@ -58,6 +58,34 @@ File(EndsWithAny((".png", ".jpg")))         # any image file
 `hierarchy` depends on `kaparoo.filters`, never the reverse — and on
 nothing in `kaparoo.filesystem.search`.
 
+## Depth: descendants at unknown levels
+
+By default a child sits one level below its parent (`depth=1`). Set
+`depth` to place an entry deeper, past intermediate directories whose
+names you do not know:
+
+| `depth` | meaning |
+| --- | --- |
+| `1` (default) | direct child |
+| `N` | exactly `N` levels below (`N - 1` unknown intermediate dirs) |
+| `None` | any depth, one or more levels — the tree-level `**` |
+
+```python
+from kaparoo.filesystem.hierarchy import Directory, File
+from kaparoo.filters import Glob
+
+Directory("dataset", [
+    Directory("frames", [File(Glob("*.png"))], depth=2),  # dataset/<any>/frames/*.png
+    File("config.yaml", depth=None),                      # config.yaml anywhere below
+])
+```
+
+`depth` is part of a node's value identity (`Directory("x", depth=None)
+!= Directory("x")`) and `repr` shows it only when non-default. Because
+the intermediate names are unknown, `depth != 1` describes structure for
+*matching*, not scaffolding — and like the rest of the representation,
+the matching that consumes `depth` is not implemented yet.
+
 ## Enumeration: `Expandable`
 
 A plain filter only *tests* a name (`matches`). Two filters defined here
