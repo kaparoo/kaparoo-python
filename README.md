@@ -54,9 +54,11 @@ operations it is designed to drive are still to come.
 ### [`kaparoo.filters`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/filters)
 
 A declarative, composable string-matching DSL: a `Filter` family
-(pattern, multi-pattern, logical) that round-trips through JSON-friendly
-dicts, plus an extension hook for custom filter kinds. Used by
-`kaparoo.filesystem.search` for path matching.
+(pattern, multi-pattern, logical, and enumerable `Literal` / `OneOf` /
+`Template`) that round-trips through JSON-friendly dicts, plus an
+extension hook for custom filter kinds. Used by
+`kaparoo.filesystem.search` for path matching and
+`kaparoo.filesystem.hierarchy` for declaring trees.
 
 ### [`kaparoo.utils`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/utils)
 

@@ -3,8 +3,11 @@
 A declarative, composable, JSON-serializable string-matching DSL.
 
 Filters test a single string with `matches(target) -> bool` and combine
-with boolean logic. They are filesystem-agnostic -- `kaparoo.filesystem.search`
-uses them for path matching, but nothing here touches the filesystem.
+with boolean logic; the [enumerable](#enumerable-filters-enumerablepy)
+ones can additionally *list* the finite set of names they match. They are
+filesystem-agnostic -- `kaparoo.filesystem.search` uses them for path
+matching and `kaparoo.filesystem.hierarchy` for declaring trees, but
+nothing here touches the filesystem.
 
 ```python
 from kaparoo.filters import And, EndsWith, Equals, Not
@@ -74,6 +77,42 @@ from kaparoo.filters import And, EndsWith, Equals, Not
 # .py files except __init__.py
 And((EndsWith(".py"), Not(Equals("__init__.py"))))
 ```
+
+### Enumerable filters ([`enumerable.py`](./enumerable.py))
+
+Most filters only *test* a string (`matches`). The enumerable family also
+*lists* the concrete strings it stands for, via `expand()` — they
+implement the `Expandable` capability. Open-ended filters (`Glob`,
+`Regex`, ...) match but cannot enumerate, so they are deliberately not
+`Expandable`.
+
+| Class | Matches | `expand()` yields |
+| --- | --- | --- |
+| `Literal` | the exact name (case-sensitive) | the one name |
+| `OneOf` | a name in an explicit set | each name in the set |
+| `Template` | a name in the enumerated product | `template.format(*combo)` over the axes |
+
+```python
+from kaparoo.filters import Expandable, Glob, Literal, OneOf, Template
+
+list(Literal("data.bin").expand())                  # ['data.bin']
+list(OneOf(["train", "val", "test"]).expand())      # ['train', 'val', 'test']
+list(Template("shard_{:03d}", range(3)).expand())   # ['shard_000', 'shard_001', 'shard_002']
+
+# Template combines multiple value axes as a cartesian product:
+list(Template("{}_{}.png", ["real", "fake"], range(1, 3)).expand())
+# ['real_1.png', 'real_2.png', 'fake_1.png', 'fake_2.png']
+
+isinstance(Glob("*.png"), Expandable)               # False — open-ended
+isinstance(Literal("data.bin"), Expandable)         # True
+```
+
+`Literal` / `OneOf` are the case-sensitive, always-enumerable counterparts
+of `Equals` / `EqualsAny` (which can be case-insensitive, and so are not
+reliably enumerable). `Template`'s axes are materialized to tuples at
+construction; formatting is lazy, so a field-count mismatch surfaces from
+`expand()`, not the constructor. All three register as ordinary filter
+kinds (`"literal"` / `"one_of"` / `"template"`).
 
 ## JSON serialization
 

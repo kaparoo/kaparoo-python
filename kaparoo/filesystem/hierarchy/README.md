@@ -29,8 +29,8 @@ several literally-named siblings that share a structure). A directory's
 | [`Node`](./base.py) | abstract base of everything in `children` (`Entry` or `Group`) |
 
 ```python
-from kaparoo.filesystem.hierarchy import Directory, File, Template
-from kaparoo.filters import Glob
+from kaparoo.filesystem.hierarchy import Directory, File
+from kaparoo.filters import Glob, Template
 
 dataset = Directory("dataset", [
     File("metadata.json"),                              # literal file
@@ -169,36 +169,23 @@ Exclusive(Together(File("a"), File("b")), File("c")).entries  # (File("a"), File
 The structured view (`alternatives` / `members`) keeps the nesting;
 `entries` flattens it to the leaves.
 
-## Enumeration: `Expandable`
+## Enumerable names
 
-A plain filter only *tests* a name (`matches`). Two filters defined here
-also *enumerate* the names they stand for, via `expand` — they implement
-the `Expandable` capability, which is what scaffolding will require.
-
-| Class | `matches` | `expand` |
-| --- | --- | --- |
-| [`Literal`](./pattern.py) | name equals the value | the one name |
-| [`OneOf`](./pattern.py) | name is one of an explicit set | each name in the set |
-| [`Template`](./pattern.py) | name is in the enumerated set | `template.format(*combo)` over the product of axes |
+A node's name can be any filter, but **scaffolding** (creating the tree
+on disk) needs names it can *list*, not just *match*. Those are the
+`Expandable` filters from [`kaparoo.filters`](../../filters/) — `Literal`,
+`OneOf`, and `Template`. Open-ended filters (`Glob`, `Regex`, ...) match
+but cannot enumerate, so they describe structure for matching only.
 
 ```python
-from kaparoo.filesystem.hierarchy import Expandable, Literal, OneOf, Template
-from kaparoo.filters import Glob
+from kaparoo.filters import Expandable, Glob, Literal
 
-list(Template("shard_{:03d}", range(3)).expand())  # ['shard_000', 'shard_001', 'shard_002']
-list(OneOf(["train", "val", "test"]).expand())     # ['train', 'val', 'test']
-list(Literal("data.bin").expand())                 # ['data.bin']
-
-# multiple axes combine as a cartesian product:
-list(Template("{}_{}.png", ["real", "fake"], range(1, 3)).expand())
-# ['real_1.png', 'real_2.png', 'fake_1.png', 'fake_2.png']
-
-isinstance(Glob("*.png"), Expandable)              # False — open-ended, cannot scaffold
-isinstance(Literal("data.bin"), Expandable)        # True
+isinstance(Literal("data.bin"), Expandable)   # True  — one concrete name
+isinstance(Glob("*.png"), Expandable)         # False — open-ended
 ```
 
 One node can stand for several literally-named siblings that share a
-structure — `list[str]` sugar makes this concise:
+structure — `str` / `list[str]` name sugar makes this concise:
 
 ```python
 from kaparoo.filesystem.hierarchy import Directory, File
@@ -211,24 +198,14 @@ Directory(["train", "val"], [
 ])
 ```
 
-`Template` takes one or more value **axes** (each materialized to a tuple
-at construction) and enumerates `template.format(*combo)` over their
-cartesian product, with one positional field per axis. A single axis is
-the common case; nest Template-named directories, or add axes, for a
-grid. Formatting is lazy, so a template whose field count does not match
-its axes raises from `expand`, not at construction.
-
-Because `Literal` and `Template` are `Filter`s, they participate in the
-filter registry and round-trip through `to_dict` / `Filter.from_dict`
-like any other filter (kinds `"literal"` and `"template"`).
-
 ## Value semantics
 
 Patterns and nodes are immutable value objects: equal by type and fields,
 hashable, with a `repr` that round-trips the fields.
 
 ```python
-from kaparoo.filesystem.hierarchy import File, Literal
+from kaparoo.filesystem.hierarchy import File
+from kaparoo.filters import Literal
 
 File("a.txt") == File(Literal("a.txt"))   # True (str is sugar for Literal)
 repr(File("a.txt"))                        # "File(Literal(name='a.txt'))"

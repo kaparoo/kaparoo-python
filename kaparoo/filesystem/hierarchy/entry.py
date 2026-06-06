@@ -10,8 +10,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from kaparoo.filesystem.hierarchy.base import Node
-from kaparoo.filesystem.hierarchy.pattern import Literal, OneOf
-from kaparoo.filters import Filter
+from kaparoo.filters import Filter, Literal, OneOf
 
 if TYPE_CHECKING:
     from collections.abc import Iterable

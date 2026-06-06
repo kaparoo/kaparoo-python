@@ -10,22 +10,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `kaparoo.filters` gains an enumerable filter family: `Literal`, `OneOf`,
+  and `Template` implement an `Expandable` capability (`expand()`) that
+  *lists* the finite set of names a filter matches, on top of the usual
+  `matches`. `Literal` / `OneOf` are the case-sensitive, always-enumerable
+  counterparts of `Equals` / `EqualsAny`; `Template` enumerates
+  `template.format(*combo)` over the cartesian product of one or more
+  value axes (`Template("shard_{:03d}", range(8))`,
+  `Template("{}_{}.png", ["real", "fake"], range(3))`). They register as
+  ordinary filter kinds (`"literal"` / `"one_of"` / `"template"`).
 - `kaparoo.filesystem.hierarchy`: a new subpackage describing a filesystem
-  tree declaratively. `File` / `Directory` nodes (bare `str` names are
-  sugar for `Literal`, `children` accept any iterable) compose into a
-  tree whose node names are `kaparoo.filters` filters — so the full
-  filter DSL (`Glob`, `Regex`, `And` / `Or` / `Not`, ...) describes which
-  siblings a node matches. A `list[str]` name is sugar for a `OneOf`, so
-  one node can stand for several literally-named siblings that share a
-  structure (`Directory(["train", "val"], layout)`). Three filters
-  defined here add an `Expandable` capability (`expand`) that enumerates
-  the names a pattern stands for: `Literal` (one name), `OneOf` (an
-  explicit set), and `Template` (`template.format(*combo)` over the
-  cartesian product of one or more value axes -- a single axis for
-  `shard_{:03d}`, several for a `{}_{}.png` grid); they also round-trip
-  through the filter registry (kinds `"literal"` / `"one_of"` /
-  `"template"`). Nodes are immutable value objects (`==`,
-  `hash`, `repr`) and take a keyword-only `depth` (default `1`, a direct
+  tree declaratively. `File` / `Directory` nodes compose into a tree whose
+  node names are `kaparoo.filters` filters — the full DSL (`Glob`,
+  `Regex`, `And` / `Or` / `Not`, the enumerable `Literal` / `OneOf` /
+  `Template`, ...) describes which siblings a node matches. As name sugar,
+  a bare `str` becomes a `Literal` and a `list[str]` a `OneOf`, so one
+  node can stand for several literally-named siblings that share a
+  structure (`Directory(["train", "val"], layout)`). Nodes are immutable
+  value objects (`==`, `hash`, `repr`) and take a keyword-only `depth`
+  (default `1`, a direct
   child) describing how far below the parent the entry sits, past
   intermediate directories of unknown name: an `int` is an exact level,
   `None` is any depth (the tree-level `**`), and a `(min, max)` tuple is

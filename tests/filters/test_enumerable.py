@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from kaparoo.filesystem.hierarchy import Expandable, Literal, OneOf, Template
-from kaparoo.filters import Filter, Glob
+from kaparoo.filters import Expandable, Filter, Glob, Literal, OneOf, Template
 
 
 class TestLiteral:

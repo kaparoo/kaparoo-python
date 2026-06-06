@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from kaparoo.filesystem.hierarchy import Directory, File, Literal, OneOf, Template
-from kaparoo.filters import Glob
+from kaparoo.filesystem.hierarchy import Directory, File
+from kaparoo.filters import Glob, Literal, OneOf, Template
 
 
 class TestFile:

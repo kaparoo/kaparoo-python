@@ -12,7 +12,8 @@ from dataclasses import dataclass
 from itertools import product
 from typing import TYPE_CHECKING
 
-from kaparoo.filters import Filter, register_filter
+from kaparoo.filters.base import Filter
+from kaparoo.filters.utils import register_filter
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
@@ -24,10 +25,11 @@ class Expandable(ABC):
 
     A plain `Filter` only *tests* names (`matches`); an `Expandable`
     filter can additionally *list* the concrete names it stands for via
-    `expand`. Enumerability is what scaffolding needs -- code that creates
-    a tree on disk requires every name to be `Expandable`. Open-ended
-    filters (`Glob`, `Regex`, ...) can match but never enumerate, so they
-    are deliberately not `Expandable`.
+    `expand`. Enumerability is what *generation* needs -- producing the
+    strings a pattern stands for (for example to scaffold a directory
+    tree) requires every name to be `Expandable`. Open-ended filters
+    (`Glob`, `Regex`, ...) can match but never enumerate, so they are
+    deliberately not `Expandable`.
     """
 
     __slots__ = ()
@@ -43,8 +45,10 @@ class Expandable(ABC):
 class Literal(Filter, Expandable):
     """A filter matching exactly one `name`, and expanding to it.
 
-    The bare-`str` form accepted by node constructors (`File("a.txt")`)
-    is sugar for `Literal("a.txt")`. Matching is case-sensitive.
+    Matching is case-sensitive, so -- unlike `Equals`, which can be
+    case-insensitive and thus match several spellings -- a `Literal`
+    always stands for exactly one concrete name, making it
+    unconditionally `Expandable`.
     """
 
     name: str
@@ -68,15 +72,11 @@ class Literal(Filter, Expandable):
 class OneOf(Filter, Expandable):
     """A filter matching and enumerating an explicit set of `names`.
 
-    The `Expandable` counterpart of `kaparoo.filters.EqualsAny`: it
-    matches a name that is one of `names`, and expands to each. Use it for
-    a fixed run of literally-named siblings that share a structure --
-    `OneOf(["train", "val", "test"])`. The bare-`list[str]` form accepted
-    by node constructors (`Directory(["train", "val"], ...)`) is sugar for
-    `OneOf(["train", "val"])`.
-
-    `names` is materialized to a tuple at construction and deduplicated
-    (first occurrence wins); matching is case-sensitive.
+    The `Expandable` counterpart of `EqualsAny`: it matches a name that is
+    one of `names`, and expands to each -- `OneOf(["train", "val",
+    "test"])`. `names` is materialized to a tuple at construction and
+    deduplicated (first occurrence wins); matching is case-sensitive, so
+    `OneOf` is unconditionally `Expandable`.
 
     Raises:
         ValueError: If `names` is empty.
