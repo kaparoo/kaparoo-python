@@ -166,6 +166,13 @@ class TestExclusive:
         ex = Exclusive([File("a"), File("b")], File("c"))
         assert ex.entries == (File("a"), File("b"), File("c"))
 
+    def test_nested_group_alternative(self) -> None:
+        # "{a and b together} or c" -- an alternative is itself a Together.
+        together = Together(File("a"), File("b"))
+        ex = Exclusive(together, File("c"))
+        assert ex.alternatives == ((together,), (File("c"),))
+        assert ex.entries == (File("a"), File("b"), File("c"))  # recursive leaves
+
     def test_single_entry_alternatives(self) -> None:
         ex = Exclusive(File("setup.py"), File("pyproject.toml"))
         assert ex.alternatives == ((File("setup.py"),), (File("pyproject.toml"),))
@@ -238,6 +245,12 @@ class TestTogether:
     def test_entries_are_the_members(self) -> None:
         together = Together(File("a"), File("b"))
         assert together.entries == together.members == (File("a"), File("b"))
+
+    def test_nested_group_member_flattens_recursively(self) -> None:
+        inner = Exclusive(File("a"), File("b"))
+        together = Together(inner, File("c"))
+        assert together.members == (inner, File("c"))
+        assert together.entries == (File("a"), File("b"), File("c"))
 
     def test_files_and_directories_both_accepted(self) -> None:
         together = Together(Directory("src"), File("setup.cfg"))

@@ -121,13 +121,20 @@ Exclusive(
 )
 ```
 
-Within an alternative the entries are **independent** — `setup.py` and
+Within an alternative the nodes are **independent** — `setup.py` and
 `setup.cfg` may appear together or singly; they just can't appear
 alongside `pyproject.toml`. For "all or nothing" co-occurrence, use
 `Together`. `required=True` tightens "at most one alternative" to "at
 least one". `Exclusive` is a `Node` but not an `Entry` — it has no name of
 its own — so a directory's `children` hold `Node`s. The validation that
 enforces it is not implemented yet.
+
+Alternatives (and `Together` members) are `Node`s, so constraints **nest**
+— an alternative may itself be a group:
+
+```python
+Exclusive(Together(File("a"), File("b")), File("c"))   # {a and b together} or c
+```
 
 ## Co-occurrence: `Together`
 
@@ -150,14 +157,17 @@ one side co-occur. Like the rest of the representation, the validation
 that enforces it is not implemented yet.
 
 Both constraints share a `Group` base that carries `required` and an
-`entries` property — the entries the constraint references, flattened in
-order — so a tree walk can descend uniformly through any constraint
-without special-casing its shape:
+`entries` property — the **leaf** entries the constraint references,
+descending recursively through any nested groups — so a tree walk reaches
+every concrete entry uniformly, whatever the constraint's shape:
 
 ```python
-Exclusive([File("a"), File("b")], File("c")).entries  # (File("a"), File("b"), File("c"))
-Together(File("x"), File("y")).entries                # (File("x"), File("y"))
+Exclusive([File("a"), File("b")], File("c")).entries          # (File("a"), File("b"), File("c"))
+Exclusive(Together(File("a"), File("b")), File("c")).entries  # (File("a"), File("b"), File("c"))
 ```
+
+The structured view (`alternatives` / `members`) keeps the nesting;
+`entries` flattens it to the leaves.
 
 ## Enumeration: `Expandable`
 

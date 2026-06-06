@@ -32,14 +32,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   an inclusive range (`max=None` unbounded), exposed as `min_depth` /
   `max_depth`. Two sibling constraints can sit among a directory's
   children: `Exclusive` (the present siblings may come from at most one of
-  its alternatives, each a set of independent entries on one side of the
+  its alternatives, each a set of independent nodes on one side of the
   exclusion; `required=True` requires at least one) and `Together` (its
   members are all-or-nothing -- all present or all absent; `required=True`
-  requires all). `File` / `Directory` (named, under the `Entry` base) and
-  the constraint nodes `Exclusive` / `Together` (under a `Group` base that
-  carries `required` and an `entries` accessor flattening the entries a
-  constraint references) share a common `Node` base, so a directory's
-  `children` hold any `Node`. The package depends on `kaparoo.filters` but
+  requires all). Both take `Node`s, so constraints nest --
+  `Exclusive(Together(a, b), c)` is "{a and b} or c". `File` / `Directory`
+  (named, under the `Entry` base) and the constraint nodes `Exclusive` /
+  `Together` (under a `Group` base that carries `required` and an
+  `entries` accessor flattening to the leaf entries a constraint
+  references, descending through nesting) share a common `Node` base, so a
+  directory's `children` hold any `Node`. The package depends on `kaparoo.filters` but
   nothing in `kaparoo.filesystem.search`. This first cut is the
   representation plus name-level semantics; disk operations (scaffold /
   validate / match), which also consume `depth`, `Exclusive`, and
