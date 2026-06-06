@@ -18,6 +18,21 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
 
+def _resolve_index(index: int, length: int) -> int:
+    """Normalize a possibly-negative index against `length`, validating range.
+
+    Raises:
+        IndexError: If `index` is outside `[-length, length)`.
+    """
+    original = index
+    if index < 0:
+        index += length
+    if not 0 <= index < length:
+        msg = f"index {original} out of range for length {length}"
+        raise IndexError(msg)
+    return index
+
+
 class SlicedSequence[T, M](DataSequence[T, M]):
     """A view of `source` exposing only items at the given `indices`.
 
@@ -161,13 +176,7 @@ class ConcatSequence[T, M](DataSequence[T, M]):
         Raises:
             IndexError: If `index` is outside `[-len(self), len(self))`.
         """
-        n = self._cumulative[-1]
-        original = index
-        if index < 0:
-            index += n
-        if not 0 <= index < n:
-            msg = f"index {original} out of range for length {n}"
-            raise IndexError(msg)
+        index = _resolve_index(index, self._cumulative[-1])
         i = bisect_right(self._cumulative, index) - 1
         return self._sources[i], index - self._cumulative[i]
 
@@ -268,14 +277,7 @@ class WindowedSequence[T, M_in, M_out = M_in](DataSequence[tuple[T, ...], M_out]
         Raises:
             IndexError: If `index` is outside `[-len(self), len(self))`.
         """
-        n = self._length
-        original = index
-        if index < 0:
-            index += n
-        if not 0 <= index < n:
-            msg = f"index {original} out of range for length {n}"
-            raise IndexError(msg)
-        return index
+        return _resolve_index(index, self._length)
 
     def get_item(self, index: int) -> tuple[T, ...]:
         index = self._normalize_index(index)
@@ -361,14 +363,7 @@ class ZippedSequence[T1, T2, M1 = None, M2 = None](
         Raises:
             IndexError: If `index` is outside `[-len(self), len(self))`.
         """
-        n = self._length
-        original = index
-        if index < 0:
-            index += n
-        if not 0 <= index < n:
-            msg = f"index {original} out of range for length {n}"
-            raise IndexError(msg)
-        return index
+        return _resolve_index(index, self._length)
 
     def get_item(self, index: int) -> tuple[T1, T2]:
         index = self._normalize_index(index)
