@@ -60,18 +60,16 @@ def _type_ok(entry: Entry, path: Path) -> bool:
 def _at_depths(parent: Path, min_depth: int, max_depth: int | None) -> Iterator[Path]:
     """Yield entries `min_depth..max_depth` levels below `parent`.
 
-    Levels above a yielded entry are unconstrained directories.
+    Levels above a yielded entry are unconstrained directories. Built on
+    `Path.walk` (iterative, like `search`) rather than Python recursion, so
+    arbitrarily deep trees never hit the recursion limit; a nonexistent or
+    non-directory `parent` yields nothing (walk errors are ignored).
     """
-
-    def walk(directory: Path, depth: int) -> Iterator[Path]:
-        try:
-            entries = sorted(directory.iterdir())
-        except OSError:
-            return
-        for entry in entries:
-            if depth >= min_depth:
-                yield entry
-            if entry.is_dir() and (max_depth is None or depth < max_depth):
-                yield from walk(entry, depth + 1)
-
-    yield from walk(parent, 1)
+    parent_depth = len(parent.parts)
+    for dirpath, dirnames, filenames in parent.walk():
+        child_depth = len(dirpath.parts) - parent_depth + 1
+        if child_depth >= min_depth:
+            for name in sorted((*dirnames, *filenames)):
+                yield dirpath / name
+        if max_depth is not None and child_depth >= max_depth:
+            dirnames.clear()  # prune deeper subtree; `Path.walk` honors in-place mutation
