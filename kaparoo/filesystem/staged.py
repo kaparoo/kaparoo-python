@@ -8,6 +8,7 @@ import shutil
 import stat
 import tempfile
 import weakref
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, cast, overload
 
@@ -75,7 +76,57 @@ def _fsync_parent(path: Path) -> None:
         os.close(fd)
 
 
-class StagedFile[AnyStrT: (str, bytes)]:
+class StagedTarget(ABC):
+    """Abstract base for `StagedFile` and `StagedDirectory`.
+
+    Holds the shared commit/abort lifecycle and context-manager protocol: a
+    clean `with`-block exit commits, an exception aborts, `abort` is
+    idempotent and a no-op once committed, and the staging is cleaned up by a
+    `weakref` finalizer if the instance is dropped without committing.
+    Subclasses set `_committed` / `_finalizer` in `__init__` and implement
+    `commit`. Excluded from `__all__` -- use `StagedFile` or `StagedDirectory`.
+    """
+
+    __slots__ = ("__weakref__", "_committed", "_finalizer")
+
+    _committed: bool
+    _finalizer: weakref.finalize
+
+    @property
+    def committed(self) -> bool:
+        """Whether the staged content has been committed to the destination."""
+        return self._committed
+
+    @abstractmethod
+    def commit(self) -> Path:
+        """Commit the staged content to the destination and return its path."""
+        raise NotImplementedError
+
+    def abort(self) -> None:
+        """Discard the staged content without writing to the destination.
+
+        Idempotent, and a no-op once committed.
+        """
+        if self._committed:
+            return
+        self._finalizer()
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        if exc_type is not None:
+            self.abort()
+        elif self._finalizer.alive:
+            self.commit()
+
+
+class StagedFile[AnyStrT: (str, bytes)](StagedTarget):
     """Write a file safely: stage to a temp file, then commit by atomic move.
 
     Content is written to a temporary file in the destination's own directory
@@ -118,10 +169,7 @@ class StagedFile[AnyStrT: (str, bytes)]:
     """
 
     __slots__ = (
-        "__weakref__",
-        "_committed",
         "_file",
-        "_finalizer",
         "_overwrite",
         "_path",
         "_temp_path",
@@ -213,11 +261,6 @@ class StagedFile[AnyStrT: (str, bytes)]:
         """
         return self._file
 
-    @property
-    def committed(self) -> bool:
-        """Whether the staged content has been committed to `path`."""
-        return self._committed
-
     def write(self, data: AnyStrT, /) -> int:
         """Write `data` to the staged file and return the units written."""
         return self._file.write(data)
@@ -298,31 +341,8 @@ class StagedFile[AnyStrT: (str, bytes)]:
         self._finalizer.detach()
         return self._path
 
-    def abort(self) -> None:
-        """Discard the staged file without writing to `path`.
 
-        Idempotent, and a no-op once committed.
-        """
-        if self._committed:
-            return
-        self._finalizer()
-
-    def __enter__(self) -> Self:
-        return self
-
-    def __exit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        if exc_type is not None:
-            self.abort()
-        elif self._finalizer.alive:
-            self.commit()
-
-
-class StagedDirectory:
+class StagedDirectory(StagedTarget):
     """Build a directory safely: populate a temp dir, then commit by atomic move.
 
     Files are written into a temporary directory (`workdir`) in the
@@ -367,9 +387,6 @@ class StagedDirectory:
     """
 
     __slots__ = (
-        "__weakref__",
-        "_committed",
-        "_finalizer",
         "_overwrite",
         "_path",
         "_workdir",
@@ -414,11 +431,6 @@ class StagedDirectory:
     def workdir(self) -> Path:
         """The staging directory to populate before commit."""
         return self._workdir
-
-    @property
-    def committed(self) -> bool:
-        """Whether the staging directory has been committed to `path`."""
-        return self._committed
 
     def commit(self) -> Path:
         """Atomically move the staged directory into `path`.
@@ -481,26 +493,3 @@ class StagedDirectory:
         self._committed = True
         self._finalizer.detach()
         return self._path
-
-    def abort(self) -> None:
-        """Discard the staging directory without creating `path`.
-
-        Idempotent, and a no-op once committed.
-        """
-        if self._committed:
-            return
-        self._finalizer()
-
-    def __enter__(self) -> Self:
-        return self
-
-    def __exit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        if exc_type is not None:
-            self.abort()
-        elif self._finalizer.alive:
-            self.commit()
