@@ -10,9 +10,17 @@ __all__ = (
     "Node",
     "OneOf",
     "Template",
+    "Together",
 )
 
-from kaparoo.filesystem.hierarchy.nodes import Directory, Entry, Exclusive, File, Node
+from kaparoo.filesystem.hierarchy.nodes import (
+    Directory,
+    Entry,
+    Exclusive,
+    File,
+    Node,
+    Together,
+)
 from kaparoo.filesystem.hierarchy.patterns import (
     Expandable,
     Literal,

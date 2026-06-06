@@ -24,7 +24,8 @@ several literally-named siblings that share a structure). A directory's
 | [`Directory`](./nodes.py) | an entry holding ordered `children` (any `Node`s) |
 | [`Entry`](./nodes.py) | abstract base of `File` / `Directory` (carries `name`) |
 | [`Exclusive`](./nodes.py) | a mutual-exclusion constraint among siblings |
-| [`Node`](./nodes.py) | abstract base of everything in `children` (`Entry` or `Exclusive`) |
+| [`Together`](./nodes.py) | a co-occurrence (all-or-nothing) constraint among siblings |
+| [`Node`](./nodes.py) | abstract base of everything in `children` (`Entry`, `Exclusive`, `Together`) |
 
 ```python
 from kaparoo.filesystem.hierarchy import Directory, File, Template
@@ -109,22 +110,43 @@ Directory("project", [
 ])
 ```
 
-Each alternative is a single entry or a group that stands or falls
-together, so the exclusion works between *sets* too:
+Each alternative is a set of one or more entries on the same side of the
+exclusion, so the constraint partitions siblings into sides:
 
 ```python
 Exclusive(
-    [Directory("src"), File("setup.cfg")],   # this group ...
-    Directory("legacy"),                      # ... or this one
+    [File("setup.py"), File("setup.cfg")],   # the legacy build files ...
+    File("pyproject.toml"),                   # ... or the modern one
 )
 ```
 
-`required=True` tightens "at most one" to "exactly one" (zero present is
-then a violation). `Exclusive` is a `Node` but not an `Entry` — it has no
-name of its own, only the entries nested in its alternatives — so a
-directory's `children` hold `Node`s: entries and exclusives alike. Like
-the rest of the representation, the validation that enforces an
-`Exclusive` is not implemented yet.
+Within an alternative the entries are **independent** — `setup.py` and
+`setup.cfg` may appear together or singly; they just can't appear
+alongside `pyproject.toml`. For "all or nothing" co-occurrence, use
+`Together`. `required=True` tightens "at most one alternative" to "at
+least one". `Exclusive` is a `Node` but not an `Entry` — it has no name of
+its own — so a directory's `children` hold `Node`s. The validation that
+enforces it is not implemented yet.
+
+## Co-occurrence: `Together`
+
+Some siblings are meaningless apart and must come as a set — a sharded
+file and its index, a certificate and its key. A `Together` declares its
+members **all-or-nothing**: every one exists, or none does.
+
+```python
+from kaparoo.filesystem.hierarchy import Directory, File, Together
+
+Directory("model", [
+    Together(File("weights.bin"), File("weights.index")),   # both or neither
+])
+```
+
+`required=True` tightens "all or nothing" to "all present". `Together` is
+the dual of `Exclusive`; the two compose by sitting side by side in
+`children` — an `Exclusive` between sides, plus a `Together` that makes
+one side co-occur. Like the rest of the representation, the validation
+that enforces it is not implemented yet.
 
 ## Enumeration: `Expandable`
 

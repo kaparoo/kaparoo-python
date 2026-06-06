@@ -11,6 +11,7 @@ from kaparoo.filesystem.hierarchy import (
     Node,
     OneOf,
     Template,
+    Together,
 )
 from kaparoo.filters import Glob
 
@@ -214,4 +215,53 @@ class TestExclusive:
         assert repr(Exclusive([File("a"), File("b")], File("c"))) == (
             "Exclusive((File(Literal(name='a')), File(Literal(name='b'))), "
             "File(Literal(name='c')))"
+        )
+
+
+class TestTogether:
+    def test_is_a_node_but_not_an_entry(self) -> None:
+        together = Together(File("weights.bin"), File("weights.index"))
+        assert isinstance(together, Node)
+        assert not isinstance(together, Entry)
+
+    def test_members(self) -> None:
+        together = Together(File("cert.pem"), File("key.pem"))
+        assert together.members == (File("cert.pem"), File("key.pem"))
+
+    def test_files_and_directories_both_accepted(self) -> None:
+        together = Together(Directory("src"), File("setup.cfg"))
+        assert together.members == (Directory("src"), File("setup.cfg"))
+
+    def test_required_defaults_to_false(self) -> None:
+        assert Together(File("a"), File("b")).required is False
+        assert Together(File("a"), File("b"), required=True).required is True
+
+    def test_fewer_than_two_members_raises(self) -> None:
+        with pytest.raises(ValueError, match="at least two"):
+            Together(File("only"))
+
+    def test_value_semantics(self) -> None:
+        assert Together(File("a"), File("b")) == Together(File("a"), File("b"))
+        assert Together(File("a"), File("b")) != Together(File("a"), File("c"))
+        assert Together(File("a"), File("b")) != Together(
+            File("a"), File("b"), required=True
+        )
+        assert hash(Together(File("a"), File("b"))) == hash(
+            Together(File("a"), File("b"))
+        )
+
+    def test_not_equal_to_exclusive_with_same_members(self) -> None:
+        assert Together(File("a"), File("b")) != Exclusive(File("a"), File("b"))
+
+    def test_can_be_a_directory_child(self) -> None:
+        together = Together(File("weights.bin"), File("weights.index"))
+        model = Directory("model", [together])
+        assert model.children == (together,)
+
+    def test_repr(self) -> None:
+        assert repr(Together(File("a"), File("b"))) == (
+            "Together(File(Literal(name='a')), File(Literal(name='b')))"
+        )
+        assert repr(Together(File("a"), File("b"), required=True)) == (
+            "Together(File(Literal(name='a')), File(Literal(name='b')), required=True)"
         )
