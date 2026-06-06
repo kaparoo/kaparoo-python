@@ -45,7 +45,12 @@ from kaparoo.filesystem.search.deprecated import (
     get_files,
     get_paths,
 )
-from kaparoo.filesystem.search.filters import (
+from kaparoo.filesystem.search.wrappers import (
+    search_dirs,
+    search_files,
+    search_paths,
+)
+from kaparoo.filters import (
     And,
     AndFilter,
     Contains,
@@ -77,9 +82,4 @@ from kaparoo.filesystem.search.filters import (
     StartsWithAnyFilter,
     StartsWithFilter,
     register_filter,
-)
-from kaparoo.filesystem.search.wrappers import (
-    search_dirs,
-    search_files,
-    search_paths,
 )

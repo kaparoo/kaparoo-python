@@ -22,8 +22,8 @@ from abc import ABC
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from kaparoo.filesystem.search.filters.base import Filter
-from kaparoo.filesystem.search.filters.utils import register_filter
+from kaparoo.filters.base import Filter
+from kaparoo.filters.utils import register_filter
 
 if TYPE_CHECKING:
     from collections.abc import Mapping

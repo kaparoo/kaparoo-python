@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from kaparoo.filesystem.search.filters.base import Filter
+    from kaparoo.filters.base import Filter
 
 
 _FILTER_REGISTRY: dict[str, type[Filter]] = {}

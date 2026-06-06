@@ -34,8 +34,8 @@ __all__ = (
     "register_filter",
 )
 
-from kaparoo.filesystem.search.filters.base import Filter
-from kaparoo.filesystem.search.filters.logical import (
+from kaparoo.filters.base import Filter
+from kaparoo.filters.logical import (
     And,
     AndFilter,
     LogicalFilter,
@@ -44,7 +44,7 @@ from kaparoo.filesystem.search.filters.logical import (
     Or,
     OrFilter,
 )
-from kaparoo.filesystem.search.filters.multi_pattern import (
+from kaparoo.filters.multi_pattern import (
     ContainsAny,
     ContainsAnyFilter,
     EndsWithAny,
@@ -55,7 +55,7 @@ from kaparoo.filesystem.search.filters.multi_pattern import (
     StartsWithAny,
     StartsWithAnyFilter,
 )
-from kaparoo.filesystem.search.filters.pattern import (
+from kaparoo.filters.pattern import (
     Contains,
     ContainsFilter,
     EndsWith,
@@ -70,4 +70,4 @@ from kaparoo.filesystem.search.filters.pattern import (
     StartsWith,
     StartsWithFilter,
 )
-from kaparoo.filesystem.search.filters.utils import register_filter
+from kaparoo.filters.utils import register_filter

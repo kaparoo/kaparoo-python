@@ -8,6 +8,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Moved the filter DSL from `kaparoo.filesystem.search.filters` to the new
+  top-level `kaparoo.filters`. The filters are a filesystem-agnostic
+  string-matching DSL, now shared beyond `search`. **Breaking**: update
+  imports from `kaparoo.filesystem.search.filters` to `kaparoo.filters`
+  (e.g. `from kaparoo.filters import Glob, And`). Class names,
+  serialization (`to_dict` / `from_dict` / `register_filter`), and
+  behavior are unchanged.
+
 ## [0.7.0] - 2026-06-04
 
 ### Added

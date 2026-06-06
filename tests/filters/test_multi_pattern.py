@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from kaparoo.filesystem.search.filters import (
+from kaparoo.filters import (
     ContainsAny,
     ContainsAnyFilter,
     EndsWithAny,

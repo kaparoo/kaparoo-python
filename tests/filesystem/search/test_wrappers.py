@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 from kaparoo.filesystem.exceptions import DirectoryNotFoundError
-from kaparoo.filesystem.search.filters import (
+from kaparoo.filesystem.search.wrappers import search_dirs, search_files, search_paths
+from kaparoo.filters import (
     And,
     EndsWith,
     EndsWithAny,
@@ -14,13 +15,12 @@ from kaparoo.filesystem.search.filters import (
     Not,
     StartsWith,
 )
-from kaparoo.filesystem.search.wrappers import search_dirs, search_files, search_paths
 from tests.filesystem.helpers import _stringify
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from kaparoo.filesystem.search.filters.types import (
+    from kaparoo.filters.types import (
         LogicalChildrenFilterDict,
         PatternFilterDict,
     )

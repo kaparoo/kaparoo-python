@@ -38,9 +38,16 @@ path stringification, and a small exception hierarchy.
 ### [`kaparoo.filesystem.search`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/filesystem/search)
 
 Filesystem traversal with composable filters. Includes `search_paths` /
-`search_files` / `search_dirs`, a `Filter` family (pattern, multi-pattern,
-logical) that round-trips through JSON-friendly dicts, and an extension
-hook for custom filter kinds.
+`search_files` / `search_dirs`, wired to the `kaparoo.filters` DSL via
+`part_filter` / `name_filter` / `predicate`, with depth control and a
+deprecated `get_*` family.
+
+### [`kaparoo.filters`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/filters)
+
+A declarative, composable string-matching DSL: a `Filter` family
+(pattern, multi-pattern, logical) that round-trips through JSON-friendly
+dicts, plus an extension hook for custom filter kinds. Used by
+`kaparoo.filesystem.search` for path matching.
 
 ### [`kaparoo.utils`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/utils)
 
@@ -62,7 +69,7 @@ and `generate_batches`.
 
 ```python
 from kaparoo.filesystem import search_files
-from kaparoo.filesystem.search.filters import And, EndsWith, Equals, Not
+from kaparoo.filters import And, EndsWith, Equals, Not
 
 # All .py files except __init__.py
 py_files = search_files(

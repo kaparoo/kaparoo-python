@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from kaparoo.filesystem.search.filters import utils as _filter_utils
+from kaparoo.filters import utils as _filter_utils
 
 
 @pytest.fixture(autouse=True)

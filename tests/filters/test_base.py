@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from kaparoo.filesystem.search.filters import (
+from kaparoo.filters import (
     AndFilter,
     EqualsAnyFilter,
     EqualsFilter,
@@ -19,7 +19,7 @@ from kaparoo.filesystem.search.filters import (
 if TYPE_CHECKING:
     from typing import Any
 
-    from kaparoo.filesystem.search.filters.types import (
+    from kaparoo.filters.types import (
         LogicalChildrenFilterDict,
         PatternFilterDict,
     )

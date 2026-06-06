@@ -6,16 +6,16 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, overload
 
 from kaparoo.filesystem.existence import ensure_dir_exists
-from kaparoo.filesystem.search.filters import Filter
 from kaparoo.filesystem.utils import stringify_path, stringify_paths
+from kaparoo.filters import Filter
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Sequence
     from pathlib import Path
     from typing import Literal
 
-    from kaparoo.filesystem.search.filters.types import FilterDict
     from kaparoo.filesystem.types import StrPath
+    from kaparoo.filters.types import FilterDict
 
 
 class Search(ABC):

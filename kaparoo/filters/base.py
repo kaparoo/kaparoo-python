@@ -6,13 +6,13 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from kaparoo.filesystem.search.filters.utils import _FILTER_REGISTRY
+from kaparoo.filters.utils import _FILTER_REGISTRY
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from typing import Any
 
-    from kaparoo.filesystem.search.filters.types import FilterDict
+    from kaparoo.filters.types import FilterDict
 
 
 @dataclass(frozen=True)

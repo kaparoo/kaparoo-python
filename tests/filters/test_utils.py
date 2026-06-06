@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from kaparoo.filesystem.search.filters import Filter, register_filter
+from kaparoo.filters import Filter, register_filter
 
 if TYPE_CHECKING:
     from collections.abc import Mapping

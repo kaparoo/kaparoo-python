@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from kaparoo.filesystem.search.filters import (
+from kaparoo.filters import (
     AndFilter,
     EqualsAnyFilter,
     EqualsFilter,
@@ -13,13 +13,13 @@ from kaparoo.filesystem.search.filters import (
     OrFilter,
     register_filter,
 )
-from kaparoo.filesystem.search.filters.types import FilterDict
+from kaparoo.filters.types import FilterDict
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from typing import Any, Self
 
-    from kaparoo.filesystem.search.filters.types import (
+    from kaparoo.filters.types import (
         LogicalChildFilterDict,
         LogicalChildrenFilterDict,
         MultiPatternFilterDict,

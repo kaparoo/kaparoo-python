@@ -1,6 +1,7 @@
 # `kaparoo.filesystem.search`
 
-Filesystem traversal with composable, JSON-serializable filters.
+Filesystem traversal driven by the composable [`kaparoo.filters`](../../filters/)
+DSL.
 
 ## Entry points
 
@@ -15,7 +16,7 @@ All three share the same keyword arguments: `part_filter`, `name_filter`,
 
 ```python
 from kaparoo.filesystem.search import search_files
-from kaparoo.filesystem.search.filters import EndsWith
+from kaparoo.filters import EndsWith
 
 # All .py files anywhere under "src"
 search_files("src", name_filter=EndsWith(".py"))
@@ -35,9 +36,12 @@ order:
 3. **`predicate`** — a Python callable receiving the full `Path`, for
    anything beyond what filters express (e.g. `p.stat().st_size > 1024`).
 
+`part_filter` and `name_filter` accept any `Filter` (or a filter dict —
+see [`kaparoo.filters`](../../filters/)).
+
 ```python
 from kaparoo.filesystem.search import search_files
-from kaparoo.filesystem.search.filters import Equals, Glob
+from kaparoo.filters import Glob
 
 # Only collect .py files from the "tests" subtree
 search_files(
@@ -63,85 +67,11 @@ search_paths("src", min_depth=2)
 search_paths("src", min_depth=2, max_depth=2)
 ```
 
-## Filter catalog
+## Filters
 
-Concrete classes end in `Filter`; the short TitleCase forms (`Equals`,
-`And`, ...) are aliases. All filters are frozen `dataclass`es and
-support `==`/`hash`.
-
-### Pattern filters ([`filters/pattern.py`](./filters/pattern.py))
-
-Take a single string `pattern` and a `case_sensitive` flag (default `True`).
-
-| Class / alias | Matches when target ... |
-| --- | --- |
-| `EqualsFilter` / `Equals` | equals the pattern |
-| `StartsWithFilter` / `StartsWith` | starts with the pattern |
-| `EndsWithFilter` / `EndsWith` | ends with the pattern |
-| `ContainsFilter` / `Contains` | contains the pattern |
-| `RegexFilter` / `Regex` | fully matches the regex (via `re.fullmatch`) |
-| `GlobFilter` / `Glob` | matches the glob (via `fnmatch.fnmatchcase`) |
-
-```python
-from kaparoo.filesystem.search.filters import EndsWith, Glob, Regex
-
-EndsWith(".PY", case_sensitive=False)   # matches "foo.py" and "foo.PY"
-Glob("test_?.py")                       # matches "test_1.py", not "test_11.py"
-Regex(r"\d{4}-\d{2}-\d{2}\.log")        # matches "2026-01-15.log"
-```
-
-### Multi-pattern filters ([`filters/multi_pattern.py`](./filters/multi_pattern.py))
-
-Take a tuple of `patterns`; match when *any* one matches. Duplicates are
-deduplicated, first occurrence wins.
-
-| Class / alias |
-| --- |
-| `EqualsAnyFilter` / `EqualsAny` |
-| `StartsWithAnyFilter` / `StartsWithAny` |
-| `EndsWithAnyFilter` / `EndsWithAny` |
-| `ContainsAnyFilter` / `ContainsAny` |
-
-```python
-from kaparoo.filesystem.search.filters import EndsWithAny
-
-EndsWithAny((".png", ".jpg", ".jpeg"))
-```
-
-### Logical filters ([`filters/logical.py`](./filters/logical.py))
-
-| Class / alias | Semantics |
-| --- | --- |
-| `AndFilter` / `And` | all children match |
-| `OrFilter` / `Or` | at least one child matches |
-| `NotFilter` / `Not` | child does not match |
-
-```python
-from kaparoo.filesystem.search.filters import And, EndsWith, Equals, Not
-
-# .py files except __init__.py
-And((EndsWith(".py"), Not(Equals("__init__.py"))))
-```
-
-## JSON serialization
-
-Every filter round-trips through a `"kind"`-discriminated dict via
-`to_dict()` / `Filter.from_dict()`. `Filter.parse()` accepts either an
-existing instance or a dict.
-
-```python
-import json
-from kaparoo.filesystem.search.filters import (
-    And, EndsWith, Filter, Not, Equals,
-)
-
-f = And((EndsWith(".py"), Not(Equals("__init__.py"))))
-spec = json.dumps(f.to_dict())   # store anywhere as JSON
-restored = Filter.from_dict(json.loads(spec))
-assert restored == f
-```
-
-The `search_*` wrappers also accept dicts directly:
+The `part_filter` / `name_filter` arguments take the
+[`kaparoo.filters`](../../filters/) DSL — pattern, multi-pattern, and
+logical filters — and also accept the JSON-friendly dict form directly:
 
 ```python
 from kaparoo.filesystem.search import search_files
@@ -150,42 +80,6 @@ search_files(
     "src",
     name_filter={"kind": "ends_with", "pattern": ".py"},
 )
-```
-
-TypedDicts for static checking live in
-[`filters/types.py`](./filters/types.py): `FilterDict` (base; `kind`-only),
-`PatternFilterDict`, `MultiPatternFilterDict`, `LogicalChildFilterDict`,
-`LogicalChildrenFilterDict`.
-
-## Custom filters
-
-Decorate a `Filter` subclass with `register_filter("<kind>")` to plug
-into `Filter.from_dict` / `Filter.parse`.
-
-```python
-from collections.abc import Mapping
-from dataclasses import dataclass
-from typing import Any, Self
-
-from kaparoo.filesystem.search.filters import Filter, register_filter
-
-@register_filter("length_above")
-@dataclass(frozen=True)
-class LengthAboveFilter(Filter):
-    threshold: int
-
-    def matches(self, target: str) -> bool:
-        return len(target) > self.threshold
-
-    def to_dict(self) -> dict[str, Any]:
-        return {"kind": "length_above", "threshold": self.threshold}
-
-    @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> Self:
-        return cls(threshold=data["threshold"])
-
-# Now reachable through the polymorphic dispatcher:
-restored = Filter.from_dict({"kind": "length_above", "threshold": 10})
 ```
 
 ## Deprecation: `get_*` -> `search_*`
@@ -210,12 +104,14 @@ search internally. Migration:
   Windows do not leak into your filter patterns. `stringify=True`
   outputs follow the same normalization.
 - **Case sensitivity**: filters apply with the case sensitivity set on
-  the filter itself (`case_sensitive=True` by default). The underlying
-  filesystem may still be case-insensitive (Windows / macOS defaults),
-  so what `Path.walk` *returns* — and therefore what filters see — is
-  the on-disk name in its actual case.
+  the filter itself (`case_sensitive=True` by default; see
+  [`kaparoo.filters`](../../filters/)). The underlying filesystem may
+  still be case-insensitive (Windows / macOS defaults), so what
+  `Path.walk` *returns* — and therefore what filters see — is the on-disk
+  name in its actual case.
 
 ## See also
 
+- [`kaparoo.filters`](../../filters/) for the filter DSL applied here
 - [`kaparoo.filesystem`](../) for the surrounding filesystem helpers
 - [`kaparoo.utils.timer`](../../utils/) for timing filter-heavy walks
