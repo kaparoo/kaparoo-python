@@ -56,9 +56,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a `"node"`-discriminated dict (`to_dict` / `Node.from_dict`, mirroring
   the filter registry), so specs can be stored as JSON. The package
   depends on `kaparoo.filters` but nothing in `kaparoo.filesystem.search`.
-  This first cut is the representation plus name-level semantics; disk
-  operations (scaffold / validate / match), which also consume `depth`,
-  `Exclusive`, and `Together`, are not implemented yet.
+  This first cut is the representation plus name-level semantics and the
+  first disk operation, `match` (below); `validate` and `scaffold` are not
+  implemented yet.
+- `kaparoo.filesystem.hierarchy.match(tree, root)`: the first operation
+  that applies a spec to a real filesystem. It maps each on-disk path
+  under `root` (the container) to the spec node(s) it matches — by name
+  filter, type (`File` ↔ file, `Directory` ↔ directory), and `depth`
+  (intermediate levels of unknown name skipped) — yielding one
+  `(path, node)` pair per match. It reports only what is *present*:
+  `Group`s are treated as "any entry may appear," so `Exclusive` /
+  `Together` enforcement and missing-`required` reporting are left to the
+  planned `validate`.
 
 ### Changed
 

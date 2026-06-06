@@ -6,10 +6,10 @@ and files as immutable objects, with names drawn from the
 run of regularly-named siblings.
 
 > **Scope.** Today this package is the *representation* plus name-level
-> semantics (filter `matches` and, where applicable, `expand`). The
-> disk-touching operations it is designed to drive — scaffolding a tree,
-> validating an existing tree, matching a path against a tree — are not
-> implemented yet.
+> semantics (filter `matches` and, where applicable, `expand`) and the
+> first disk-touching operation, [`match`](#matching-match). The remaining
+> operations it is designed to drive — validating an existing tree,
+> scaffolding a new one — are not implemented yet.
 
 ## Nodes
 
@@ -91,9 +91,8 @@ Directory("dataset", [
 != Directory("x")`; `depth=3` and `depth=(3, 3)` are equal) and `repr`
 shows it only when non-default, in its most compact form. Because the
 intermediate names are unknown, any depth beyond `1` describes structure
-for *matching*, not scaffolding — and like the rest of the
-representation, the matching that consumes the depth range is not
-implemented yet.
+for *matching* (which [`match`](#matching-match) honors), not for
+scaffolding.
 
 ## Presence: `required`
 
@@ -243,6 +242,31 @@ assert Node.from_dict(json.loads(blob)) == tree
 
 A round-trip preserves value equality, not object identity: a reused
 subtree comes back as distinct-but-equal nodes (JSON has no aliasing).
+
+## Matching: `match`
+
+`match(tree, root)` maps each path under `root` to the spec node(s) it
+corresponds to — by name (the node's filter), type (`File` ↔ file,
+`Directory` ↔ directory), and `depth` (intermediate levels of unknown name
+are skipped). `root` is the *container*, like `search`'s root; a path
+matching several nodes yields one pair per node.
+
+```python
+from kaparoo.filesystem.hierarchy import Directory, File, match
+from kaparoo.filters import Glob
+
+spec = Directory("dataset", [
+    File("metadata.json"),
+    Directory("images", [File(Glob("*.png"))]),
+])
+for path, node in match(spec, "/data"):   # "/data" contains "dataset"
+    ...   # path -> the spec node it matches
+```
+
+`match` reports only what is *present* — a `Group` is treated as "any of
+its entries may appear," so it does not enforce `Exclusive` / `Together`,
+and it does not report missing `required` entries. Those are the job of
+`validate`, which is still to come (and will build on `match`).
 
 ## See also
 

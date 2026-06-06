@@ -41,16 +41,15 @@ explicitly or add per-metric weight tracking if a concrete case demands it.
 
 ## 🌳 `kaparoo.filesystem.hierarchy`
 
-### Matcher / validator (the operations that consume a spec)
+### Validator / scaffolder (the remaining spec operations)
 
-The representation is built; the operations that apply a tree to a real
-filesystem are not. Build them as free functions in a new module
-(`match.py` / `validate.py`), keeping nodes pure value objects and reusing
-`search`'s traversal and `stringify_path` where helpful:
+`match(tree, root)` has landed (`match.py`): it maps each on-disk path to
+its spec node(s), honoring `depth` (backtracking, like a glob `**`) and
+descending through `Group`s, reporting all overlapping matches. The
+operations that build on it are not yet written — keep them as free
+functions, nodes as pure value objects, reusing `search`'s traversal and
+`stringify_path` where helpful:
 
-- `match(tree, root)` — map each on-disk path to its spec node, honoring
-  `depth` (backtracking, like a glob `**`) and descending through `Group`s.
-  The foundation the rest build on.
 - `validate(tree, root)` — conformance report: `matched`, `unexpected` (no
   node), `missing` (a `required` entry or required `Group` not satisfied),
   `violations` (`Exclusive` with >1 side present; `Together` partial).
@@ -59,16 +58,13 @@ filesystem are not. Build them as free functions in a new module
 - `scaffold(tree, root)` — write op: create the tree from `Expandable`
   names (and `required`).
 - Cross-level "cell" exclusion (drop e.g. `(cam_01, frame_0003)` from a
-  nested product) lands here as a path-reject in `match`, not in the
+  nested product) lands as a path-reject in `match`, not in the
   representation.
 
-Policies to settle first:
+Policies to settle for the above:
 
-- **Overlap**: a path may match several nodes (filters overlap) — return
-  all / first-in-order / most-specific?
 - **`required` on an enumerable name** (`Template` / `OneOf`): "all expanded
   names present" or "at least one"?
-- **`depth` backtracking** rules.
 
 `match` does not replace `search`: `search` *discovers* paths matching
 stateless filters; `match` *checks / maps* a real tree against a known
