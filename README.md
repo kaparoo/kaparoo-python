@@ -42,6 +42,15 @@ Filesystem traversal with composable filters. Includes `search_paths` /
 `part_filter` / `name_filter` / `predicate`, with depth control and a
 deprecated `get_*` family.
 
+### [`kaparoo.filesystem.hierarchy`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/filesystem/hierarchy)
+
+A declarative description of a filesystem tree: `File` / `Directory`
+nodes whose names are drawn from the `kaparoo.filters` DSL, so one node
+can stand for many regularly-named siblings. The `Expandable` filters
+(`Literal`, `Template`) also enumerate their names via `expand`. A
+representation layer (name-level `matches` / `expand`); the disk
+operations it is designed to drive are still to come.
+
 ### [`kaparoo.filters`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/filters)
 
 A declarative, composable string-matching DSL: a `Filter` family

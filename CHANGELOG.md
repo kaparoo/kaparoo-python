@@ -8,6 +8,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `kaparoo.filesystem.hierarchy`: a new subpackage describing a filesystem
+  tree declaratively. `File` / `Directory` nodes (bare `str` names are
+  sugar for `Literal`, `children` accept any iterable) compose into a
+  tree whose node names are `kaparoo.filters` filters — so the full
+  filter DSL (`Glob`, `Regex`, `And` / `Or` / `Not`, ...) describes which
+  siblings a node matches. Two filters defined here add an `Expandable`
+  capability (`expand`) that enumerates the names a pattern stands for:
+  `Literal` (one name) and `Template` (`template.format(value)` over
+  `values`); they also round-trip through the filter registry (kinds
+  `"literal"` / `"template"`). Nodes are immutable value objects (`==`,
+  `hash`, `repr`). The package depends on `kaparoo.filters` but nothing
+  in `kaparoo.filesystem.search`. This first cut is the representation
+  plus name-level semantics; disk operations (scaffold / validate /
+  match) are not implemented yet.
+
 ### Changed
 
 - Moved the filter DSL from `kaparoo.filesystem.search.filters` to the new
