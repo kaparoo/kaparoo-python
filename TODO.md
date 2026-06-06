@@ -37,6 +37,18 @@ class docstrings, CHANGELOG entry, and `kaparoo/utils/README.md`.
 keys were present. Ambiguous when updates have varying key sets. Document
 explicitly or add per-metric weight tracking if a concrete case demands it.
 
+### `Aggregator` single-dict refactor (perf)
+
+`_reductions` and `_states` are parallel dicts keyed identically, so every
+`update` / `compute` / `state` / `merge` does two keyed lookups per metric.
+Collapse them into one `dict[str, tuple[Reduction, state]]`: `update` then
+reads the pair once per metric (via a `_MISSING` sentinel — a `None` state
+is valid for `Min` / `Max` / `Last`, so `.get() is None` cannot
+disambiguate), and `merge` iterates the other aggregator's internals
+directly instead of allocating a full `state()` snapshot. Per-sample hot
+path; behavior-preserving (tuples keep `state()`'s immutable-snapshot
+contract).
+
 ---
 
 ## 🌳 `kaparoo.filesystem.hierarchy`
@@ -123,10 +135,11 @@ Implementation:
   `{p for p, n in match(node, root) if _is_terminal(n)}` where
   `_is_terminal` is a `File` or a childless `Directory`. Combine with
   `any(...)`.
-- Thread the combined predicate into `_at_depths` (the `Path.walk` loop):
-  one check site skips excluded entries and `dirnames`-prunes excluded
-  directories, so exclusion stays consistent across overlap, `depth`
-  ranges, `unique`, and `match_map`. The core matching logic is untouched.
+- Thread the combined predicate into the `_walk_depths` `Path.walk` loop
+  (consumed by `_match_children`): one check site skips excluded entries
+  and `dirnames`-prunes excluded directories, so exclusion stays consistent
+  across overlap, `depth` ranges, `unique`, and `match_map`. The core
+  matching logic is untouched.
 
 ### Attribute conditions on `File` / `Directory`
 
@@ -161,6 +174,61 @@ Deferred because it overloads the `str` sugar (a name string would
 sometimes mean one `Literal`, sometimes a whole subtree) and interacts
 awkwardly with `depth` (which level would `depth` apply to?). Add as an
 explicit, separate feature if a concrete need arises.
+
+### Operation throughput (perf — deferred)
+
+From the codebase-wide perf review; the higher-value wins already landed
+(the single-walk `_match_children` rewrite, filter set-membership
+precompute, search `stringify_path` guard). Remaining:
+
+- **`validate` walks the disk twice** — once via `match_map` (spec-driven)
+  and once in `_unexpected` (disk-driven). It is a constant 2× factor, not
+  an algorithmic blow-up; collapsing it needs a disk-driven pass that
+  classifies matched vs unexpected in a single walk. Defer until profiling
+  shows it matters.
+- **`conforms(spec)` re-validates per candidate** — used as a `search`
+  predicate over many directories, it re-walks each candidate's subtree
+  (O(paths × subtree)). Inherent to the per-path "is this a conforming
+  instance?" semantics; documented cost, not easily removable.
+
+---
+
+## 🗂️ `kaparoo.filesystem`
+
+### `make_dir` / `make_dirs` redundant `is_dir()` stat (perf — marginal)
+
+`_ensure_directory_target` already establishes whether the path is a
+directory, then the caller re-stats `path.is_dir()` for the `clean` branch.
+The redundancy fires **only** in the `clean=True` + existing-directory case
+(a rare, destructive path). A naive precompute would *regress* the common
+create-new path, where short-circuit evaluation currently skips `is_dir`
+entirely — so a correct fix must read `exists` once, compute `is_dir` only
+when it exists, and return it for the caller to reuse. Low value; do only
+if directory-creation throughput is ever shown to matter.
+
+---
+
+## 🧱 `kaparoo.data.sequences`
+
+### Batch-delegating `get_items` on composers (perf)
+
+`SlicedSequence`, `TransformedSequence`, `WindowedSequence`, and
+`ConcatSequence` do not override `get_items` / `get_metas`, so the base
+loops `get_item` per element (re-resolving each index). Slicing a composed
+lazy sequence therefore degrades a source's batched fetch to N scalar
+reads — the exact pessimization the `get_items` hook exists to avoid.
+Override each to delegate to `self._source.get_items([...])` (grouping
+resolved indices by source for `ConcatSequence`); `ZippedSequence` already
+implements the pattern. Value depends on sources implementing batch reads.
+
+### `FileListSequence.files` snapshot caching (perf — needs a contract call)
+
+`files` rebuilds `n` `Path` objects (plus `n` joins for
+`FileFolderSequence`) on every access; the docstring advertises "a fresh
+`tuple` on each access." Since `Path` / `tuple` are immutable, a cached
+snapshot is observationally identical except for `is` identity. Build it
+once (through `get_file`) and cache; reword the docstring. Deferred because
+it is a deliberate, if benign, contract change.
 
 ---
 
