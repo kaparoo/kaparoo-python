@@ -1,0 +1,172 @@
+from __future__ import annotations
+
+__all__ = ("ValidationReport", "Violation", "validate")
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import TYPE_CHECKING, Literal, cast
+
+from kaparoo.filesystem.hierarchy.entry import Directory, Entry
+from kaparoo.filesystem.hierarchy.group import Exclusive, Group, Together
+from kaparoo.filesystem.hierarchy.match import match_map
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
+
+    from kaparoo.filesystem.hierarchy.base import Node
+    from kaparoo.filesystem.types import StrPath
+
+
+@dataclass(frozen=True)
+class Violation:
+    """A constraint that a matched tree breaks.
+
+    `kind` is the group's type, `node` the offending `Exclusive` /
+    `Together`, and `present` the leaf entries found present: for
+    `exclusive`, the entries across the more-than-one sides that coexist;
+    for `together`, the members present while others are absent.
+    """
+
+    kind: Literal["exclusive", "together"]
+    node: Group
+    present: tuple[Entry, ...]
+
+
+@dataclass(frozen=True)
+class ValidationReport:
+    """The outcome of checking a real directory against a spec tree.
+
+    `matched` maps each on-disk path to the node(s) it matched (exactly
+    `match_map`); `unexpected` are paths matching no node; `missing` are
+    `required` entries / groups left unsatisfied; `violations` are broken
+    `Exclusive` / `Together` constraints. `ok` -- and the report's
+    truthiness -- is `True` only when `unexpected`, `missing`, and
+    `violations` are all empty.
+    """
+
+    matched: dict[Path, tuple[Node, ...]]
+    unexpected: tuple[Path, ...]
+    missing: tuple[Node, ...]
+    violations: tuple[Violation, ...]
+
+    @property
+    def ok(self) -> bool:
+        return not (self.unexpected or self.missing or self.violations)
+
+    def __bool__(self) -> bool:
+        return self.ok
+
+
+def validate(tree: Node, root: StrPath) -> ValidationReport:
+    """Check the real directory at `root` against the spec `tree`.
+
+    `root` is the *container* (as in `match`). The returned
+    `ValidationReport` records what matched, what is `unexpected`
+    (on-disk but matching no node -- a path not specified, nor an ancestor
+    of any match, is unexpected, so anything below an unspecified directory
+    counts too), what is `missing` (a `required` entry, or a `required`
+    `Exclusive` / `Together` with nothing present), and which `Exclusive` /
+    `Together` constraints are `violations`. A `required` enumerable name
+    (`OneOf` / `Template`) is satisfied by *at least one* present match.
+    """
+    root_path = Path(root)
+    matched = match_map(tree, root_path)
+    present: set[Node] = {node for nodes in matched.values() for node in nodes}
+
+    missing: list[Node] = []
+    violations: list[Violation] = []
+    for node in _walk_nodes(tree):
+        if isinstance(node, Entry):
+            if node.required and node not in present:
+                missing.append(node)
+        else:
+            group = cast("Group", node)
+            violation, group_missing = _check_group(group, present)
+            if violation is not None:
+                violations.append(violation)
+            if group_missing:
+                missing.append(group)
+
+    return ValidationReport(
+        matched=matched,
+        unexpected=tuple(_unexpected(root_path, matched)),
+        missing=tuple(missing),
+        violations=tuple(violations),
+    )
+
+
+def _check_group(group: Group, present: set[Node]) -> tuple[Violation | None, bool]:
+    """Inspect one constraint; return its `(violation, is_missing)`."""
+    if isinstance(group, Exclusive):
+        present_sides = [
+            side for side in group.alternatives if _present_leaves(side, present)
+        ]
+        if len(present_sides) > 1:
+            leaves = _present_leaves(group.entries, present)
+            return Violation("exclusive", group, leaves), False
+        return None, group.required and not present_sides
+
+    together = cast("Together", group)
+    present_members = [
+        member for member in together.members if _present_leaves((member,), present)
+    ]
+    if 0 < len(present_members) < len(together.members):
+        leaves = _present_leaves(together.entries, present)
+        return Violation("together", together, leaves), False
+    return None, together.required and not present_members
+
+
+def _unexpected(root_path: Path, matched: dict[Path, tuple[Node, ...]]) -> list[Path]:
+    """List paths under `root_path` matching no node (subtrees included).
+
+    A path is unexpected unless it is matched or an ancestor of a match;
+    an unexpected directory is reported once and not descended.
+    """
+    allowed: set[Path] = set(matched)
+    for path in matched:
+        allowed.update(path.parents)
+
+    result: list[Path] = []
+    for dirpath, dirnames, filenames in root_path.walk(top_down=True):
+        for name in filenames:
+            candidate = dirpath / name
+            if candidate not in allowed:
+                result.append(candidate)
+        kept: list[str] = []
+        for name in dirnames:
+            candidate = dirpath / name
+            if candidate in allowed:
+                kept.append(name)
+            else:
+                result.append(candidate)
+        dirnames[:] = kept
+    return result
+
+
+def _walk_nodes(node: Node) -> Iterator[Node]:
+    """Yield `node` and every node beneath it (descending into groups)."""
+    yield node
+    if isinstance(node, Directory):
+        for child in node.children:
+            yield from _walk_nodes(child)
+    elif isinstance(node, Exclusive):
+        for alternative in node.alternatives:
+            for member in alternative:
+                yield from _walk_nodes(member)
+    elif isinstance(node, Together):
+        for member in node.members:
+            yield from _walk_nodes(member)
+
+
+def _leaf_entries(nodes: Iterable[Node]) -> Iterator[Entry]:
+    """Yield the leaf entries among `nodes`, flattening any nested groups."""
+    for node in nodes:
+        if isinstance(node, Group):
+            yield from node.entries
+        else:
+            yield cast("Entry", node)
+
+
+def _present_leaves(nodes: Iterable[Node], present: set[Node]) -> tuple[Entry, ...]:
+    """The leaf entries of `nodes` that are present on disk."""
+    return tuple(entry for entry in _leaf_entries(nodes) if entry in present)

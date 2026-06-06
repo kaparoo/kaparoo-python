@@ -6,10 +6,11 @@ and files as immutable objects, with names drawn from the
 run of regularly-named siblings.
 
 > **Scope.** Today this package is the *representation* plus name-level
-> semantics (filter `matches` and, where applicable, `expand`) and the
-> first disk-touching operation, [`match`](#matching-match). The remaining
-> operations it is designed to drive — validating an existing tree,
-> scaffolding a new one — are not implemented yet.
+> semantics (filter `matches` and, where applicable, `expand`) and two
+> read-only disk operations, [`match`](#matching-match) and
+> [`validate`](#validation-validate). The remaining operation it is
+> designed to drive — scaffolding a new tree on disk — is not implemented
+> yet.
 
 ## Nodes
 
@@ -282,7 +283,38 @@ returning (its nodes are distinct, in spec-traversal order).
 `match` reports only what is *present* — a `Group` is treated as "any of
 its entries may appear," so it does not enforce `Exclusive` / `Together`,
 and it does not report missing `required` entries. Those are the job of
-`validate`, which is still to come (and will build on `match`).
+`validate`.
+
+## Validation: `validate`
+
+`validate(tree, root)` checks a real directory against the spec and returns
+a `ValidationReport`:
+
+```python
+from kaparoo.filesystem.hierarchy import Directory, Exclusive, File, validate
+
+spec = Directory("project", [
+    File("README.md", required=True),
+    Exclusive(File("setup.py"), File("pyproject.toml")),
+])
+report = validate(spec, "/repo")   # "/repo" contains "project"
+if not report:                     # truthy only when fully conformant
+    print(report.missing, report.unexpected, report.violations)
+```
+
+| Field | Meaning |
+| --- | --- |
+| `matched` | `{path: (node, ...)}`, exactly `match_map` |
+| `unexpected` | paths matching no node (see below) |
+| `missing` | a `required` entry, or a `required` `Exclusive` / `Together` with nothing present |
+| `violations` | `Exclusive` with more than one side present, or `Together` only partly present |
+| `ok` | `True` (and the report is truthy) when the three above are empty |
+
+A path is **unexpected** unless it is matched or an ancestor of a match —
+so anything below an *unspecified* directory counts too (describe the
+contents, or accept them with a wildcard like `File(Glob("*"))`, to keep
+them out of the report). A `required` enumerable name (`OneOf` / `Template`)
+is satisfied by *at least one* present match.
 
 ## See also
 

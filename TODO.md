@@ -41,27 +41,23 @@ explicitly or add per-metric weight tracking if a concrete case demands it.
 
 ## 🌳 `kaparoo.filesystem.hierarchy`
 
-### Validator / scaffolder (the remaining spec operations)
+### Scaffolder & the search bridge (the remaining spec operations)
 
-`match(tree, root)` has landed (`match.py`): it maps each on-disk path to
-its spec node(s), honoring `depth` (backtracking, like a glob `**`) and
-descending through `Group`s, reporting all overlapping matches. The
-operations that build on it are not yet written — keep them as free
-functions, nodes as pure value objects, reusing `search`'s traversal and
-`stringify_path` where helpful:
+`match` / `match_map` (`match.py`) and `validate` (`validate.py`) have
+landed: `match` maps each on-disk path to its spec node(s) honoring `depth`
+and descending through `Group`s, and `validate` returns a conformance
+report (`matched` / `unexpected` / `missing` / `violations`). The
+`required`-enumerable policy was settled as **"at least one present"**, and
+`unexpected` as **"not matched and not an ancestor of a match"** (so an
+unspecified directory's contents count). The operations still to write —
+free functions, nodes as pure value objects, reusing `search`'s traversal
+and `stringify_path` where helpful:
 
-- `validate(tree, root)` — conformance report: `matched`, `unexpected` (no
-  node), `missing` (a `required` entry or required `Group` not satisfied),
-  `violations` (`Exclusive` with >1 side present; `Together` partial).
 - `conforms(tree, root)` — a `search` predicate ("keep spec-conforming
-  paths"); the find-with-spec bridge.
+  paths"); the find-with-spec bridge. (Likely `validate(...).ok` per
+  candidate, or a lighter check.)
 - `scaffold(tree, root)` — write op: create the tree from `Expandable`
   names (and `required`).
-
-Policies to settle for the above:
-
-- **`required` on an enumerable name** (`Template` / `OneOf`): "all expanded
-  names present" or "at least one"?
 
 `match` does not replace `search`: `search` *discovers* paths matching
 stateless filters; `match` *checks / maps* a real tree against a known

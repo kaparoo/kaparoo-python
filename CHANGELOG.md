@@ -56,9 +56,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a `"node"`-discriminated dict (`to_dict` / `Node.from_dict`, mirroring
   the filter registry), so specs can be stored as JSON. The package
   depends on `kaparoo.filters` but nothing in `kaparoo.filesystem.search`.
-  This first cut is the representation plus name-level semantics and the
-  first disk operation, `match` (below); `validate` and `scaffold` are not
-  implemented yet.
+  This first cut is the representation plus name-level semantics and two
+  read-only disk operations, `match` and `validate` (below); `scaffold` is
+  not implemented yet.
 - `kaparoo.filesystem.hierarchy.match(tree, root)`: the first operation
   that applies a spec to a real filesystem. It maps each on-disk path
   under `root` (the container) to the spec node(s) it matches — by name
@@ -72,6 +72,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `unique=True` to suppress identical pairs), while the companion
   `match_map(tree, root)` groups the results into a `{path: (node, ...)}`
   mapping (distinct nodes, spec-traversal order).
+- `kaparoo.filesystem.hierarchy.validate(tree, root)`: checks a real
+  directory against a spec, returning a `ValidationReport` with `matched`
+  (as `match_map`), `unexpected` (paths matching no node — anything not
+  matched and not an ancestor of a match, so contents of an unspecified
+  directory count), `missing` (a `required` entry, or a `required`
+  `Exclusive` / `Together` with nothing present), and `violations` (an
+  `Exclusive` with more than one side present, or a partly-present
+  `Together`). `report.ok` (and its truthiness) is `True` only when the
+  last three are empty. A `required` enumerable name (`OneOf` / `Template`)
+  is satisfied by at least one present match. Also exports the
+  `ValidationReport` and `Violation` result types.
 
 ### Changed
 
