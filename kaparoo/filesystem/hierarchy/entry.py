@@ -134,22 +134,28 @@ class Entry(Node, ABC):
             `None` is any depth (one or more levels), and a
             `(min, max)` tuple is an inclusive range whose `max` may be
             `None` for unbounded. Defaults to `1` (a direct child).
+        required: Whether the entry must be present. Defaults to `False`
+            (the spec describes structure; presence is asserted only when
+            opted in). Like `depth`, this is consumed by matching /
+            validation, not yet implemented.
 
     Raises:
         ValueError: If a sugar name contains a path separator, a depth
             bound is below 1, or `max` is below `min`.
     """
 
-    __slots__ = ("_depth", "_name")
+    __slots__ = ("_depth", "_name", "_required")
 
     def __init__(
         self,
         name: str | list[str] | Filter,
         *,
         depth: int | tuple[int, int | None] | None = 1,
+        required: bool = False,
     ) -> None:
         self._name = _as_filter(name)
         self._depth = _normalize_depth(depth)
+        self._required = required
 
     @property
     def name(self) -> Filter:
@@ -166,21 +172,34 @@ class Entry(Node, ABC):
         """The deepest level below the parent (`None` is unbounded)."""
         return self._depth[1]
 
+    @property
+    def required(self) -> bool:
+        """Whether this entry must be present (vs optional)."""
+        return self._required
+
     @abstractmethod
     def _fields(self) -> tuple[object, ...]:
         """Return the identity fields shown in `repr`, excluding `depth`."""
         raise NotImplementedError
 
     def _key(self) -> tuple[object, ...]:
-        return (*self._fields(), self._depth)
+        return (*self._fields(), self._depth, self._required)
 
-    def _depth_payload(self) -> dict[str, Any]:
-        """The `depth` fragment of `to_dict`, omitted when it is the default."""
-        return {} if self._depth == (1, 1) else {"depth": list(self._depth)}
+    def _payload(self) -> dict[str, Any]:
+        """The non-default `depth` / `required` fragments of `to_dict`."""
+        payload: dict[str, Any] = {}
+        if self._depth != (1, 1):
+            payload["depth"] = list(self._depth)
+        if self._required:
+            payload["required"] = True
+        return payload
 
     def __repr__(self) -> str:
         inner = ", ".join(repr(field) for field in self._fields())
-        return f"{type(self).__name__}({inner}{_depth_suffix(self._depth)})"
+        suffix = _depth_suffix(self._depth)
+        if self._required:
+            suffix += ", required=True"
+        return f"{type(self).__name__}({inner}{suffix})"
 
 
 @register_node("file")
@@ -193,11 +212,15 @@ class File(Entry):
         return (self._name,)
 
     def to_dict(self) -> dict[str, Any]:
-        return {"node": "file", "name": self._name.to_dict(), **self._depth_payload()}
+        return {"node": "file", "name": self._name.to_dict(), **self._payload()}
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
-        return cls(Filter.from_dict(data["name"]), depth=_depth_arg(data))
+        return cls(
+            Filter.from_dict(data["name"]),
+            depth=_depth_arg(data),
+            required=data.get("required", False),
+        )
 
 
 @register_node("directory")
@@ -219,8 +242,9 @@ class Directory(Entry):
         children: Iterable[Node] = (),
         *,
         depth: int | tuple[int, int | None] | None = 1,
+        required: bool = False,
     ) -> None:
-        super().__init__(name, depth=depth)
+        super().__init__(name, depth=depth, required=required)
         self._children = tuple(children)
 
     @property
@@ -235,10 +259,15 @@ class Directory(Entry):
         result: dict[str, Any] = {"node": "directory", "name": self._name.to_dict()}
         if self._children:
             result["children"] = [child.to_dict() for child in self._children]
-        result.update(self._depth_payload())
+        result.update(self._payload())
         return result
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         children = [Node.from_dict(child) for child in data.get("children", ())]
-        return cls(Filter.from_dict(data["name"]), children, depth=_depth_arg(data))
+        return cls(
+            Filter.from_dict(data["name"]),
+            children,
+            depth=_depth_arg(data),
+            required=data.get("required", False),
+        )

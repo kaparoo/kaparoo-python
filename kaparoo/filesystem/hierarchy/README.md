@@ -95,6 +95,15 @@ for *matching*, not scaffolding — and like the rest of the
 representation, the matching that consumes the depth range is not
 implemented yet.
 
+## Presence: `required`
+
+Each entry takes a keyword-only `required` flag (default `False`) asserting
+that it must be present — `File("metadata.json", required=True)`. By
+default the spec describes structure (what *may* be there); `required=True`
+adds a "must be there" assertion that a validator enforces. (Attribute
+conditions — size, emptiness, ... — are a separate, planned feature; see
+`TODO.md`.)
+
 ## Mutual exclusion: `Exclusive`
 
 Some siblings must not coexist — `setup.py` vs `pyproject.toml`,

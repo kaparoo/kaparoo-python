@@ -144,6 +144,29 @@ class TestDepth:
         )
 
 
+class TestRequired:
+    def test_defaults_to_false(self) -> None:
+        assert File("a").required is False
+        assert Directory("d").required is False
+
+    def test_required_flag(self) -> None:
+        assert File("a", required=True).required is True
+        assert Directory("d", required=True).required is True
+
+    def test_is_part_of_identity(self) -> None:
+        assert File("a", required=True) == File("a", required=True)
+        assert File("a", required=True) != File("a")
+        assert hash(File("a", required=True)) == hash(File("a", required=True))
+
+    def test_repr_shows_required(self) -> None:
+        assert (
+            repr(File("a", required=True)) == "File(Literal(name='a'), required=True)"
+        )
+        assert repr(File("a", depth=2, required=True)) == (
+            "File(Literal(name='a'), depth=2, required=True)"
+        )
+
+
 class TestNameSeparator:
     @pytest.mark.parametrize("bad", ("a/b", "a\\b", "dir/sub.txt"))
     def test_str_name_with_separator_raises(self, bad: str) -> None:

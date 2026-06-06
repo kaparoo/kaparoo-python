@@ -39,7 +39,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   intermediate directories of unknown name: an `int` is an exact level,
   `None` is any depth (the tree-level `**`), and a `(min, max)` tuple is
   an inclusive range (`max=None` unbounded), exposed as `min_depth` /
-  `max_depth`. Two sibling constraints can sit among a directory's
+  `max_depth`. Each entry also takes a keyword-only `required` flag
+  (default `False`) asserting it must be present. Two sibling constraints
+  can sit among a directory's
   children: `Exclusive` (the present siblings may come from at most one of
   its alternatives, each a set of independent nodes on one side of the
   exclusion; `required=True` requires at least one) and `Together` (its

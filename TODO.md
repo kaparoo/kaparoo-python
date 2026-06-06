@@ -82,6 +82,19 @@ sometimes mean one `Literal`, sometimes a whole subtree) and interacts
 awkwardly with `depth` (which level would `depth` apply to?). Add as an
 explicit, separate feature if a concrete need arises.
 
+### Attribute conditions on `File` / `Directory`
+
+Beyond the name filter and the `required` presence flag, an entry may need
+*attribute* conditions on the actual filesystem object -- file size,
+emptiness, extension, mtime; directory child count, etc. (needed for both
+files and directories).
+
+Must stay **declarative and serializable** (the representation round-trips
+through `to_dict` / `from_dict`), so this is a small condition DSL over
+metadata, not an arbitrary Python callable (a lambda cannot be serialized
+or value-compared). Design alongside the matcher / validator, which is
+what consumes such conditions.
+
 ---
 
 *Last updated: 2026-06-07*

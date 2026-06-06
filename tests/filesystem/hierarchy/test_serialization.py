@@ -26,6 +26,8 @@ class TestFileSerialization:
             File(Glob("*.png")),
             File("frames", depth=None),
             File("x", depth=(2, 4)),
+            File("a", required=True),
+            File("x", depth=(2, 4), required=True),
         ),
     )
     def test_round_trips(self, node: File) -> None:
@@ -37,6 +39,8 @@ class TestFileSerialization:
             "name": {"kind": "literal", "name": "a.txt"},
         }
         assert File("a", depth=3).to_dict()["depth"] == [3, 3]
+        assert "required" not in File("a").to_dict()
+        assert File("a", required=True).to_dict()["required"] is True
 
 
 class TestDirectorySerialization:
@@ -46,6 +50,7 @@ class TestDirectorySerialization:
             Directory("empty"),
             Directory("d", [File("a"), File("b")]),
             Directory(["train", "val"], [File("x")], depth=(1, None)),
+            Directory("d", [File("a")], required=True),
         ),
     )
     def test_round_trips(self, node: Directory) -> None:
