@@ -66,8 +66,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (intermediate levels of unknown name skipped) — yielding one
   `(path, node)` pair per match. It reports only what is *present*:
   `Group`s are treated as "any entry may appear," so `Exclusive` /
-  `Together` enforcement and missing-`required` reporting are left to the
-  planned `validate`. A path may match several nodes (overlapping filters);
+  `Together` enforcement and missing-`required` reporting are left to
+  `validate`. A path may match several nodes (overlapping filters);
   `match` yields one pair per node (lazily, duplicates kept by default; pass
   `unique=True` to suppress identical pairs), while the companion
   `match_map(tree, root)` groups the results into a `{path: (node, ...)}`
@@ -99,9 +99,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   top-level `kaparoo.filters`. The filters are a filesystem-agnostic
   string-matching DSL, now shared beyond `search`. **Breaking**: update
   imports from `kaparoo.filesystem.search.filters` to `kaparoo.filters`
-  (e.g. `from kaparoo.filters import Glob, And`). Class names,
-  serialization (`to_dict` / `from_dict` / `register_filter`), and
-  behavior are unchanged.
+  (e.g. `from kaparoo.filters import Glob, And`). Class names, serialized
+  format, and matching behavior are unchanged.
+- `kaparoo.filters` serialization is now a template method: `Filter.to_dict`
+  injects the `"kind"` discriminator (stamped onto the class as `_kind` by
+  `register_filter`) and subclasses supply only their own fields via a new
+  abstract `_payload`. **Breaking** for *custom* `Filter` subclasses —
+  implement `_payload` (the kind-less fields) instead of `to_dict`; the
+  serialized output of the built-in filters is unchanged. `AndFilter` /
+  `OrFilter` now share a `NaryLogicalFilter` base.
+- Faster filter matching: `EqualsAny` tests a precomputed `frozenset` (O(1)
+  rather than a linear tuple scan) and `Template` matches against its
+  expanded names materialized once; `search` skips the per-directory path
+  stringification when no `part_filter` is given.
 
 ## [0.7.0] - 2026-06-04
 
