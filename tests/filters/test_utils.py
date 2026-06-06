@@ -26,8 +26,8 @@ def test_register_filter_makes_custom_kind_discoverable():
         def matches(self, target: str) -> bool:
             return len(target) > self.threshold
 
-        def to_dict(self) -> dict[str, Any]:
-            return {"kind": "test_length_above", "threshold": self.threshold}
+        def _payload(self) -> dict[str, Any]:
+            return {"threshold": self.threshold}
 
         @classmethod
         def from_dict(cls, data: Mapping[str, Any]) -> Self:
@@ -45,8 +45,8 @@ def test_register_filter_rejects_duplicate_kind_for_different_class():
         def matches(self, target: str) -> bool:
             return False
 
-        def to_dict(self) -> dict[str, Any]:
-            return {"kind": "test_dup_kind_a"}
+        def _payload(self) -> dict[str, Any]:
+            return {}
 
         @classmethod
         def from_dict(cls, data: Mapping[str, Any]) -> Self:
@@ -60,8 +60,8 @@ def test_register_filter_rejects_duplicate_kind_for_different_class():
             def matches(self, target: str) -> bool:
                 return False
 
-            def to_dict(self) -> dict[str, Any]:
-                return {"kind": "test_dup_kind_a"}
+            def _payload(self) -> dict[str, Any]:
+                return {}
 
             @classmethod
             def from_dict(cls, data: Mapping[str, Any]) -> Self:
@@ -76,8 +76,8 @@ def test_register_filter_same_class_is_idempotent():
         def matches(self, target: str) -> bool:
             return False
 
-        def to_dict(self) -> dict[str, Any]:
-            return {"kind": "test_idempotent"}
+        def _payload(self) -> dict[str, Any]:
+            return {}
 
         @classmethod
         def from_dict(cls, data: Mapping[str, Any]) -> Self:

@@ -65,11 +65,11 @@ class PatternFilter(Filter, ABC):
         """Return `target` normalized for `case_sensitive`."""
         return target if self.case_sensitive else target.casefold()
 
-    def to_dict(self) -> dict[str, Any]:
-        result: dict[str, Any] = {"kind": self._kind, "pattern": self.pattern}
+    def _payload(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {"pattern": self.pattern}
         if not self.case_sensitive:
-            result["case_sensitive"] = False
-        return result
+            payload["case_sensitive"] = False
+        return payload
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Self:

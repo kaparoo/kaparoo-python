@@ -79,8 +79,8 @@ def test_subclass_from_dict_not_overridden_raises():
         def matches(self, target: str) -> bool:
             return False
 
-        def to_dict(self) -> dict[str, Any]:
-            return {"kind": "unoverridden"}
+        def _payload(self) -> dict[str, Any]:
+            return {}
 
     with pytest.raises(NotImplementedError, match="must be overridden"):
         UnoverriddenFilter.from_dict({"kind": "unoverridden"})

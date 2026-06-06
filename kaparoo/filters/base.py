@@ -25,13 +25,14 @@ class Filter(ABC):
         - `LogicalFilter` and its concretes: composite rules that combine
           the results of one or more child filters.
 
-    Subclasses must implement `matches` and `to_dict`, and override
+    Subclasses must implement `matches` and `_payload`, and override
     `from_dict` to construct themselves from a dict (with no further
     dispatch). Polymorphic deserialization is provided by
     `Filter.from_dict(data)`, which reads `data["kind"]`, looks up the
     target class in the registry (populated by `register_filter`), and
-    delegates. `register_filter` also stamps each concrete class's
-    discriminator onto `_kind`, which base `to_dict` implementations reuse.
+    delegates. `register_filter` stamps each concrete class's discriminator
+    onto `_kind`, which `to_dict` injects automatically -- so a subclass
+    never repeats (or mistypes) its own kind.
     """
 
     _kind: ClassVar[str]
@@ -41,12 +42,20 @@ class Filter(ABC):
         """Test whether `target` satisfies this filter."""
         raise NotImplementedError
 
-    @abstractmethod
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a `"kind"`-discriminated dict.
 
-        Round-trippable via `Filter.from_dict`. Default-valued fields
-        may be omitted from the output for compactness; `from_dict`
+        The `"kind"` discriminator is injected from `_kind`; subclasses
+        supply only their own fields via `_payload`. Round-trippable via
+        `Filter.from_dict`.
+        """
+        return {"kind": self._kind, **self._payload()}
+
+    @abstractmethod
+    def _payload(self) -> dict[str, Any]:
+        """Return this filter's serialized fields, excluding `"kind"`.
+
+        Default-valued fields may be omitted for compactness; `from_dict`
         supplies them via `data.get(..., DEFAULT)`.
         """
         raise NotImplementedError

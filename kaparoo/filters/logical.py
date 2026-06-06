@@ -55,11 +55,8 @@ class NaryLogicalFilter(LogicalFilter, ABC):
             msg = f"{type(self).__name__} requires at least one child filter."
             raise ValueError(msg)
 
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "kind": self._kind,
-            "children": [child.to_dict() for child in self.children],
-        }
+    def _payload(self) -> dict[str, Any]:
+        return {"children": [child.to_dict() for child in self.children]}
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
@@ -100,8 +97,8 @@ class NotFilter(LogicalFilter):
     def matches(self, target: str) -> bool:
         return not self.child.matches(target)
 
-    def to_dict(self) -> dict[str, Any]:
-        return {"kind": self._kind, "child": self.child.to_dict()}
+    def _payload(self) -> dict[str, Any]:
+        return {"child": self.child.to_dict()}
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Self:

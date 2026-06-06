@@ -58,8 +58,8 @@ class Literal(Expandable):
     def expand(self) -> Iterator[str]:
         yield self.name
 
-    def to_dict(self) -> dict[str, Any]:
-        return {"kind": "literal", "name": self.name}
+    def _payload(self) -> dict[str, Any]:
+        return {"name": self.name}
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
@@ -96,8 +96,8 @@ class OneOf(Expandable):
     def expand(self) -> Iterator[str]:
         yield from self.names
 
-    def to_dict(self) -> dict[str, Any]:
-        return {"kind": "one_of", "names": list(self.names)}
+    def _payload(self) -> dict[str, Any]:
+        return {"names": list(self.names)}
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
@@ -162,9 +162,8 @@ class Template(Expandable):
         for combo in product(*self._axes):
             yield self._template.format(*combo)
 
-    def to_dict(self) -> dict[str, Any]:
+    def _payload(self) -> dict[str, Any]:
         return {
-            "kind": "template",
             "template": self._template,
             "axes": [list(axis) for axis in self._axes],
         }
@@ -240,9 +239,8 @@ class Without(Expandable):
             if not any(e.matches(name) for e in self._excluded):
                 yield name
 
-    def to_dict(self) -> dict[str, Any]:
+    def _payload(self) -> dict[str, Any]:
         return {
-            "kind": "without",
             "base": self._base.to_dict(),
             "excluded": [e.to_dict() for e in self._excluded],
         }

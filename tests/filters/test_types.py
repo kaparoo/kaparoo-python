@@ -99,11 +99,8 @@ def test_user_filter_dict_subclass_round_trips():
         def matches(self, target: str) -> bool:
             return len(target) > self.threshold
 
-        def to_dict(self) -> dict[str, Any]:
-            return {
-                "kind": "test_user_typed_filter_dict",
-                "threshold": self.threshold,
-            }
+        def _payload(self) -> dict[str, Any]:
+            return {"threshold": self.threshold}
 
         @classmethod
         def from_dict(cls, data: Mapping[str, Any]) -> Self:
@@ -134,8 +131,8 @@ def test_filter_dict_base_only_requires_kind():
         def matches(self, target: str) -> bool:
             return False
 
-        def to_dict(self) -> dict[str, Any]:
-            return {"kind": "test_kind_only"}
+        def _payload(self) -> dict[str, Any]:
+            return {}
 
         @classmethod
         def from_dict(cls, data: Mapping[str, Any]) -> Self:
