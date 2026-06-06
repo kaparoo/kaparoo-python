@@ -52,6 +52,11 @@ def _ensure_directory_target(path: Path, *, clean: bool) -> None:
         raise NotADirectoryError(msg)
 
 
+def _join_root_unchecked(paths: StrPaths, root: StrPath | None) -> StrPaths:
+    """Prepend `root` to each path, without any existence validation."""
+    return paths if root is None else [Path(root) / p for p in paths]
+
+
 @overload
 def make_dir(
     path: StrPath,
@@ -236,9 +241,7 @@ def dir_empty_unsafe(path: StrPath) -> bool:
 
 def dirs_empty_unsafe(paths: StrPaths, *, root: StrPath | None = None) -> bool:
     """Check if directories are empty without existence checks."""
-    if root is not None:
-        paths = [Path(root) / p for p in paths]
-    return all(dir_empty_unsafe(p) for p in paths)
+    return all(dir_empty_unsafe(p) for p in _join_root_unchecked(paths, root))
 
 
 def dir_empty(path: StrPath) -> bool:
@@ -286,9 +289,7 @@ def dir_not_empty_unsafe(path: StrPath) -> bool:
 
 def dirs_not_empty_unsafe(paths: StrPaths, *, root: StrPath | None = None) -> bool:
     """Check if directories are not empty without existence checks."""
-    if root is not None:
-        paths = [Path(root) / p for p in paths]
-    return all(dir_not_empty_unsafe(p) for p in paths)
+    return all(dir_not_empty_unsafe(p) for p in _join_root_unchecked(paths, root))
 
 
 def dir_not_empty(path: StrPath) -> bool:
