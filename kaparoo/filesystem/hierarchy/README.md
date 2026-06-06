@@ -20,13 +20,13 @@ several literally-named siblings that share a structure). A directory's
 
 | Class | Role |
 | --- | --- |
-| [`File`](./nodes.py) | a leaf entry |
-| [`Directory`](./nodes.py) | an entry holding ordered `children` (any `Node`s) |
-| [`Entry`](./nodes.py) | abstract base of `File` / `Directory` (carries `name`) |
-| [`Exclusive`](./nodes.py) | a mutual-exclusion constraint among siblings |
-| [`Together`](./nodes.py) | a co-occurrence (all-or-nothing) constraint among siblings |
-| [`Group`](./nodes.py) | abstract base of the constraint nodes (`Exclusive`, `Together`) |
-| [`Node`](./nodes.py) | abstract base of everything in `children` (`Entry` or `Group`) |
+| [`File`](./entry.py) | a leaf entry |
+| [`Directory`](./entry.py) | an entry holding ordered `children` (any `Node`s) |
+| [`Entry`](./entry.py) | abstract base of `File` / `Directory` (carries `name`) |
+| [`Exclusive`](./group.py) | a mutual-exclusion constraint among siblings |
+| [`Together`](./group.py) | a co-occurrence (all-or-nothing) constraint among siblings |
+| [`Group`](./group.py) | abstract base of the constraint nodes (`Exclusive`, `Together`) |
+| [`Node`](./base.py) | abstract base of everything in `children` (`Entry` or `Group`) |
 
 ```python
 from kaparoo.filesystem.hierarchy import Directory, File, Template
@@ -177,9 +177,9 @@ the `Expandable` capability, which is what scaffolding will require.
 
 | Class | `matches` | `expand` |
 | --- | --- | --- |
-| [`Literal`](./patterns.py) | name equals the value | the one name |
-| [`OneOf`](./patterns.py) | name is one of an explicit set | each name in the set |
-| [`Template`](./patterns.py) | name is in the enumerated set | `template.format(*combo)` over the product of axes |
+| [`Literal`](./pattern.py) | name equals the value | the one name |
+| [`OneOf`](./pattern.py) | name is one of an explicit set | each name in the set |
+| [`Template`](./pattern.py) | name is in the enumerated set | `template.format(*combo)` over the product of axes |
 
 ```python
 from kaparoo.filesystem.hierarchy import Expandable, Literal, OneOf, Template

@@ -14,16 +14,10 @@ __all__ = (
     "Together",
 )
 
-from kaparoo.filesystem.hierarchy.nodes import (
-    Directory,
-    Entry,
-    Exclusive,
-    File,
-    Group,
-    Node,
-    Together,
-)
-from kaparoo.filesystem.hierarchy.patterns import (
+from kaparoo.filesystem.hierarchy.base import Node
+from kaparoo.filesystem.hierarchy.entry import Directory, Entry, File
+from kaparoo.filesystem.hierarchy.group import Exclusive, Group, Together
+from kaparoo.filesystem.hierarchy.pattern import (
     Expandable,
     Literal,
     OneOf,
