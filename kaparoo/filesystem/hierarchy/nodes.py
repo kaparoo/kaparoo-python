@@ -29,9 +29,47 @@ def _as_filter(name: str | list[str] | Filter) -> Filter:
     return OneOf(name)
 
 
-def _depth_suffix(depth: int | None) -> str:
-    """Render the `depth=` part of a `repr`, omitted when it is the default."""
-    return "" if depth == 1 else f", depth={depth!r}"
+def _normalize_depth(
+    depth: int | tuple[int, int | None] | None,
+) -> tuple[int, int | None]:
+    """Normalize the `depth` argument to an inclusive `(min, max)` range.
+
+    `None` becomes `(1, None)` (any depth), an `int` becomes `(int, int)`
+    (an exact level), and a `(min, max)` tuple is taken as-is.
+
+    Raises:
+        ValueError: If a bound is less than 1, or `max` is below `min`.
+    """
+    if depth is None:
+        return (1, None)
+    if isinstance(depth, tuple):
+        min_depth, max_depth = depth
+    else:
+        min_depth = max_depth = depth
+    if min_depth < 1:
+        msg = f"depth must be >= 1, got {min_depth!r}"
+        raise ValueError(msg)
+    if max_depth is not None and max_depth < min_depth:
+        msg = f"depth max {max_depth!r} is below min {min_depth!r}"
+        raise ValueError(msg)
+    return (min_depth, max_depth)
+
+
+def _depth_suffix(depth: tuple[int, int | None]) -> str:
+    """Render the `depth=` part of a `repr` in its most compact form.
+
+    Omitted for the `(1, 1)` default; an exact `(n, n)` renders as
+    `depth=n`, `(1, None)` as `depth=None`, and any other range as
+    `depth=(min, max)`.
+    """
+    min_depth, max_depth = depth
+    if min_depth == 1 and max_depth == 1:
+        return ""
+    if min_depth == max_depth:
+        return f", depth={min_depth!r}"
+    if min_depth == 1 and max_depth is None:
+        return ", depth=None"
+    return f", depth=({min_depth!r}, {max_depth!r})"
 
 
 class Entry(ABC):
@@ -41,7 +79,7 @@ class Entry(ABC):
     `str` becomes a `Literal` and a `list[str]` becomes a `OneOf` -- the
     latter lets one node stand for several literally-named siblings that
     share a structure (`Directory(["train", "val"], layout)`). Entries are
-    immutable value objects -- equal by type, name, `depth`, and (for a
+    immutable value objects -- equal by type, name, depth, and (for a
     directory) its children -- hashable, with a `repr` that round-trips
     their fields.
 
@@ -51,22 +89,24 @@ class Entry(ABC):
     `OneOf`, `Template`) can additionally be enumerated -- the basis for
     scaffolding.
 
-    `depth` is how far below its parent the entry sits, defaulting to 1
-    (a direct child). A larger `depth` places the entry that many levels
-    down past intermediate directories of unknown name; `depth=None` means
-    any depth (one or more levels), the tree-level analogue of a `**`
-    glob. Because the intermediate names are unknown, an entry with
-    `depth != 1` describes structure for *matching*, not scaffolding.
-    This is representation only -- the matching that consumes `depth` is
+    `depth` is how far below its parent the entry sits, as an inclusive
+    `(min_depth, max_depth)` range past intermediate directories of
+    unknown name. The default `1` is a direct child. Because the
+    intermediate names are unknown, any entry whose depth allows more than
+    one level describes structure for *matching*, not scaffolding. This is
+    representation only -- the matching that consumes the depth range is
     not implemented yet.
 
     Args:
         name: The entry's name (a filter, or `str` / `list[str]` sugar).
-        depth: Levels below the parent, `>= 1`, or `None` for any depth.
-            Defaults to 1.
+        depth: How far below the parent the entry sits, exposed as
+            `min_depth` / `max_depth`. An `int >= 1` is an exact level,
+            `None` is any depth (one or more levels), and a
+            `(min, max)` tuple is an inclusive range whose `max` may be
+            `None` for unbounded. Defaults to `1` (a direct child).
 
     Raises:
-        ValueError: If `depth` is an integer less than 1.
+        ValueError: If a depth bound is below 1, or `max` is below `min`.
     """
 
     __slots__ = ("_depth", "_name")
@@ -75,13 +115,10 @@ class Entry(ABC):
         self,
         name: str | list[str] | Filter,
         *,
-        depth: int | None = 1,
+        depth: int | tuple[int, int | None] | None = 1,
     ) -> None:
-        if depth is not None and depth < 1:
-            msg = f"depth must be None or a positive integer, got {depth!r}"
-            raise ValueError(msg)
         self._name = _as_filter(name)
-        self._depth = depth
+        self._depth = _normalize_depth(depth)
 
     @property
     def name(self) -> Filter:
@@ -89,9 +126,14 @@ class Entry(ABC):
         return self._name
 
     @property
-    def depth(self) -> int | None:
-        """Levels below the parent (`1` = direct child; `None` = any depth)."""
-        return self._depth
+    def min_depth(self) -> int:
+        """The shallowest level below the parent the entry may sit at."""
+        return self._depth[0]
+
+    @property
+    def max_depth(self) -> int | None:
+        """The deepest level below the parent (`None` is unbounded)."""
+        return self._depth[1]
 
     @abstractmethod
     def _fields(self) -> tuple[object, ...]:
@@ -138,7 +180,7 @@ class Directory(Entry):
         name: str | list[str] | Filter,
         children: Iterable[Entry] = (),
         *,
-        depth: int | None = 1,
+        depth: int | tuple[int, int | None] | None = 1,
     ) -> None:
         super().__init__(name, depth=depth)
         self._children = tuple(children)

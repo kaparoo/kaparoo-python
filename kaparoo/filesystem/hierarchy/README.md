@@ -62,13 +62,15 @@ nothing in `kaparoo.filesystem.search`.
 
 By default a child sits one level below its parent (`depth=1`). Set
 `depth` to place an entry deeper, past intermediate directories whose
-names you do not know:
+names you do not know. It is an inclusive `(min, max)` range, exposed as
+the `min_depth` / `max_depth` properties:
 
-| `depth` | meaning |
-| --- | --- |
-| `1` (default) | direct child |
-| `N` | exactly `N` levels below (`N - 1` unknown intermediate dirs) |
-| `None` | any depth, one or more levels — the tree-level `**` |
+| `depth=` | meaning | `(min_depth, max_depth)` |
+| --- | --- | --- |
+| `1` (default) | direct child | `(1, 1)` |
+| `N` | exactly `N` levels below | `(N, N)` |
+| `None` | any depth, one or more levels — the tree-level `**` | `(1, None)` |
+| `(min, max)` | an inclusive range (`max=None` is unbounded) | `(min, max)` |
 
 ```python
 from kaparoo.filesystem.hierarchy import Directory, File
@@ -76,15 +78,18 @@ from kaparoo.filters import Glob
 
 Directory("dataset", [
     Directory("frames", [File(Glob("*.png"))], depth=2),  # dataset/<any>/frames/*.png
+    Directory("checkpoints", depth=(1, 3)),               # 1 to 3 levels below
     File("config.yaml", depth=None),                      # config.yaml anywhere below
 ])
 ```
 
 `depth` is part of a node's value identity (`Directory("x", depth=None)
-!= Directory("x")`) and `repr` shows it only when non-default. Because
-the intermediate names are unknown, `depth != 1` describes structure for
-*matching*, not scaffolding — and like the rest of the representation,
-the matching that consumes `depth` is not implemented yet.
+!= Directory("x")`; `depth=3` and `depth=(3, 3)` are equal) and `repr`
+shows it only when non-default, in its most compact form. Because the
+intermediate names are unknown, any depth beyond `1` describes structure
+for *matching*, not scaffolding — and like the rest of the
+representation, the matching that consumes the depth range is not
+implemented yet.
 
 ## Enumeration: `Expandable`
 

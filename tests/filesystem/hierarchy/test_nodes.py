@@ -86,19 +86,33 @@ class TestDirectory:
 
 
 class TestDepth:
-    def test_defaults_to_one(self) -> None:
-        assert File("a").depth == 1
-        assert Directory("d").depth == 1
+    def test_defaults_to_a_direct_child(self) -> None:
+        for node in (File("a"), Directory("d")):
+            assert node.min_depth == 1
+            assert node.max_depth == 1
 
     def test_exact_depth(self) -> None:
-        assert File("frames", depth=3).depth == 3
+        node = File("frames", depth=3)
+        assert (node.min_depth, node.max_depth) == (3, 3)
 
     def test_any_depth(self) -> None:
-        assert Directory("frames", depth=None).depth is None
+        node = Directory("frames", depth=None)
+        assert (node.min_depth, node.max_depth) == (1, None)
+
+    def test_range_depth(self) -> None:
+        assert (
+            File("a", depth=(2, 4)).min_depth,
+            File("a", depth=(2, 4)).max_depth,
+        ) == (
+            2,
+            4,
+        )
+        unbounded = File("a", depth=(2, None))
+        assert (unbounded.min_depth, unbounded.max_depth) == (2, None)
 
     def test_directory_forwards_depth(self) -> None:
-        node = Directory("frames", [File("a")], depth=2)
-        assert node.depth == 2
+        node = Directory("frames", [File("a")], depth=(2, None))
+        assert (node.min_depth, node.max_depth) == (2, None)
         assert node.children == (File("a"),)
 
     @pytest.mark.parametrize("bad", (0, -1))
@@ -106,15 +120,25 @@ class TestDepth:
         with pytest.raises(ValueError, match="depth must be"):
             File("a", depth=bad)
 
+    def test_max_below_min_raises(self) -> None:
+        with pytest.raises(ValueError, match="below min"):
+            File("a", depth=(5, 2))
+
+    def test_scalar_and_none_are_canonical_ranges(self) -> None:
+        assert File("a", depth=3) == File("a", depth=(3, 3))
+        assert File("a", depth=None) == File("a", depth=(1, None))
+
     def test_depth_is_part_of_identity(self) -> None:
         assert File("a", depth=2) == File("a", depth=2)
         assert File("a", depth=2) != File("a")
         assert File("a", depth=None) != File("a", depth=2)
         assert hash(File("a", depth=2)) == hash(File("a", depth=2))
 
-    def test_repr_hides_default_depth_but_shows_others(self) -> None:
+    def test_repr_renders_depth_in_compact_form(self) -> None:
         assert repr(File("a")) == "File(Literal(name='a'))"
         assert repr(File("a", depth=3)) == "File(Literal(name='a'), depth=3)"
-        assert repr(Directory("d", depth=None)) == (
-            "Directory(Literal(name='d'), (), depth=None)"
+        assert repr(File("a", depth=None)) == "File(Literal(name='a'), depth=None)"
+        assert repr(File("a", depth=(2, 4))) == "File(Literal(name='a'), depth=(2, 4))"
+        assert repr(File("a", depth=(2, None))) == (
+            "File(Literal(name='a'), depth=(2, None))"
         )

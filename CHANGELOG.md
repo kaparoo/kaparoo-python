@@ -24,12 +24,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   they also round-trip through the filter registry (kinds `"literal"` /
   `"one_of"` / `"template"`). Nodes are immutable value objects (`==`,
   `hash`, `repr`) and take a keyword-only `depth` (default `1`, a direct
-  child): an integer places the entry exactly that many levels below its
-  parent past intermediate directories of unknown name, and `None` means
-  any depth (the tree-level `**`). The package depends on `kaparoo.filters`
-  but nothing in `kaparoo.filesystem.search`. This first cut is the
-  representation plus name-level semantics; disk operations (scaffold /
-  validate / match), which also consume `depth`, are not implemented yet.
+  child) describing how far below the parent the entry sits, past
+  intermediate directories of unknown name: an `int` is an exact level,
+  `None` is any depth (the tree-level `**`), and a `(min, max)` tuple is
+  an inclusive range (`max=None` unbounded), exposed as `min_depth` /
+  `max_depth`. The package depends on `kaparoo.filters` but nothing in
+  `kaparoo.filesystem.search`. This first cut is the representation plus
+  name-level semantics; disk operations (scaffold / validate / match),
+  which also consume `depth`, are not implemented yet.
 
 ### Changed
 
