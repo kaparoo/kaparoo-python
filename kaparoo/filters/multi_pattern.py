@@ -70,21 +70,18 @@ class MultiPatternFilter(Filter, ABC):
         """Return `target` normalized for `case_sensitive`."""
         return target if self.case_sensitive else target.casefold()
 
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"kind": self._kind, "patterns": list(self.patterns)}
+        if not self.case_sensitive:
+            result["case_sensitive"] = False
+        return result
 
-def _multi_to_dict(kind: str, f: MultiPatternFilter) -> dict[str, Any]:
-    """Build a `MultiPatternFilter` serialization dict; omit default `case_sensitive`."""
-    d: dict[str, Any] = {"kind": kind, "patterns": list(f.patterns)}
-    if not f.case_sensitive:
-        d["case_sensitive"] = False
-    return d
-
-
-def _multi_from_dict[T: MultiPatternFilter](cls: type[T], data: Mapping[str, Any]) -> T:
-    """Build a `MultiPatternFilter` subclass from a serialization dict."""
-    return cls(
-        patterns=tuple(data["patterns"]),
-        case_sensitive=data.get("case_sensitive", True),
-    )
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        return cls(
+            patterns=tuple(data["patterns"]),
+            case_sensitive=data.get("case_sensitive", True),
+        )
 
 
 @register_filter("equals_any")
@@ -106,13 +103,6 @@ class EqualsAnyFilter(MultiPatternFilter):
     def matches(self, target: str) -> bool:
         return self._prepare_target(target) in self._pattern_set
 
-    def to_dict(self) -> dict[str, Any]:
-        return _multi_to_dict("equals_any", self)
-
-    @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> Self:
-        return _multi_from_dict(cls, data)
-
 
 @register_filter("starts_with_any")
 @dataclass(frozen=True)
@@ -121,13 +111,6 @@ class StartsWithAnyFilter(MultiPatternFilter):
 
     def matches(self, target: str) -> bool:
         return self._prepare_target(target).startswith(self.patterns)
-
-    def to_dict(self) -> dict[str, Any]:
-        return _multi_to_dict("starts_with_any", self)
-
-    @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> Self:
-        return _multi_from_dict(cls, data)
 
 
 @register_filter("ends_with_any")
@@ -138,13 +121,6 @@ class EndsWithAnyFilter(MultiPatternFilter):
     def matches(self, target: str) -> bool:
         return self._prepare_target(target).endswith(self.patterns)
 
-    def to_dict(self) -> dict[str, Any]:
-        return _multi_to_dict("ends_with_any", self)
-
-    @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> Self:
-        return _multi_from_dict(cls, data)
-
 
 @register_filter("contains_any")
 @dataclass(frozen=True)
@@ -154,13 +130,6 @@ class ContainsAnyFilter(MultiPatternFilter):
     def matches(self, target: str) -> bool:
         t = self._prepare_target(target)
         return any(p in t for p in self.patterns)
-
-    def to_dict(self) -> dict[str, Any]:
-        return _multi_to_dict("contains_any", self)
-
-    @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> Self:
-        return _multi_from_dict(cls, data)
 
 
 # Short aliases. Prefer these in inline composition; prefer the

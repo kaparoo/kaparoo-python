@@ -4,7 +4,7 @@ __all__ = ("Filter",)
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from kaparoo.filters.utils import _FILTER_REGISTRY
 
@@ -30,8 +30,11 @@ class Filter(ABC):
     dispatch). Polymorphic deserialization is provided by
     `Filter.from_dict(data)`, which reads `data["kind"]`, looks up the
     target class in the registry (populated by `register_filter`), and
-    delegates.
+    delegates. `register_filter` also stamps each concrete class's
+    discriminator onto `_kind`, which base `to_dict` implementations reuse.
     """
+
+    _kind: ClassVar[str]
 
     @abstractmethod
     def matches(self, target: str) -> bool:

@@ -23,7 +23,9 @@ def register_filter[F: Filter](kind: str) -> Callable[[type[F]], type[F]]:
     """Register a `Filter` subclass under `kind` (decorator).
 
     The registered class becomes discoverable by `Filter.from_dict`
-    when it encounters `{"kind": kind, ...}` in serialized input.
+    when it encounters `{"kind": kind, ...}` in serialized input, and
+    `kind` is stamped onto the class as `_kind` so base `to_dict`
+    implementations can emit the discriminator without repeating it.
 
     Args:
         kind: The discriminator string written by `to_dict` and read by
@@ -46,6 +48,7 @@ def register_filter[F: Filter](kind: str) -> Callable[[type[F]], type[F]]:
             )
             raise ValueError(msg)
         _FILTER_REGISTRY[kind] = cls
+        cls._kind = kind
         return cls
 
     return decorator

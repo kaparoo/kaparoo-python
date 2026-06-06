@@ -28,7 +28,7 @@ class LogicalFilter(Filter, ABC):
 
     Concrete subclasses define their own field shape:
         - `AndFilter` and `OrFilter` take `children: tuple[Filter, ...]`
-          and combine multiple results.
+          and combine multiple results (under `NaryLogicalFilter`).
         - `NotFilter` takes a single `child: Filter` and inverts it.
 
     Because children are typed as `Filter`, logical filters can nest
@@ -37,14 +37,12 @@ class LogicalFilter(Filter, ABC):
     """
 
 
-@register_filter("and")
 @dataclass(frozen=True)
-class AndFilter(LogicalFilter):
-    """Match strings that satisfy ALL of `children` (logical conjunction).
+class NaryLogicalFilter(LogicalFilter, ABC):
+    """Base for logical filters over a non-empty tuple of `children`.
 
-    Attributes:
-        children: The component filters. Always non-empty (validated at
-            construction).
+    Subclasses (`AndFilter`, `OrFilter`) supply only the `matches`
+    quantifier; field, validation, and serialization are shared.
 
     Raises:
         ValueError: If `children` is empty.
@@ -56,57 +54,36 @@ class AndFilter(LogicalFilter):
         if not self.children:
             msg = f"{type(self).__name__} requires at least one child filter."
             raise ValueError(msg)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "kind": self._kind,
+            "children": [child.to_dict() for child in self.children],
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        return cls(
+            children=tuple(Filter.from_dict(child) for child in data["children"]),
+        )
+
+
+@register_filter("and")
+@dataclass(frozen=True)
+class AndFilter(NaryLogicalFilter):
+    """Match strings that satisfy ALL of `children` (logical conjunction)."""
 
     def matches(self, target: str) -> bool:
         return all(child.matches(target) for child in self.children)
 
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "kind": "and",
-            "children": [child.to_dict() for child in self.children],
-        }
-
-    @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> Self:
-        return cls(
-            children=tuple(Filter.from_dict(child) for child in data["children"]),
-        )
-
 
 @register_filter("or")
 @dataclass(frozen=True)
-class OrFilter(LogicalFilter):
-    """Match strings that satisfy AT LEAST ONE of `children` (logical disjunction).
-
-    Attributes:
-        children: The component filters. Always non-empty (validated at
-            construction).
-
-    Raises:
-        ValueError: If `children` is empty.
-    """
-
-    children: tuple[Filter, ...]
-
-    def __post_init__(self) -> None:
-        if not self.children:
-            msg = f"{type(self).__name__} requires at least one child filter."
-            raise ValueError(msg)
+class OrFilter(NaryLogicalFilter):
+    """Match strings that satisfy AT LEAST ONE of `children` (disjunction)."""
 
     def matches(self, target: str) -> bool:
         return any(child.matches(target) for child in self.children)
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "kind": "or",
-            "children": [child.to_dict() for child in self.children],
-        }
-
-    @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> Self:
-        return cls(
-            children=tuple(Filter.from_dict(child) for child in data["children"]),
-        )
 
 
 @register_filter("not")
@@ -124,7 +101,7 @@ class NotFilter(LogicalFilter):
         return not self.child.matches(target)
 
     def to_dict(self) -> dict[str, Any]:
-        return {"kind": "not", "child": self.child.to_dict()}
+        return {"kind": self._kind, "child": self.child.to_dict()}
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Self:

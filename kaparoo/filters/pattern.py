@@ -65,21 +65,18 @@ class PatternFilter(Filter, ABC):
         """Return `target` normalized for `case_sensitive`."""
         return target if self.case_sensitive else target.casefold()
 
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"kind": self._kind, "pattern": self.pattern}
+        if not self.case_sensitive:
+            result["case_sensitive"] = False
+        return result
 
-def _pattern_to_dict(kind: str, f: PatternFilter) -> dict[str, Any]:
-    """Build a `PatternFilter` serialization dict; omit default `case_sensitive`."""
-    d: dict[str, Any] = {"kind": kind, "pattern": f.pattern}
-    if not f.case_sensitive:
-        d["case_sensitive"] = False
-    return d
-
-
-def _pattern_from_dict[T: PatternFilter](cls: type[T], data: Mapping[str, Any]) -> T:
-    """Build a `PatternFilter` subclass from a serialization dict."""
-    return cls(
-        pattern=data["pattern"],
-        case_sensitive=data.get("case_sensitive", True),
-    )
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        return cls(
+            pattern=data["pattern"],
+            case_sensitive=data.get("case_sensitive", True),
+        )
 
 
 @register_filter("equals")
@@ -90,13 +87,6 @@ class EqualsFilter(PatternFilter):
     def matches(self, target: str) -> bool:
         return self._prepare_target(target) == self.pattern
 
-    def to_dict(self) -> dict[str, Any]:
-        return _pattern_to_dict("equals", self)
-
-    @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> Self:
-        return _pattern_from_dict(cls, data)
-
 
 @register_filter("starts_with")
 @dataclass(frozen=True)
@@ -105,13 +95,6 @@ class StartsWithFilter(PatternFilter):
 
     def matches(self, target: str) -> bool:
         return self._prepare_target(target).startswith(self.pattern)
-
-    def to_dict(self) -> dict[str, Any]:
-        return _pattern_to_dict("starts_with", self)
-
-    @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> Self:
-        return _pattern_from_dict(cls, data)
 
 
 @register_filter("ends_with")
@@ -122,13 +105,6 @@ class EndsWithFilter(PatternFilter):
     def matches(self, target: str) -> bool:
         return self._prepare_target(target).endswith(self.pattern)
 
-    def to_dict(self) -> dict[str, Any]:
-        return _pattern_to_dict("ends_with", self)
-
-    @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> Self:
-        return _pattern_from_dict(cls, data)
-
 
 @register_filter("contains")
 @dataclass(frozen=True)
@@ -137,13 +113,6 @@ class ContainsFilter(PatternFilter):
 
     def matches(self, target: str) -> bool:
         return self.pattern in self._prepare_target(target)
-
-    def to_dict(self) -> dict[str, Any]:
-        return _pattern_to_dict("contains", self)
-
-    @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> Self:
-        return _pattern_from_dict(cls, data)
 
 
 @register_filter("regex")
@@ -177,13 +146,6 @@ class RegexFilter(PatternFilter):
     def matches(self, target: str) -> bool:
         return self._compiled.fullmatch(target) is not None
 
-    def to_dict(self) -> dict[str, Any]:
-        return _pattern_to_dict("regex", self)
-
-    @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> Self:
-        return _pattern_from_dict(cls, data)
-
 
 @register_filter("glob")
 @dataclass(frozen=True)
@@ -197,13 +159,6 @@ class GlobFilter(PatternFilter):
 
     def matches(self, target: str) -> bool:
         return fnmatch.fnmatchcase(self._prepare_target(target), self.pattern)
-
-    def to_dict(self) -> dict[str, Any]:
-        return _pattern_to_dict("glob", self)
-
-    @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> Self:
-        return _pattern_from_dict(cls, data)
 
 
 # Short aliases. Prefer these in inline composition; prefer the
