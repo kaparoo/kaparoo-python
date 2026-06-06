@@ -50,7 +50,7 @@ def unwrap_or_default[T](
         The `optional` value if it is not None, otherwise the `default` value.
     """
     result = replace_if_none(optional, default)
-    return callback(result) if callable(callback) else result
+    return callback(result) if callback is not None else result
 
 
 def unwrap_or_defaults[T](
@@ -69,7 +69,9 @@ def unwrap_or_defaults[T](
     Returns:
         A sequence containing the unwrapped values from `optionals` or their defaults.
     """
-    return [unwrap_or_default(optional, default, callback) for optional in optionals]
+    if callback is None:
+        return [default if o is None else o for o in optionals]
+    return [callback(default if o is None else o) for o in optionals]
 
 
 # ========================== #
@@ -107,7 +109,7 @@ def unwrap_or_factory[T](
         The `optional` value if it is not None, otherwise the value created by `factory`.
     """
     result = factory_if_none(optional, factory)
-    return callback(result) if callable(callback) else result
+    return callback(result) if callback is not None else result
 
 
 def unwrap_or_factories[T](
@@ -126,4 +128,6 @@ def unwrap_or_factories[T](
     Returns:
         A sequence containing the unwrapped values from `optionals` or values created by `factory`.
     """
-    return [unwrap_or_factory(optional, factory, callback) for optional in optionals]
+    if callback is None:
+        return [o if o is not None else factory() for o in optionals]
+    return [callback(o if o is not None else factory()) for o in optionals]
