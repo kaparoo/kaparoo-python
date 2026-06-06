@@ -103,41 +103,27 @@ def _depth_arg(data: Mapping[str, Any]) -> int | tuple[int, int | None]:
 class Entry(Node, ABC):
     """A named node in a filesystem hierarchy: a `File` or a `Directory`.
 
-    Every entry carries a `name` filter. As constructor sugar, a bare
-    `str` becomes a `Literal` and a `list[str]` becomes a `OneOf` -- the
-    latter lets one node stand for several literally-named siblings that
-    share a structure (`Directory(["train", "val"], layout)`). Entries are
-    immutable value objects -- equal by type, name, depth, and (for a
-    directory) its children -- hashable, with a `repr` that round-trips
-    their fields.
-
-    A node's `name` is any `kaparoo.filters.Filter`, so the full filter
-    DSL (`Glob`, `Regex`, `And` / `Or` / `Not`, ...) describes which
-    siblings a node matches. Names that are also `Expandable` (`Literal`,
-    `OneOf`, `Template`) can additionally be enumerated -- the basis for
-    scaffolding.
+    Every entry carries a `name` filter (any `kaparoo.filters.Filter`, so
+    the full DSL describes which siblings it matches). As sugar, a bare
+    `str` becomes a `Literal` and a `list[str]` a `OneOf` -- one node
+    standing for several literally-named siblings that share a structure.
+    Entries are immutable value objects -- equal by type, name, depth, and
+    (for a directory) children -- and hashable.
 
     `depth` is how far below its parent the entry sits, as an inclusive
-    `(min_depth, max_depth)` range past intermediate directories of
-    unknown name. The default `1` is a direct child. Because the
-    intermediate names are unknown, any entry whose depth allows more than
-    one level describes structure for *matching*, not scaffolding. This is
-    representation only -- the matching that consumes the depth range is
-    not implemented yet.
+    `(min_depth, max_depth)` range past intermediate directories of unknown
+    name; the default `1` is a direct child.
 
     Args:
         name: The entry's name -- a `kaparoo.filters.Filter`, or `str` /
-            `list[str]` sugar naming a single path component (a sugar name
-            containing a `/` or `\\` separator raises `ValueError`).
+            `list[str]` sugar naming a single path component (a separator
+            in sugar raises `ValueError`).
         depth: How far below the parent the entry sits, exposed as
             `min_depth` / `max_depth`. An `int >= 1` is an exact level,
-            `None` is any depth (one or more levels), and a
-            `(min, max)` tuple is an inclusive range whose `max` may be
-            `None` for unbounded. Defaults to `1` (a direct child).
-        required: Whether the entry must be present. Defaults to `False`
-            (the spec describes structure; presence is asserted only when
-            opted in). Like `depth`, this is consumed by matching /
-            validation, not yet implemented.
+            `None` is any depth (one or more levels), and a `(min, max)`
+            tuple is an inclusive range whose `max` may be `None` for
+            unbounded. Defaults to `1`.
+        required: Whether the entry must be present. Defaults to `False`.
 
     Raises:
         ValueError: If a sugar name contains a path separator, a depth

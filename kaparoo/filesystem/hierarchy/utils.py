@@ -11,26 +11,18 @@ if TYPE_CHECKING:
 
 
 _NODE_REGISTRY: dict[str, type[Node]] = {}
-"""Maps a `"node"` discriminator string to a `Node` subclass.
+"""Maps a `"node"` discriminator to a `Node` subclass.
 
-Populated by the `register_node` decorator at class-definition time and
-consulted by `Node.from_dict` for polymorphic deserialization. Treated as
-private -- mutate only through `register_node`.
+Populated by `register_node` and consulted by `Node.from_dict` for
+polymorphic deserialization; mutate only through `register_node`.
 """
 
 
 def register_node[N: Node](node: str) -> Callable[[type[N]], type[N]]:
-    """Register a `Node` subclass under `node` (decorator).
+    """Register a `Node` subclass under the discriminator `node` (decorator).
 
-    The registered class becomes discoverable by `Node.from_dict` when it
-    encounters `{"node": node, ...}` in serialized input.
-
-    Args:
-        node: The discriminator string written by `to_dict` and read by
-            `from_dict` (e.g. `"file"`, `"directory"`, `"exclusive"`).
-
-    Returns:
-        A decorator that registers and returns the given class.
+    Makes the class discoverable by `Node.from_dict` when it sees
+    `{"node": node, ...}`.
 
     Raises:
         ValueError: If `node` is already registered to another class.

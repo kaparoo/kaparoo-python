@@ -34,11 +34,10 @@ def match(
     nonexistent or non-directory `root` simply yields nothing.
 
     Args:
-        unique: When `False` (default) the same `(path, node)` pair may be
-            yielded more than once -- a reused subtree matching one path
-            shows up once per occurrence -- and iteration stays fully lazy.
-            When `True`, duplicate pairs are suppressed (a `seen` set grows
-            with the distinct results, but iteration is still streamed).
+        unique: When `False` (default) the same `(path, node)` pair may
+            repeat (a reused subtree shows up once per occurrence) and
+            iteration stays lazy. When `True`, duplicate pairs are
+            suppressed (still streamed, backed by a `seen` set).
 
     Yields:
         `(path, node)` for each match, in spec-traversal order.
@@ -107,4 +106,4 @@ def _at_depths(parent: Path, min_depth: int, max_depth: int | None) -> Iterator[
             for name in sorted((*dirnames, *filenames)):
                 yield dirpath / name
         if max_depth is not None and child_depth >= max_depth:
-            dirnames.clear()  # prune deeper subtree; `Path.walk` honors in-place mutation
+            dirnames.clear()  # prune deeper levels (Path.walk honors the edit)

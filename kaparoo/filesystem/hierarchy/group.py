@@ -30,14 +30,11 @@ class Group(Node, ABC):
     """A constraint over a group of sibling nodes.
 
     The shared base of `Exclusive` (mutual exclusion) and `Together`
-    (co-occurrence). A group is a `Node` but not an `Entry` -- it has no
-    name of its own, only the nodes it constrains (which may themselves be
-    groups). Every group carries a keyword-only `required` flag (whether
-    the empty, none-present case is forbidden; its precise meaning is
-    defined by each subclass) and exposes the leaf entries it references
-    through `entries`, regardless of how they are structured internally.
-    Groups are constraints for *matching* / *validation*, which is not
-    implemented yet -- this is representation only.
+    (co-occurrence). A group is a `Node` but not an `Entry`: it has no name
+    of its own, only the nodes it constrains (which may themselves be
+    groups). The keyword-only `required` flag forbids the none-present case
+    (its precise meaning is subclass-defined); `entries` exposes the leaf
+    entries it references, however they are nested.
     """
 
     __slots__ = ("_required",)
@@ -65,7 +62,7 @@ class Group(Node, ABC):
         raise NotImplementedError
 
 
-def _flatten_entries(nodes: Iterable[Node]) -> tuple[Entry, ...]:
+def flatten_entries(nodes: Iterable[Node]) -> tuple[Entry, ...]:
     """Recursively gather the leaf `Entry` nodes from `nodes`."""
     result: list[Entry] = []
     for node in nodes:
@@ -80,28 +77,13 @@ def _flatten_entries(nodes: Iterable[Node]) -> tuple[Entry, ...]:
 class Exclusive(Group):
     """A mutual-exclusion constraint among sibling alternatives.
 
-    Placed in a `Directory`'s `children`, `Exclusive` declares that the
-    present siblings may come from at most one of its `alternatives`. Each
-    alternative is a set of one or more entries on the same side of the
-    exclusion -- `Exclusive(File("setup.py"), File("pyproject.toml"))`
-    forbids both files coexisting, while `Exclusive([File("setup.py"),
-    File("setup.cfg")], File("pyproject.toml"))` lets `setup.py` and
-    `setup.cfg` appear together (same side) but not alongside
-    `pyproject.toml`.
-
-    Nodes within an alternative are independent -- they need not all be
-    present; use `Together` for co-occurrence. An alternative may itself
-    contain a `Group` (e.g. a `Together`), so constraints nest:
-    `Exclusive(Together(a, b), c)` is "{a and b together} or c". With
-    `required=False` (the default) no alternative present is also allowed;
-    `required=True` additionally requires at least one alternative to be
-    present.
-
-    `Exclusive` is a `Group` (a `Node`, not an `Entry`): it has no name of
-    its own, only the nodes grouped in its alternatives; `entries` gives
-    the leaf entries it references, descending through any nesting. It is a
-    constraint for *matching* / *validation*, which is not implemented yet
-    -- this is representation only.
+    In a `Directory`'s `children`, `Exclusive` declares that present
+    siblings may come from at most one of its `alternatives`. Each
+    alternative is one or more entries on the same side; nodes within a
+    side are independent (use `Together` for co-occurrence). An alternative
+    may itself be a `Group`, so constraints nest -- `Exclusive(Together(a,
+    b), c)` is "{a and b} or c". `required=True` additionally requires at
+    least one alternative present.
 
     Args:
         *alternatives: Two or more alternatives, each a `Node` or an
@@ -138,7 +120,7 @@ class Exclusive(Group):
 
     @property
     def entries(self) -> tuple[Entry, ...]:
-        return _flatten_entries(node for alt in self._alternatives for node in alt)
+        return flatten_entries(node for alt in self._alternatives for node in alt)
 
     def _key(self) -> tuple[object, ...]:
         return (self._alternatives, self._required)
@@ -174,22 +156,11 @@ class Exclusive(Group):
 class Together(Group):
     """A co-occurrence constraint: sibling entries that exist as a unit.
 
-    Placed in a `Directory`'s `children`, `Together` declares its
-    `members` all-or-nothing -- either every one exists on disk or none
-    does. Use it for entries that are meaningless apart, such as a sharded
-    file and its index, or a certificate and its key. It is the dual of
-    `Exclusive`, and the two compose by sitting side by side in
-    `children`.
-
-    With `required=False` (the default) all-absent is allowed;
+    In a `Directory`'s `children`, `Together` declares its `members`
+    all-or-nothing -- every one exists on disk, or none does (a sharded
+    file and its index, a certificate and its key). It is the dual of
+    `Exclusive`. Members may themselves be groups, so constraints nest.
     `required=True` additionally requires every member present.
-
-    Members may themselves be groups, so constraints nest; `entries` gives
-    the leaf entries, descending through any nesting. Like `Exclusive`,
-    `Together` is a `Group` (a `Node`, not an `Entry`) -- it has no name of
-    its own, only the nodes it groups. It is a constraint for *matching* /
-    *validation*, which is not implemented yet -- this is representation
-    only.
 
     Args:
         *members: Two or more nodes that must coexist.
@@ -216,7 +187,7 @@ class Together(Group):
 
     @property
     def entries(self) -> tuple[Entry, ...]:
-        return _flatten_entries(self._members)
+        return flatten_entries(self._members)
 
     def _key(self) -> tuple[object, ...]:
         return (self._members, self._required)

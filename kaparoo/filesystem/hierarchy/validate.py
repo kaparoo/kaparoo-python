@@ -7,7 +7,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
 
 from kaparoo.filesystem.hierarchy.entry import Directory, Entry, File
-from kaparoo.filesystem.hierarchy.group import Exclusive, Group, Together
+from kaparoo.filesystem.hierarchy.group import (
+    Exclusive,
+    Group,
+    Together,
+    flatten_entries,
+)
 from kaparoo.filesystem.hierarchy.match import match_map
 
 if TYPE_CHECKING:
@@ -58,37 +63,29 @@ class ValidationReport:
 
 
 def validate(tree: Node, root: StrPath) -> ValidationReport:
-    """Check the real directory at `root` against the spec `tree`.
+    """Check the directory at `root` (the container, as in `match`) against
+    the spec `tree`, returning a `ValidationReport`.
 
-    `root` is the *container* (as in `match`). The returned
-    `ValidationReport` records what matched, what is `unexpected`
-    (on-disk but matching no node -- a path not specified, nor an ancestor
-    of any match, is unexpected, so anything below an unspecified directory
-    counts too), what is `missing` (a `required` entry, or a `required`
-    `Exclusive` / `Together` with nothing present), and which `Exclusive` /
-    `Together` constraints are `violations`. A `required` enumerable name
-    (`OneOf` / `Template`) is satisfied by *at least one* present match.
+    A path is `unexpected` when it is neither matched nor an ancestor of a
+    match, so an unspecified directory's contents count too. A `required`
+    enumerable name (`OneOf` / `Template`) is satisfied by *at least one*
+    present match.
     """
     return _build_report((tree,), Path(root))
 
 
 def conforms(spec: Node) -> Callable[[StrPath], bool]:
-    """Build a path predicate: does a path conform to *any* part of `spec`?
+    """Build a `search` predicate accepting a path that realizes *any* entry
+    in `spec` -- so one spec doubles as a catalogue of acceptable
+    sub-structures.
 
-    Returns a `Callable[[Path], bool]` (a `search` predicate) that accepts a
-    path when it realizes *some* entry anywhere in `spec` -- so one spec
-    doubles as a catalogue of acceptable sub-structures. A path realizes an
-    entry when:
-
-    - the entry is a `File` and the path is a file whose name matches (file
-      *attribute* conditions are a planned feature and will tighten this);
-    - the entry is a `Directory` and the path is a directory whose name
-      matches *and* whose subtree conforms (via `validate`).
-
-    Because files (and childless directories) are accepted by name and type
-    regardless of where they sit, the predicate answers "is this a
-    well-formed instance of something `spec` describes?", not "is it in the
-    right place?".
+    A path realizes a `File` entry when it is a file whose name matches, and
+    a `Directory` entry when it is a directory whose name matches *and*
+    whose subtree conforms (via `validate`). Because files (and childless
+    directories) are accepted by name and type regardless of where they sit,
+    the predicate answers "a well-formed instance of something `spec`
+    describes?", not "in the right place?". (File *attribute* conditions are
+    planned and will tighten the file case.)
     """
     entries = tuple(node for node in _walk_nodes(spec) if isinstance(node, Entry))
 
@@ -102,7 +99,6 @@ def conforms(spec: Node) -> Callable[[StrPath], bool]:
 def _node_conforms(entry: Entry, path: Path) -> bool:
     """Whether `path` realizes `entry` (a file match, or a conforming dir)."""
     if isinstance(entry, File):
-        # Attribute conditions (size, mtime, ...) will be checked here too.
         return path.is_file() and entry.name.matches(path.name)
     directory = cast("Directory", entry)
     if not (path.is_dir() and directory.name.matches(path.name)):
@@ -212,15 +208,6 @@ def _walk_nodes(node: Node) -> Iterator[Node]:
             yield from _walk_nodes(member)
 
 
-def _leaf_entries(nodes: Iterable[Node]) -> Iterator[Entry]:
-    """Yield the leaf entries among `nodes`, flattening any nested groups."""
-    for node in nodes:
-        if isinstance(node, Group):
-            yield from node.entries
-        else:
-            yield cast("Entry", node)
-
-
 def _present_leaves(nodes: Iterable[Node], present: set[Node]) -> tuple[Entry, ...]:
     """The leaf entries of `nodes` that are present on disk."""
-    return tuple(entry for entry in _leaf_entries(nodes) if entry in present)
+    return tuple(entry for entry in flatten_entries(nodes) if entry in present)

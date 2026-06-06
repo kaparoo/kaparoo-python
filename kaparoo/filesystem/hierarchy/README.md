@@ -136,8 +136,8 @@ Within an alternative the nodes are **independent** — `setup.py` and
 alongside `pyproject.toml`. For "all or nothing" co-occurrence, use
 `Together`. `required=True` tightens "at most one alternative" to "at
 least one". `Exclusive` is a `Node` but not an `Entry` — it has no name of
-its own — so a directory's `children` hold `Node`s. The validation that
-enforces it is not implemented yet.
+its own — so a directory's `children` hold `Node`s.
+[`validate`](#validation-validate) enforces it.
 
 Alternatives (and `Together` members) are `Node`s, so constraints **nest**
 — an alternative may itself be a group:
@@ -163,8 +163,7 @@ Directory("model", [
 `required=True` tightens "all or nothing" to "all present". `Together` is
 the dual of `Exclusive`; the two compose by sitting side by side in
 `children` — an `Exclusive` between sides, plus a `Together` that makes
-one side co-occur. Like the rest of the representation, the validation
-that enforces it is not implemented yet.
+one side co-occur. [`validate`](#validation-validate) enforces it.
 
 Both constraints share a `Group` base that carries `required` and an
 `entries` property — the **leaf** entries the constraint references,
