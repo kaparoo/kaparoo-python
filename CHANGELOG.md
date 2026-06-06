@@ -67,7 +67,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `(path, node)` pair per match. It reports only what is *present*:
   `Group`s are treated as "any entry may appear," so `Exclusive` /
   `Together` enforcement and missing-`required` reporting are left to the
-  planned `validate`.
+  planned `validate`. A path may match several nodes (overlapping filters);
+  `match` yields one pair per node (lazily, duplicates kept by default; pass
+  `unique=True` to suppress identical pairs), while the companion
+  `match_map(tree, root)` groups the results into a `{path: (node, ...)}`
+  mapping (distinct nodes, spec-traversal order).
 
 ### Changed
 

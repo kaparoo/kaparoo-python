@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("match",)
+__all__ = ("match", "match_map")
 
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
@@ -16,7 +16,9 @@ if TYPE_CHECKING:
     from kaparoo.filesystem.types import StrPath
 
 
-def match(tree: Node, root: StrPath) -> Iterator[tuple[Path, Node]]:
+def match(
+    tree: Node, root: StrPath, *, unique: bool = False
+) -> Iterator[tuple[Path, Node]]:
     """Map each path under `root` to the spec `tree` node(s) it matches.
 
     `root` is the *container*: `tree`'s top node is matched as an entry
@@ -30,8 +32,41 @@ def match(tree: Node, root: StrPath) -> Iterator[tuple[Path, Node]]:
     `Exclusive` / `Together` violations are `validate`'s concern, so a
     `Group` here is treated as "any of its entries may appear." A
     nonexistent or non-directory `root` simply yields nothing.
+
+    Args:
+        unique: When `False` (default) the same `(path, node)` pair may be
+            yielded more than once -- a reused subtree matching one path
+            shows up once per occurrence -- and iteration stays fully lazy.
+            When `True`, duplicate pairs are suppressed (a `seen` set grows
+            with the distinct results, but iteration is still streamed).
+
+    Yields:
+        `(path, node)` for each match, in spec-traversal order.
     """
-    yield from _match_under(tree, Path(root))
+    pairs = _match_under(tree, Path(root))
+    if not unique:
+        yield from pairs
+        return
+    seen: set[tuple[Path, Node]] = set()
+    for pair in pairs:
+        if pair not in seen:
+            seen.add(pair)
+            yield pair
+
+
+def match_map(tree: Node, root: StrPath) -> dict[Path, tuple[Node, ...]]:
+    """Group `match` results into a `path -> matching nodes` mapping.
+
+    Each on-disk path maps to the tuple of distinct nodes it matches, in
+    spec-traversal order (so overlapping nodes for one path are collected
+    rather than yielded separately). Unlike `match`, this materializes the
+    full result before returning. Iterate `.items()` for `(path, nodes)`
+    pairs; index by path to look a single one up.
+    """
+    grouped: dict[Path, list[Node]] = {}
+    for path, node in match(tree, root, unique=True):
+        grouped.setdefault(path, []).append(node)
+    return {path: tuple(nodes) for path, nodes in grouped.items()}
 
 
 def _match_under(node: Node, parent: Path) -> Iterator[tuple[Path, Node]]:

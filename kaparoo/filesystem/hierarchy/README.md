@@ -263,6 +263,22 @@ for path, node in match(spec, "/data"):   # "/data" contains "dataset"
     ...   # path -> the spec node it matches
 ```
 
+A path may match several nodes at once (overlapping filters). By default
+`match` yields one pair per node and stays fully lazy; the variants let you
+shape that:
+
+```python
+from kaparoo.filesystem.hierarchy import match, match_map
+
+match(spec, "/data")                  # (path, node) per match — duplicates kept, lazy
+match(spec, "/data", unique=True)     # same, but identical (path, node) pairs suppressed
+match_map(spec, "/data")              # {path: (node, ...)} — overlapping nodes grouped
+match_map(spec, "/data").items()      # iterate (path, nodes) tuples instead
+```
+
+`match` streams; `match_map` materializes the full mapping before
+returning (its nodes are distinct, in spec-traversal order).
+
 `match` reports only what is *present* — a `Group` is treated as "any of
 its entries may appear," so it does not enforce `Exclusive` / `Together`,
 and it does not report missing `required` entries. Those are the job of
