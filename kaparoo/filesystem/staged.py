@@ -353,6 +353,13 @@ class StagedDirectory:
     restores the original; only a crash *between* the two renames leaves the
     previous contents in a sibling ``<name>.old`` directory for recovery.
 
+    Durability note: `commit` makes the directory's *appearance* durable (it
+    fsyncs the parent directory entry), but the files you write into `workdir`
+    are not individually fsynced -- their contents may still be buffered when
+    `commit` returns. If they must survive a crash immediately after commit,
+    fsync them yourself (for example, write each via `StagedFile` inside
+    `workdir`). Atomicity for concurrent readers always holds regardless.
+
     The committed directory gets the usual umask-based permissions. Pass
     `make_parents=True` to create the destination's parent if it is missing.
     An uncommitted instance discards its staging directory on garbage

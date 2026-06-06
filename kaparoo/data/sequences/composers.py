@@ -79,9 +79,14 @@ class TransformedSequence[T_in, M_in, T_out = T_in, M_out = M_in](
         T_in: Item type of `source`.
         M_in: Metadata type of `source`.
         T_out: Item type after the transform. Defaults to `T_in`.
-        M_out: Metadata type exposed by this view. Defaults to `M_in`.
-            When `M_out != M_in`, override `get_meta` in a subclass;
-            the default passthrough is only safe when `M_out == M_in`.
+        M_out: Metadata type exposed by this view. Defaults to `M_in`. The
+            default `get_meta` passes `source.get_meta` through, which is
+            correct only when `M_out == M_in`. **Always override `get_meta`**
+            when `M_out != M_in`: the default's `cast` silences the type
+            checker and Python erases generics at runtime, so a forgotten
+            override silently returns an `M_in` value typed as `M_out` -- a
+            wrong-typed value that surfaces only later in use, never at
+            construction.
 
     Example:
         >>> # Item-only transform; metadata passes through unchanged.
@@ -116,7 +121,9 @@ class TransformedSequence[T_in, M_in, T_out = T_in, M_out = M_in](
         return self._transform(self._source.get_item(index))
 
     def get_meta(self, index: int) -> M_out:
-        # Passthrough by default. Override when M_out != M_in.
+        # Passthrough -- correct only when M_out == M_in. A subclass with a
+        # different M_out MUST override this; the cast cannot catch a missing
+        # override, since generics are erased at runtime.
         return cast("M_out", self._source.get_meta(index))
 
 

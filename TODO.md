@@ -59,13 +59,6 @@ on any mainstream OS. Documented in class docstring.
 
 ## 📝 Known design limitations (documentation-only resolution)
 
-### `TransformedSequence`: `M_out ≠ M_in` without `get_meta` override
-
-If `M_out != M_in` is explicitly set but `get_meta` is not overridden, the
-`cast` in the default implementation silences the type checker while returning
-a wrongly-typed value at runtime. Python's generic type erasure makes this
-undetectable at construction. Resolution: docstring + README only.
-
 ### `Aggregator.weight` semantics with heterogeneous updates
 
 `weight` accumulates across all `update` calls regardless of which metric

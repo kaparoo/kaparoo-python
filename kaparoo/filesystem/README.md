@@ -230,6 +230,12 @@ directory is swapped aside and removed, so there is a brief window where the
 destination is absent and, on a rare failure mid-swap, the previous contents
 remain in a sibling `<name>.old` directory for recovery.
 
+`commit` makes the directory's appearance durable (it fsyncs the parent
+entry), but the files you write into `workdir` are *not* individually
+fsynced; if their contents must survive a crash right after commit, fsync
+them yourself (e.g. write each via `StagedFile`). Concurrent readers always
+see the complete directory regardless.
+
 ## Platform notes
 
 - **Directory mode bits**: `mode` (on `make_dir` / `make_dirs`) and

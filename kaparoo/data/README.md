@@ -90,7 +90,11 @@ A lazy view that applies a `transform` callable to each item of
 `source`. The transform is called on demand in `get_item` -- nothing
 is computed at construction. `get_meta` passes through `source.get_meta`
 unchanged by default; override it in a subclass when `M_out` differs
-from `M_in`.
+from `M_in`. **That override is required, not optional**: if you declare a
+different `M_out` but forget it, the default silently returns the source's
+`M_in` metadata typed as `M_out` (a `cast` hides the mismatch, and Python
+erases generics at runtime, so nothing catches it until the wrong value is
+used).
 
 ```python
 from kaparoo.data.sequences import TransformedSequence
