@@ -1,11 +1,11 @@
 # TODO
 
-Tracked items that are not yet captured in code or tests. Promote an
-item to a CHANGELOG entry once it lands.
+Tracked items that are not yet captured in code or tests, organized by
+module. Promote an item to a CHANGELOG entry once it lands.
 
 ---
 
-## 🧮 `kaparoo.utils.aggregate` — stabilization
+## 🧮 `kaparoo.utils.aggregate`
 
 ### `Stored` reduction (deferred — add when concrete need arises)
 
@@ -31,34 +31,6 @@ Once the reduction family is complete (after `Stored` is merged or explicitly
 decided against), remove the `experimental` note from the module docstring,
 class docstrings, CHANGELOG entry, and `kaparoo/utils/README.md`.
 
----
-
-## 🛠 `kaparoo.filesystem.staged` — known limitations (documented)
-
-Tracked for visibility; no action until a concrete motivation arises.
-
-### Hardlink fallback TOCTOU (`StagedFile`, non-overwrite)
-
-When `hardlink_to` fails (FAT/exFAT), the fallback does `exists()` then
-`replace()`. A file appearing between those two calls could be clobbered.
-Unavoidable without an OS-level atomic no-clobber rename primitive.
-Documented in code and class docstring.
-
-### Workdir contents not fsynced (`StagedDirectory`)
-
-`commit` fsyncs the parent directory entry (the rename) but not the files
-the caller wrote into `workdir`. Documented as caller's responsibility.
-
-### Crash window in `overwrite=True` (`StagedDirectory`)
-
-A crash between the two renames (`dest→.old`, `staged→dest`) leaves `.old`
-as a manual recovery artifact. Fully atomic directory replace is not possible
-on any mainstream OS. Documented in class docstring.
-
----
-
-## 📝 Known design limitations (documentation-only resolution)
-
 ### `Aggregator.weight` semantics with heterogeneous updates
 
 `weight` accumulates across all `update` calls regardless of which metric
@@ -67,25 +39,46 @@ explicitly or add per-metric weight tracking if a concrete case demands it.
 
 ---
 
-## 🌳 `kaparoo.filesystem.hierarchy` — possible path-name sugar
+## 🌳 `kaparoo.filesystem.hierarchy`
 
-Node-name sugar (`File("x")`, `Directory(["a", "b"])`) names a *single*
-path component; a separator (`/` or `\`) is rejected with `ValueError`.
+### Matcher / validator (the operations that consume a spec)
 
-A separate convenience could let a separator-containing name expand to
-nested nodes -- e.g. `Directory("a/b/c", children)` becoming
-`Directory("a", [Directory("b", [Directory("c", children)])])`, and
-`File("a/b.txt")` the file `b.txt` two levels down.
+The representation is built; the operations that apply a tree to a real
+filesystem are not. Build them as free functions in a new module
+(`match.py` / `validate.py`), keeping nodes pure value objects and reusing
+`search`'s traversal and `stringify_path` where helpful:
 
-Deferred because it overloads the `str` sugar (a name string would
-sometimes mean one `Literal`, sometimes a whole subtree) and interacts
-awkwardly with `depth` (which level would `depth` apply to?). Add as an
-explicit, separate feature if a concrete need arises.
+- `match(tree, root)` — map each on-disk path to its spec node, honoring
+  `depth` (backtracking, like a glob `**`) and descending through `Group`s.
+  The foundation the rest build on.
+- `validate(tree, root)` — conformance report: `matched`, `unexpected` (no
+  node), `missing` (a `required` entry or required `Group` not satisfied),
+  `violations` (`Exclusive` with >1 side present; `Together` partial).
+- `conforms(tree, root)` — a `search` predicate ("keep spec-conforming
+  paths"); the find-with-spec bridge.
+- `scaffold(tree, root)` — write op: create the tree from `Expandable`
+  names (and `required`).
+- Cross-level "cell" exclusion (drop e.g. `(cam_01, frame_0003)` from a
+  nested product) lands here as a path-reject in `match`, not in the
+  representation.
+
+Policies to settle first:
+
+- **Overlap**: a path may match several nodes (filters overlap) — return
+  all / first-in-order / most-specific?
+- **`required` on an enumerable name** (`Template` / `OneOf`): "all expanded
+  names present" or "at least one"?
+- **`depth` backtracking** rules.
+
+`match` does not replace `search`: `search` *discovers* paths matching
+stateless filters; `match` *checks / maps* a real tree against a known
+structural spec (depth, constraints, presence). They share `kaparoo.filters`
+and may share traversal, but answer different questions.
 
 ### Attribute conditions on `File` / `Directory`
 
 Beyond the name filter and the `required` presence flag, an entry may need
-*attribute* conditions on the actual filesystem object -- file size,
+*attribute* conditions on the actual filesystem object — file size,
 emptiness, extension, mtime; directory child count, etc. (needed for both
 files and directories).
 
@@ -94,6 +87,27 @@ through `to_dict` / `from_dict`), so this is a small condition DSL over
 metadata, not an arbitrary Python callable (a lambda cannot be serialized
 or value-compared). Design alongside the matcher / validator, which is
 what consumes such conditions.
+
+### `required` default
+
+The presence flag defaults to `False` (opt-in). When the validator lands,
+reconsider whether a strict "listed = required" default, or a
+`validate(require_all=...)` mode, reads better.
+
+### Possible path-name sugar
+
+Node-name sugar (`File("x")`, `Directory(["a", "b"])`) names a *single*
+path component; a separator (`/` or `\`) is rejected with `ValueError`.
+
+A separate convenience could let a separator-containing name expand to
+nested nodes — e.g. `Directory("a/b/c", children)` becoming
+`Directory("a", [Directory("b", [Directory("c", children)])])`, and
+`File("a/b.txt")` the file `b.txt` two levels down.
+
+Deferred because it overloads the `str` sugar (a name string would
+sometimes mean one `Literal`, sometimes a whole subtree) and interacts
+awkwardly with `depth` (which level would `depth` apply to?). Add as an
+explicit, separate feature if a concrete need arises.
 
 ---
 
