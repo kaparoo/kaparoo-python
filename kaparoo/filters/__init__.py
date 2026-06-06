@@ -35,11 +35,12 @@ __all__ = (
     "StartsWithAnyFilter",
     "StartsWithFilter",
     "Template",
+    "Without",
     "register_filter",
 )
 
 from kaparoo.filters.base import Filter
-from kaparoo.filters.enumerable import Expandable, Literal, OneOf, Template
+from kaparoo.filters.enumerable import Expandable, Literal, OneOf, Template, Without
 from kaparoo.filters.logical import (
     And,
     AndFilter,

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from kaparoo.filters import Expandable, Filter, Glob, Literal, OneOf, Template
+from kaparoo.filters import Expandable, Filter, Glob, Literal, OneOf, Template, Without
 
 
 class TestLiteral:
@@ -146,3 +146,58 @@ class TestExpandableCapability:
         assert isinstance(glob, Filter)
         assert not isinstance(glob, Expandable)
         assert glob.matches("frame.png")
+
+
+class TestWithout:
+    def test_is_an_expandable_filter(self) -> None:
+        without = Without(Template("v{}", range(3)), "v1")
+        assert isinstance(without, Filter)
+        assert isinstance(without, Expandable)
+
+    def test_expand_removes_excluded(self) -> None:
+        without = Without(Template("cam_{:02d}", range(4)), "cam_02")
+        assert list(without.expand()) == ["cam_00", "cam_01", "cam_03"]
+
+    def test_matches_the_difference(self) -> None:
+        without = Without(Template("cam_{:02d}", range(4)), "cam_02")
+        assert without.matches("cam_00")
+        assert not without.matches("cam_02")  # excluded
+        assert not without.matches("cam_09")  # not in base
+
+    def test_exclude_by_filter(self) -> None:
+        without = Without(Template("img_{:02d}", range(5)), Glob("*_03"))
+        assert list(without.expand()) == ["img_00", "img_01", "img_02", "img_04"]
+
+    def test_str_excluded_is_sugar_for_literal(self) -> None:
+        without = Without(OneOf(["a", "b", "c"]), "b")
+        assert without.excluded == (Literal("b"),)
+        assert list(without.expand()) == ["a", "c"]
+
+    def test_base_property(self) -> None:
+        base = Template("v{}", range(2))
+        assert Without(base, "v0").base == base
+
+    def test_no_exclusion_raises(self) -> None:
+        with pytest.raises(ValueError, match="at least one exclusion"):
+            Without(OneOf(["a", "b"]))
+
+    def test_nested_without(self) -> None:
+        without = Without(Without(Template("v{}", range(4)), "v0"), "v3")
+        assert list(without.expand()) == ["v1", "v2"]
+
+    def test_serialization_round_trips(self) -> None:
+        without = Without(Template("cam_{:02d}", range(4)), "cam_02", Glob("*_03"))
+        assert Filter.from_dict(without.to_dict()) == without
+
+    def test_value_semantics(self) -> None:
+        assert Without(OneOf(["a", "b"]), "a") == Without(OneOf(["a", "b"]), "a")
+        assert Without(OneOf(["a", "b"]), "a") != Without(OneOf(["a", "b"]), "b")
+        assert Without(OneOf(["a", "b"]), "a") != "a"
+        assert hash(Without(OneOf(["a", "b"]), "a")) == hash(
+            Without(OneOf(["a", "b"]), "a")
+        )
+
+    def test_repr(self) -> None:
+        assert repr(Without(OneOf(["a", "b"]), "a")) == (
+            "Without(OneOf(names=('a', 'b')), Literal(name='a'))"
+        )

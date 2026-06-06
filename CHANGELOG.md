@@ -11,14 +11,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - `kaparoo.filters` gains an enumerable filter family: `Literal`, `OneOf`,
-  and `Template` implement an `Expandable` capability (`expand()`) that
-  *lists* the finite set of names a filter matches, on top of the usual
-  `matches`. `Literal` / `OneOf` are the case-sensitive, always-enumerable
+  `Template`, and `Without` implement an `Expandable` capability
+  (`expand()`) that *lists* the finite set of names a filter matches, on
+  top of the usual `matches` (`Expandable` is now a `Filter` subtype).
+  `Literal` / `OneOf` are the case-sensitive, always-enumerable
   counterparts of `Equals` / `EqualsAny`; `Template` enumerates
   `template.format(*combo)` over the cartesian product of one or more
   value axes (`Template("shard_{:03d}", range(8))`,
-  `Template("{}_{}.png", ["real", "fake"], range(3))`). They register as
-  ordinary filter kinds (`"literal"` / `"one_of"` / `"template"`).
+  `Template("{}_{}.png", ["real", "fake"], range(3))`); `Without(base,
+  *excluded)` is the enumerable form of `And(base, Not(...))`, expanding
+  `base` minus anything the excluded filters match. They register as
+  ordinary filter kinds (`"literal"` / `"one_of"` / `"template"` /
+  `"without"`).
 - `kaparoo.filesystem.hierarchy`: a new subpackage describing a filesystem
   tree declaratively. `File` / `Directory` nodes compose into a tree whose
   node names are `kaparoo.filters` filters — the full DSL (`Glob`,

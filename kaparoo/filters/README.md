@@ -91,6 +91,7 @@ implement the `Expandable` capability. Open-ended filters (`Glob`,
 | `Literal` | the exact name (case-sensitive) | the one name |
 | `OneOf` | a name in an explicit set | each name in the set |
 | `Template` | a name in the enumerated product | `template.format(*combo)` over the axes |
+| `Without` | `base` but not the excluded names | `base`'s names minus the excluded ones |
 
 ```python
 from kaparoo.filters import Expandable, Glob, Literal, OneOf, Template
@@ -111,8 +112,25 @@ isinstance(Literal("data.bin"), Expandable)         # True
 of `Equals` / `EqualsAny` (which can be case-insensitive, and so are not
 reliably enumerable). `Template`'s axes are materialized to tuples at
 construction; formatting is lazy, so a field-count mismatch surfaces from
-`expand()`, not the constructor. All three register as ordinary filter
-kinds (`"literal"` / `"one_of"` / `"template"`).
+`expand()`, not the constructor.
+
+`Without(base, *excluded)` is the enumerable form of
+`And(base, Not(...))` — it punches holes in an enumerable set, both
+matching and expanding `base` minus anything the `excluded` filters match
+(a bare `str` is sugar for `Literal`; an excluded filter may itself be
+open-ended, like a `Glob`):
+
+```python
+from kaparoo.filters import Glob, Template, Without
+
+list(Without(Template("cam_{:02d}", range(4)), "cam_02").expand())
+# ['cam_00', 'cam_01', 'cam_03']
+list(Without(Template("img_{:02d}", range(5)), Glob("*_03")).expand())
+# ['img_00', 'img_01', 'img_02', 'img_04']
+```
+
+All register as ordinary filter kinds (`"literal"` / `"one_of"` /
+`"template"` / `"without"`).
 
 ## JSON serialization
 

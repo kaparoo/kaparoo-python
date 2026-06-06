@@ -5,12 +5,13 @@ __all__ = (
     "Literal",
     "OneOf",
     "Template",
+    "Without",
 )
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from itertools import product
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from kaparoo.filters.base import Filter
 from kaparoo.filters.utils import register_filter
@@ -20,19 +21,17 @@ if TYPE_CHECKING:
     from typing import Any, Self
 
 
-class Expandable(ABC):
-    """A capability for patterns that can enumerate their names.
+@dataclass(frozen=True)
+class Expandable(Filter, ABC):
+    """A `Filter` that can also *enumerate* the names it matches.
 
-    A plain `Filter` only *tests* names (`matches`); an `Expandable`
-    filter can additionally *list* the concrete names it stands for via
-    `expand`. Enumerability is what *generation* needs -- producing the
-    strings a pattern stands for (for example to scaffold a directory
-    tree) requires every name to be `Expandable`. Open-ended filters
-    (`Glob`, `Regex`, ...) can match but never enumerate, so they are
-    deliberately not `Expandable`.
+    A plain `Filter` only *tests* a name (`matches`); an `Expandable` one
+    can additionally *list* the concrete names it stands for via `expand`.
+    Enumerability is what *generation* needs -- producing the strings a
+    pattern stands for, for example to scaffold a directory tree.
+    Open-ended filters (`Glob`, `Regex`, ...) match but never enumerate,
+    so they are deliberately not `Expandable`.
     """
-
-    __slots__ = ()
 
     @abstractmethod
     def expand(self) -> Iterator[str]:
@@ -42,7 +41,7 @@ class Expandable(ABC):
 
 @register_filter("literal")
 @dataclass(frozen=True)
-class Literal(Filter, Expandable):
+class Literal(Expandable):
     """A filter matching exactly one `name`, and expanding to it.
 
     Matching is case-sensitive, so -- unlike `Equals`, which can be
@@ -69,7 +68,7 @@ class Literal(Filter, Expandable):
 
 @register_filter("one_of")
 @dataclass(frozen=True)
-class OneOf(Filter, Expandable):
+class OneOf(Expandable):
     """A filter matching and enumerating an explicit set of `names`.
 
     The `Expandable` counterpart of `EqualsAny`: it matches a name that is
@@ -106,7 +105,7 @@ class OneOf(Filter, Expandable):
 
 
 @register_filter("template")
-class Template(Filter, Expandable):
+class Template(Expandable):
     """A filter enumerating `template.format(*combo)` over value `axes`.
 
     A single axis condenses a run of regularly-named siblings --
@@ -181,3 +180,82 @@ class Template(Filter, Expandable):
     def __repr__(self) -> str:
         axes = "".join(f", {axis!r}" for axis in self._axes)
         return f"Template({self._template!r}{axes})"
+
+
+def _as_filter(value: str | Filter) -> Filter:
+    """Coerce a bare name into a `Literal`; pass a filter through."""
+    return Literal(value) if isinstance(value, str) else value
+
+
+@register_filter("without")
+class Without(Expandable):
+    """`base` minus every name matching any of `excluded`.
+
+    The `Expandable` form of `And(base, Not(...))`: it both *matches* and
+    *enumerates* `base`'s names with the excluded ones removed -- use it to
+    punch holes in an enumerable set. For example
+    `Without(Template("cam_{:02d}", range(4)), "cam_02")` yields `cam_00`,
+    `cam_01`, `cam_03`.
+
+    `base` must be enumerable (`Literal`, `OneOf`, `Template`, or another
+    `Without`); each excluded entry is any `Filter` (a bare `str` is sugar
+    for `Literal`), removed by `matches`, so it may itself be open-ended
+    (`Without(Template("img_{:04d}", range(1000)), Glob("*_999"))`).
+
+    Raises:
+        ValueError: If no exclusions are given.
+    """
+
+    _base: Expandable
+    _excluded: tuple[Filter, ...]
+
+    def __init__(self, base: Expandable, *excluded: str | Filter) -> None:
+        if not excluded:
+            msg = "Without requires at least one exclusion."
+            raise ValueError(msg)
+        object.__setattr__(self, "_base", base)
+        object.__setattr__(self, "_excluded", tuple(_as_filter(e) for e in excluded))
+
+    @property
+    def base(self) -> Expandable:
+        """The enumerable filter being reduced."""
+        return self._base
+
+    @property
+    def excluded(self) -> tuple[Filter, ...]:
+        """The filters whose matches are removed from `base`."""
+        return self._excluded
+
+    def matches(self, target: str) -> bool:
+        return self._base.matches(target) and not any(
+            e.matches(target) for e in self._excluded
+        )
+
+    def expand(self) -> Iterator[str]:
+        for name in self._base.expand():
+            if not any(e.matches(name) for e in self._excluded):
+                yield name
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "kind": "without",
+            "base": self._base.to_dict(),
+            "excluded": [e.to_dict() for e in self._excluded],
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        base = cast("Expandable", Filter.from_dict(data["base"]))
+        return cls(base, *[Filter.from_dict(e) for e in data["excluded"]])
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Without):
+            return (self._base, self._excluded) == (other._base, other._excluded)
+        return NotImplemented
+
+    def __hash__(self) -> int:
+        return hash((Without, self._base, self._excluded))
+
+    def __repr__(self) -> str:
+        excluded = ", ".join(repr(e) for e in self._excluded)
+        return f"Without({self._base!r}, {excluded})"
