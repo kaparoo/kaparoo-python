@@ -2,7 +2,16 @@ from __future__ import annotations
 
 import pytest
 
-from kaparoo.filesystem.hierarchy import Directory, File, Literal, OneOf, Template
+from kaparoo.filesystem.hierarchy import (
+    Directory,
+    Entry,
+    Exclusive,
+    File,
+    Literal,
+    Node,
+    OneOf,
+    Template,
+)
 from kaparoo.filters import Glob
 
 
@@ -141,4 +150,68 @@ class TestDepth:
         assert repr(File("a", depth=(2, 4))) == "File(Literal(name='a'), depth=(2, 4))"
         assert repr(File("a", depth=(2, None))) == (
             "File(Literal(name='a'), depth=(2, None))"
+        )
+
+
+class TestExclusive:
+    def test_is_a_node_but_not_an_entry(self) -> None:
+        ex = Exclusive(File("setup.py"), File("pyproject.toml"))
+        assert isinstance(ex, Node)
+        assert not isinstance(ex, Entry)
+
+    def test_single_entry_alternatives(self) -> None:
+        ex = Exclusive(File("setup.py"), File("pyproject.toml"))
+        assert ex.alternatives == ((File("setup.py"),), (File("pyproject.toml"),))
+
+    def test_group_alternatives(self) -> None:
+        ex = Exclusive([Directory("src"), File("setup.cfg")], Directory("legacy"))
+        assert ex.alternatives == (
+            (Directory("src"), File("setup.cfg")),
+            (Directory("legacy"),),
+        )
+
+    def test_required_defaults_to_false(self) -> None:
+        assert Exclusive(File("a"), File("b")).required is False
+        assert Exclusive(File("a"), File("b"), required=True).required is True
+
+    def test_files_and_directories_are_both_accepted(self) -> None:
+        ex = Exclusive(Directory("build"), Directory("dist"))
+        assert ex.alternatives == ((Directory("build"),), (Directory("dist"),))
+
+    def test_fewer_than_two_alternatives_raises(self) -> None:
+        with pytest.raises(ValueError, match="at least two"):
+            Exclusive(File("only"))
+
+    def test_empty_alternative_raises(self) -> None:
+        with pytest.raises(ValueError, match="non-empty"):
+            Exclusive([], File("a"))
+
+    def test_value_semantics(self) -> None:
+        assert Exclusive(File("a"), File("b")) == Exclusive(File("a"), File("b"))
+        assert Exclusive(File("a"), File("b")) != Exclusive(File("a"), File("c"))
+        assert Exclusive(File("a"), File("b")) != Exclusive(
+            File("a"), File("b"), required=True
+        )
+        assert hash(Exclusive(File("a"), File("b"))) == hash(
+            Exclusive(File("a"), File("b"))
+        )
+
+    def test_not_equal_to_an_entry(self) -> None:
+        assert Exclusive(File("a"), File("b")) != File("a")
+
+    def test_can_be_a_directory_child(self) -> None:
+        ex = Exclusive(File("setup.py"), File("pyproject.toml"))
+        project = Directory("project", [File("README.md"), ex])
+        assert project.children == (File("README.md"), ex)
+
+    def test_repr(self) -> None:
+        assert repr(Exclusive(File("a"), File("b"))) == (
+            "Exclusive(File(Literal(name='a')), File(Literal(name='b')))"
+        )
+        assert repr(Exclusive(File("a"), File("b"), required=True)) == (
+            "Exclusive(File(Literal(name='a')), File(Literal(name='b')), required=True)"
+        )
+        assert repr(Exclusive([File("a"), File("b")], File("c"))) == (
+            "Exclusive((File(Literal(name='a')), File(Literal(name='b'))), "
+            "File(Literal(name='c')))"
         )

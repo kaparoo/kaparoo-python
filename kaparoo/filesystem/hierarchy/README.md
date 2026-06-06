@@ -21,8 +21,10 @@ several literally-named siblings that share a structure). A directory's
 | Class | Role |
 | --- | --- |
 | [`File`](./nodes.py) | a leaf entry |
-| [`Directory`](./nodes.py) | an entry holding ordered `children` |
-| [`Entry`](./nodes.py) | abstract base of both (carries `name`) |
+| [`Directory`](./nodes.py) | an entry holding ordered `children` (any `Node`s) |
+| [`Entry`](./nodes.py) | abstract base of `File` / `Directory` (carries `name`) |
+| [`Exclusive`](./nodes.py) | a mutual-exclusion constraint among siblings |
+| [`Node`](./nodes.py) | abstract base of everything in `children` (`Entry` or `Exclusive`) |
 
 ```python
 from kaparoo.filesystem.hierarchy import Directory, File, Template
@@ -90,6 +92,39 @@ intermediate names are unknown, any depth beyond `1` describes structure
 for *matching*, not scaffolding — and like the rest of the
 representation, the matching that consumes the depth range is not
 implemented yet.
+
+## Mutual exclusion: `Exclusive`
+
+Some siblings must not coexist — `setup.py` vs `pyproject.toml`,
+`README.md` vs `README.rst`, `build/` vs `dist/`. An `Exclusive` placed in
+a directory's `children` declares that **at most one** of its alternatives
+may exist:
+
+```python
+from kaparoo.filesystem.hierarchy import Directory, Exclusive, File
+
+Directory("project", [
+    File("README.md"),
+    Exclusive(File("setup.py"), File("pyproject.toml")),   # at most one
+])
+```
+
+Each alternative is a single entry or a group that stands or falls
+together, so the exclusion works between *sets* too:
+
+```python
+Exclusive(
+    [Directory("src"), File("setup.cfg")],   # this group ...
+    Directory("legacy"),                      # ... or this one
+)
+```
+
+`required=True` tightens "at most one" to "exactly one" (zero present is
+then a violation). `Exclusive` is a `Node` but not an `Entry` — it has no
+name of its own, only the entries nested in its alternatives — so a
+directory's `children` hold `Node`s: entries and exclusives alike. Like
+the rest of the representation, the validation that enforces an
+`Exclusive` is not implemented yet.
 
 ## Enumeration: `Expandable`
 

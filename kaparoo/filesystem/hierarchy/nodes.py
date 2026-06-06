@@ -3,7 +3,9 @@ from __future__ import annotations
 __all__ = (
     "Directory",
     "Entry",
+    "Exclusive",
     "File",
+    "Node",
 )
 
 from abc import ABC, abstractmethod
@@ -27,6 +29,23 @@ def _as_filter(name: str | list[str] | Filter) -> Filter:
     if isinstance(name, str):
         return Literal(name)
     return OneOf(name)
+
+
+def _depth_suffix(depth: tuple[int, int | None]) -> str:
+    """Render the `depth=` part of a `repr` in its most compact form.
+
+    Omitted for the `(1, 1)` default; an exact `(n, n)` renders as
+    `depth=n`, `(1, None)` as `depth=None`, and any other range as
+    `depth=(min, max)`.
+    """
+    min_depth, max_depth = depth
+    if min_depth == 1 and max_depth == 1:
+        return ""
+    if min_depth == max_depth:
+        return f", depth={min_depth!r}"
+    if min_depth == 1 and max_depth is None:
+        return ", depth=None"
+    return f", depth=({min_depth!r}, {max_depth!r})"
 
 
 def _normalize_depth(
@@ -55,25 +74,33 @@ def _normalize_depth(
     return (min_depth, max_depth)
 
 
-def _depth_suffix(depth: tuple[int, int | None]) -> str:
-    """Render the `depth=` part of a `repr` in its most compact form.
+class Node(ABC):
+    """A member of a hierarchy -- anything that can sit in a directory.
 
-    Omitted for the `(1, 1)` default; an exact `(n, n)` renders as
-    `depth=n`, `(1, None)` as `depth=None`, and any other range as
-    `depth=(min, max)`.
+    The shared base of `Entry` (named filesystem nodes) and `Exclusive`
+    (an unnamed constraint group). Nodes are immutable value objects:
+    equal when they are the same concrete type with equal `_key`s, and
+    hashable on the same basis.
     """
-    min_depth, max_depth = depth
-    if min_depth == 1 and max_depth == 1:
-        return ""
-    if min_depth == max_depth:
-        return f", depth={min_depth!r}"
-    if min_depth == 1 and max_depth is None:
-        return ", depth=None"
-    return f", depth=({min_depth!r}, {max_depth!r})"
+
+    __slots__ = ()
+
+    @abstractmethod
+    def _key(self) -> tuple[object, ...]:
+        """Return the fields that define this node's identity."""
+        raise NotImplementedError
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Node) and type(self) is type(other):
+            return self._key() == other._key()
+        return NotImplemented
+
+    def __hash__(self) -> int:
+        return hash((type(self), self._key()))
 
 
-class Entry(ABC):
-    """A node in a filesystem hierarchy: a `File` or a `Directory`.
+class Entry(Node, ABC):
+    """A named node in a filesystem hierarchy: a `File` or a `Directory`.
 
     Every entry carries a `name` filter. As constructor sugar, a bare
     `str` becomes a `Literal` and a `list[str]` becomes a `OneOf` -- the
@@ -143,14 +170,6 @@ class Entry(ABC):
     def _key(self) -> tuple[object, ...]:
         return (*self._fields(), self._depth)
 
-    def __eq__(self, other: object) -> bool:
-        if isinstance(other, Entry) and type(self) is type(other):
-            return self._key() == other._key()
-        return NotImplemented
-
-    def __hash__(self) -> int:
-        return hash((type(self), self._key()))
-
     def __repr__(self) -> str:
         inner = ", ".join(repr(field) for field in self._fields())
         return f"{type(self).__name__}({inner}{_depth_suffix(self._depth)})"
@@ -169,8 +188,10 @@ class Directory(Entry):
     """An internal entry: a directory named by `name`, holding `children`.
 
     `children` is materialized to a tuple at construction and preserves
-    insertion order. When `name` matches many sibling directories,
-    `children` describes the shape shared by every one of them.
+    insertion order. Each child is any `Node` -- a nested `File` /
+    `Directory`, or an `Exclusive` constraint over some of them. When
+    `name` matches many sibling directories, `children` describes the
+    shape shared by every one of them.
     """
 
     __slots__ = ("_children",)
@@ -178,7 +199,7 @@ class Directory(Entry):
     def __init__(
         self,
         name: str | list[str] | Filter,
-        children: Iterable[Entry] = (),
+        children: Iterable[Node] = (),
         *,
         depth: int | tuple[int, int | None] | None = 1,
     ) -> None:
@@ -186,9 +207,85 @@ class Directory(Entry):
         self._children = tuple(children)
 
     @property
-    def children(self) -> tuple[Entry, ...]:
-        """The contained entries, in insertion order."""
+    def children(self) -> tuple[Node, ...]:
+        """The contained nodes, in insertion order."""
         return self._children
 
     def _fields(self) -> tuple[object, ...]:
         return (self._name, self._children)
+
+
+def _normalize_alternative(alternative: Entry | Iterable[Entry]) -> tuple[Entry, ...]:
+    """Coerce one `Exclusive` alternative to a tuple of entries."""
+    if isinstance(alternative, Entry):
+        return (alternative,)
+    return tuple(alternative)
+
+
+class Exclusive(Node):
+    """A mutual-exclusion constraint among sibling alternatives.
+
+    Placed in a `Directory`'s `children`, `Exclusive` declares that at
+    most one of its `alternatives` may exist on disk. Each alternative is
+    a single `Entry` or a group of entries that stand or fall together --
+    `Exclusive(File("setup.py"), File("pyproject.toml"))` forbids both
+    files coexisting, while `Exclusive([Directory("src"),
+    File("setup.cfg")], Directory("legacy"))` treats `src/` + `setup.cfg`
+    as one alternative.
+
+    With `required=False` (the default) zero alternatives present is also
+    allowed; `required=True` additionally requires exactly one.
+
+    `Exclusive` is a `Node` but not an `Entry`: it has no name of its own,
+    only the entries nested in its alternatives. It is a constraint for
+    *matching* / *validation*, which is not implemented yet -- this is
+    representation only.
+
+    Args:
+        *alternatives: Two or more alternatives, each an `Entry` or an
+            iterable of entries (a co-present group).
+        required: If True, exactly one alternative must be present; if
+            False (the default), at most one.
+
+    Raises:
+        ValueError: If fewer than two alternatives are given, or any
+            alternative is empty.
+    """
+
+    __slots__ = ("_alternatives", "_required")
+
+    def __init__(
+        self,
+        *alternatives: Entry | Iterable[Entry],
+        required: bool = False,
+    ) -> None:
+        normalized = tuple(_normalize_alternative(alt) for alt in alternatives)
+        if len(normalized) < 2:
+            msg = "Exclusive requires at least two alternatives."
+            raise ValueError(msg)
+        if any(not alt for alt in normalized):
+            msg = "each Exclusive alternative must be non-empty."
+            raise ValueError(msg)
+        self._alternatives = normalized
+        self._required = required
+
+    @property
+    def alternatives(self) -> tuple[tuple[Entry, ...], ...]:
+        """The mutually exclusive alternatives, each a tuple of entries."""
+        return self._alternatives
+
+    @property
+    def required(self) -> bool:
+        """Whether exactly one alternative must be present (vs at most one)."""
+        return self._required
+
+    def _key(self) -> tuple[object, ...]:
+        return (self._alternatives, self._required)
+
+    def __repr__(self) -> str:
+        parts = [
+            repr(alt[0]) if len(alt) == 1 else repr(alt) for alt in self._alternatives
+        ]
+        if self._required:
+            parts.append("required=True")
+        return f"Exclusive({', '.join(parts)})"

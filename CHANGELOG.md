@@ -28,10 +28,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   intermediate directories of unknown name: an `int` is an exact level,
   `None` is any depth (the tree-level `**`), and a `(min, max)` tuple is
   an inclusive range (`max=None` unbounded), exposed as `min_depth` /
-  `max_depth`. The package depends on `kaparoo.filters` but nothing in
-  `kaparoo.filesystem.search`. This first cut is the representation plus
-  name-level semantics; disk operations (scaffold / validate / match),
-  which also consume `depth`, are not implemented yet.
+  `max_depth`. An `Exclusive` node placed among a directory's children
+  declares mutually exclusive siblings -- at most one of its alternatives
+  (each a single entry or a co-present group) may exist, or exactly one
+  with `required=True`. `File` / `Directory` (named, under the `Entry`
+  base) and `Exclusive` share a common `Node` base, so a directory's
+  `children` hold any `Node`. The package depends on `kaparoo.filters` but
+  nothing in `kaparoo.filesystem.search`. This first cut is the
+  representation plus name-level semantics; disk operations (scaffold /
+  validate / match), which also consume `depth` and `Exclusive`, are not
+  implemented yet.
 
 ### Changed
 
