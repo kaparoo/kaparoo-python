@@ -67,4 +67,21 @@ explicitly or add per-metric weight tracking if a concrete case demands it.
 
 ---
 
-*Last updated: 2026-06-04*
+## 🌳 `kaparoo.filesystem.hierarchy` — possible path-name sugar
+
+Node-name sugar (`File("x")`, `Directory(["a", "b"])`) names a *single*
+path component; a separator (`/` or `\`) is rejected with `ValueError`.
+
+A separate convenience could let a separator-containing name expand to
+nested nodes -- e.g. `Directory("a/b/c", children)` becoming
+`Directory("a", [Directory("b", [Directory("c", children)])])`, and
+`File("a/b.txt")` the file `b.txt` two levels down.
+
+Deferred because it overloads the `str` sugar (a name string would
+sometimes mean one `Literal`, sometimes a whole subtree) and interacts
+awkwardly with `depth` (which level would `depth` apply to?). Add as an
+explicit, separate feature if a concrete need arises.
+
+---
+
+*Last updated: 2026-06-07*

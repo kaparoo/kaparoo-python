@@ -16,16 +16,32 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 
+def _reject_separator(name: str) -> None:
+    """Reject a sugar name that is not a single path component.
+
+    Raises:
+        ValueError: If `name` contains a `/` or `\\` separator.
+    """
+    if "/" in name or "\\" in name:
+        msg = f"name must be a single path component (no separators), got {name!r}"
+        raise ValueError(msg)
+
+
 def _as_filter(name: str | list[str] | Filter) -> Filter:
     """Coerce a bare name into a pattern; pass a filter through.
 
     A `Filter` is returned unchanged, a `str` becomes a `Literal`, and a
-    `list[str]` becomes a `OneOf` (the shared-structure shorthand).
+    `list[str]` becomes a `OneOf` (the shared-structure shorthand). A bare
+    `str` / `list[str]` names a single path component, so a separator in it
+    is rejected; pass an explicit filter for anything more exotic.
     """
     if isinstance(name, Filter):
         return name
     if isinstance(name, str):
+        _reject_separator(name)
         return Literal(name)
+    for part in name:
+        _reject_separator(part)
     return OneOf(name)
 
 
@@ -98,7 +114,9 @@ class Entry(Node, ABC):
     not implemented yet.
 
     Args:
-        name: The entry's name (a filter, or `str` / `list[str]` sugar).
+        name: The entry's name -- a `kaparoo.filters.Filter`, or `str` /
+            `list[str]` sugar naming a single path component (a sugar name
+            containing a `/` or `\\` separator raises `ValueError`).
         depth: How far below the parent the entry sits, exposed as
             `min_depth` / `max_depth`. An `int >= 1` is an exact level,
             `None` is any depth (one or more levels), and a
@@ -106,7 +124,8 @@ class Entry(Node, ABC):
             `None` for unbounded. Defaults to `1` (a direct child).
 
     Raises:
-        ValueError: If a depth bound is below 1, or `max` is below `min`.
+        ValueError: If a sugar name contains a path separator, a depth
+            bound is below 1, or `max` is below `min`.
     """
 
     __slots__ = ("_depth", "_name")

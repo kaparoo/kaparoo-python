@@ -30,7 +30,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Template`, ...) describes which siblings a node matches. As name sugar,
   a bare `str` becomes a `Literal` and a `list[str]` a `OneOf`, so one
   node can stand for several literally-named siblings that share a
-  structure (`Directory(["train", "val"], layout)`). Nodes are immutable
+  structure (`Directory(["train", "val"], layout)`); a sugar name must be
+  a single path component (a `/` or `\` separator raises `ValueError`).
+  Nodes are immutable
   value objects (`==`, `hash`, `repr`) and take a keyword-only `depth`
   (default `1`, a direct
   child) describing how far below the parent the entry sits, past

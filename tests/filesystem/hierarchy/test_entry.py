@@ -142,3 +142,19 @@ class TestDepth:
         assert repr(File("a", depth=(2, None))) == (
             "File(Literal(name='a'), depth=(2, None))"
         )
+
+
+class TestNameSeparator:
+    @pytest.mark.parametrize("bad", ("a/b", "a\\b", "dir/sub.txt"))
+    def test_str_name_with_separator_raises(self, bad: str) -> None:
+        with pytest.raises(ValueError, match="single path component"):
+            File(bad)
+
+    def test_list_name_with_separator_raises(self) -> None:
+        with pytest.raises(ValueError, match="single path component"):
+            Directory(["ok", "a/b"])
+
+    def test_explicit_filter_name_is_not_checked(self) -> None:
+        # An explicit filter is the caller's responsibility, not sugar.
+        name = Glob("a/*")
+        assert File(name).name is name
