@@ -10,10 +10,12 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from kaparoo.filesystem.hierarchy.base import Node
+from kaparoo.filesystem.hierarchy.utils import register_node
 from kaparoo.filters import Filter, Literal, OneOf
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
+    from typing import Any, Self
 
 
 def _reject_separator(name: str) -> None:
@@ -86,6 +88,16 @@ def _normalize_depth(
         msg = f"depth max {max_depth!r} is below min {min_depth!r}"
         raise ValueError(msg)
     return (min_depth, max_depth)
+
+
+def _depth_arg(data: Mapping[str, Any]) -> int | tuple[int, int | None]:
+    """Read the depth constructor argument from a node dict.
+
+    A missing `depth` defaults to `1` (a direct child); otherwise the
+    serialized `[min, max]` pair is returned as a tuple.
+    """
+    depth = data.get("depth")
+    return 1 if depth is None else (depth[0], depth[1])
 
 
 class Entry(Node, ABC):
@@ -162,11 +174,16 @@ class Entry(Node, ABC):
     def _key(self) -> tuple[object, ...]:
         return (*self._fields(), self._depth)
 
+    def _depth_payload(self) -> dict[str, Any]:
+        """The `depth` fragment of `to_dict`, omitted when it is the default."""
+        return {} if self._depth == (1, 1) else {"depth": list(self._depth)}
+
     def __repr__(self) -> str:
         inner = ", ".join(repr(field) for field in self._fields())
         return f"{type(self).__name__}({inner}{_depth_suffix(self._depth)})"
 
 
+@register_node("file")
 class File(Entry):
     """A leaf entry: a file named by its `name` filter."""
 
@@ -175,7 +192,15 @@ class File(Entry):
     def _fields(self) -> tuple[object, ...]:
         return (self._name,)
 
+    def to_dict(self) -> dict[str, Any]:
+        return {"node": "file", "name": self._name.to_dict(), **self._depth_payload()}
 
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        return cls(Filter.from_dict(data["name"]), depth=_depth_arg(data))
+
+
+@register_node("directory")
 class Directory(Entry):
     """An internal entry: a directory named by `name`, holding `children`.
 
@@ -205,3 +230,15 @@ class Directory(Entry):
 
     def _fields(self) -> tuple[object, ...]:
         return (self._name, self._children)
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"node": "directory", "name": self._name.to_dict()}
+        if self._children:
+            result["children"] = [child.to_dict() for child in self._children]
+        result.update(self._depth_payload())
+        return result
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        children = [Node.from_dict(child) for child in data.get("children", ())]
+        return cls(Filter.from_dict(data["name"]), children, depth=_depth_arg(data))

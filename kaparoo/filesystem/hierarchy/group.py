@@ -10,9 +10,11 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, cast
 
 from kaparoo.filesystem.hierarchy.base import Node
+from kaparoo.filesystem.hierarchy.utils import register_node
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
+    from typing import Any, Self
 
     from kaparoo.filesystem.hierarchy.entry import Entry
 
@@ -74,6 +76,7 @@ def _flatten_entries(nodes: Iterable[Node]) -> tuple[Entry, ...]:
     return tuple(result)
 
 
+@register_node("exclusive")
 class Exclusive(Group):
     """A mutual-exclusion constraint among sibling alternatives.
 
@@ -140,6 +143,24 @@ class Exclusive(Group):
     def _key(self) -> tuple[object, ...]:
         return (self._alternatives, self._required)
 
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {
+            "node": "exclusive",
+            "alternatives": [
+                [node.to_dict() for node in alt] for alt in self._alternatives
+            ],
+        }
+        if self._required:
+            result["required"] = True
+        return result
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        alternatives = [
+            [Node.from_dict(node) for node in alt] for alt in data["alternatives"]
+        ]
+        return cls(*alternatives, required=data.get("required", False))
+
     def __repr__(self) -> str:
         parts = [
             repr(alt[0]) if len(alt) == 1 else repr(alt) for alt in self._alternatives
@@ -149,6 +170,7 @@ class Exclusive(Group):
         return f"Exclusive({', '.join(parts)})"
 
 
+@register_node("together")
 class Together(Group):
     """A co-occurrence constraint: sibling entries that exist as a unit.
 
@@ -198,6 +220,20 @@ class Together(Group):
 
     def _key(self) -> tuple[object, ...]:
         return (self._members, self._required)
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {
+            "node": "together",
+            "members": [member.to_dict() for member in self._members],
+        }
+        if self._required:
+            result["required"] = True
+        return result
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        members = [Node.from_dict(member) for member in data["members"]]
+        return cls(*members, required=data.get("required", False))
 
     def __repr__(self) -> str:
         parts = [repr(member) for member in self._members]

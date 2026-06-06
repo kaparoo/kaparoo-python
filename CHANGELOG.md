@@ -50,11 +50,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Together` (under a `Group` base that carries `required` and an
   `entries` accessor flattening to the leaf entries a constraint
   references, descending through nesting) share a common `Node` base, so a
-  directory's `children` hold any `Node`. The package depends on `kaparoo.filters` but
-  nothing in `kaparoo.filesystem.search`. This first cut is the
-  representation plus name-level semantics; disk operations (scaffold /
-  validate / match), which also consume `depth`, `Exclusive`, and
-  `Together`, are not implemented yet.
+  directory's `children` hold any `Node`. A whole tree round-trips through
+  a `"node"`-discriminated dict (`to_dict` / `Node.from_dict`, mirroring
+  the filter registry), so specs can be stored as JSON. The package
+  depends on `kaparoo.filters` but nothing in `kaparoo.filesystem.search`.
+  This first cut is the representation plus name-level semantics; disk
+  operations (scaffold / validate / match), which also consume `depth`,
+  `Exclusive`, and `Together`, are not implemented yet.
 
 ### Changed
 

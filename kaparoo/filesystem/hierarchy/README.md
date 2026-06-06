@@ -212,6 +212,29 @@ repr(File("a.txt"))                        # "File(Literal(name='a.txt'))"
 {File("a"), File("a")}                      # one element
 ```
 
+## Serialization
+
+A whole tree round-trips through a `"node"`-discriminated dict via
+`to_dict()` / `Node.from_dict()`, recursing into child nodes and (for
+entries) the filter `name` — so a spec can be stored as JSON. Defaults
+(`depth=(1, 1)`, `required=False`, empty `children`) are omitted.
+
+```python
+import json
+from kaparoo.filesystem.hierarchy import Directory, File, Node
+from kaparoo.filters import Glob
+
+tree = Directory("dataset", [
+    File("metadata.json"),
+    Directory("images", [File(Glob("*.png"))]),
+])
+blob = json.dumps(tree.to_dict())
+assert Node.from_dict(json.loads(blob)) == tree
+```
+
+A round-trip preserves value equality, not object identity: a reused
+subtree comes back as distinct-but-equal nodes (JSON has no aliasing).
+
 ## See also
 
 - [`kaparoo.filters`](../../filters/) — the filter DSL node names are
