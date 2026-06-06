@@ -90,10 +90,21 @@ def _multi_from_dict[T: MultiPatternFilter](cls: type[T], data: Mapping[str, Any
 @register_filter("equals_any")
 @dataclass(frozen=True)
 class EqualsAnyFilter(MultiPatternFilter):
-    """Match strings that equal ANY of `patterns`."""
+    """Match strings that equal ANY of `patterns`.
+
+    Membership is tested against a `frozenset` built once at construction,
+    so `matches` is O(1) in the number of patterns rather than a linear
+    tuple scan.
+    """
+
+    _pattern_set: frozenset[str] = field(init=False, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        super().__post_init__()  # validate / casefold / dedupe `patterns`
+        object.__setattr__(self, "_pattern_set", frozenset(self.patterns))
 
     def matches(self, target: str) -> bool:
-        return self._prepare_target(target) in self.patterns
+        return self._prepare_target(target) in self._pattern_set
 
     def to_dict(self) -> dict[str, Any]:
         return _multi_to_dict("equals_any", self)

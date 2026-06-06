@@ -152,7 +152,11 @@ class Template(Expandable):
         return self._axes
 
     def matches(self, target: str) -> bool:
-        return any(target == name for name in self.expand())
+        names = getattr(self, "_matchable", None)
+        if names is None:
+            names = frozenset(self.expand())
+            object.__setattr__(self, "_matchable", names)
+        return target in names
 
     def expand(self) -> Iterator[str]:
         for combo in product(*self._axes):
