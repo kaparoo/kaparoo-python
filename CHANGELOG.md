@@ -20,9 +20,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   structure (`Directory(["train", "val"], layout)`). Three filters
   defined here add an `Expandable` capability (`expand`) that enumerates
   the names a pattern stands for: `Literal` (one name), `OneOf` (an
-  explicit set), and `Template` (`template.format(value)` over `values`);
-  they also round-trip through the filter registry (kinds `"literal"` /
-  `"one_of"` / `"template"`). Nodes are immutable value objects (`==`,
+  explicit set), and `Template` (`template.format(*combo)` over the
+  cartesian product of one or more value axes -- a single axis for
+  `shard_{:03d}`, several for a `{}_{}.png` grid); they also round-trip
+  through the filter registry (kinds `"literal"` / `"one_of"` /
+  `"template"`). Nodes are immutable value objects (`==`,
   `hash`, `repr`) and take a keyword-only `depth` (default `1`, a direct
   child) describing how far below the parent the entry sits, past
   intermediate directories of unknown name: an `int` is an exact level,

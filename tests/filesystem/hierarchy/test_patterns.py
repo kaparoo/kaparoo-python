@@ -36,36 +36,61 @@ class TestTemplate:
         assert isinstance(template, Filter)
         assert isinstance(template, Expandable)
 
-    def test_expand_substitutes_each_value(self) -> None:
+    def test_single_axis_substitutes_each_value(self) -> None:
         template = Template("shard_{:03d}", range(3))
         assert list(template.expand()) == ["shard_000", "shard_001", "shard_002"]
 
-    def test_matches_uses_the_enumerated_set(self) -> None:
-        template = Template("shard_{:03d}", range(8))
-        assert template.matches("shard_000")
-        assert template.matches("shard_007")
-        assert not template.matches("shard_008")
-        assert not template.matches("shard_0")
+    def test_multiple_axes_combine_as_a_product(self) -> None:
+        template = Template("{}_{}.png", ["real", "fake"], range(1, 4))
+        assert list(template.expand()) == [
+            "real_1.png",
+            "real_2.png",
+            "real_3.png",
+            "fake_1.png",
+            "fake_2.png",
+            "fake_3.png",
+        ]
 
-    def test_values_are_frozen_to_a_tuple(self) -> None:
+    def test_matches_uses_the_enumerated_set(self) -> None:
+        template = Template("{}_{}.png", ["real", "fake"], range(1, 4))
+        assert template.matches("real_1.png")
+        assert template.matches("fake_3.png")
+        assert not template.matches("real_4.png")
+        assert not template.matches("other_1.png")
+
+    def test_axes_are_frozen_to_tuples(self) -> None:
         source = [1, 2, 3]
         template = Template("v{}", source)
         source.append(4)
-        assert template.values == (1, 2, 3)
+        assert template.axes == ((1, 2, 3),)
 
-    def test_empty_values_match_nothing(self) -> None:
+    def test_no_axes_raises(self) -> None:
+        with pytest.raises(ValueError, match="at least one axis"):
+            Template("constant")
+
+    def test_empty_axis_matches_nothing(self) -> None:
         template = Template("v{}", [])
         assert list(template.expand()) == []
         assert not template.matches("v1")
 
     def test_serialization_round_trips(self) -> None:
-        template = Template("shard_{:03d}", range(3))
+        template = Template("{}_{}.png", ["real", "fake"], [1, 2])
         assert template.to_dict() == {
             "kind": "template",
-            "template": "shard_{:03d}",
-            "values": [0, 1, 2],
+            "template": "{}_{}.png",
+            "axes": [["real", "fake"], [1, 2]],
         }
         assert Filter.from_dict(template.to_dict()) == template
+
+    def test_repr(self) -> None:
+        assert repr(Template("v{}", [1, 2])) == "Template('v{}', (1, 2))"
+        assert repr(Template("{}_{}", ["a"], [1])) == "Template('{}_{}', ('a',), (1,))"
+
+    def test_template_property_hash_and_inequality(self) -> None:
+        template = Template("v{}", [1, 2])
+        assert template.template == "v{}"
+        assert template != "v{}"  # not a Template -> NotImplemented
+        assert hash(template) == hash(Template("v{}", [1, 2]))
 
 
 class TestOneOf:

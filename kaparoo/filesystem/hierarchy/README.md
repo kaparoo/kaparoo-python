@@ -158,7 +158,7 @@ the `Expandable` capability, which is what scaffolding will require.
 | --- | --- | --- |
 | [`Literal`](./patterns.py) | name equals the value | the one name |
 | [`OneOf`](./patterns.py) | name is one of an explicit set | each name in the set |
-| [`Template`](./patterns.py) | name is in the enumerated set | `template.format(value)` per value |
+| [`Template`](./patterns.py) | name is in the enumerated set | `template.format(*combo)` over the product of axes |
 
 ```python
 from kaparoo.filesystem.hierarchy import Expandable, Literal, OneOf, Template
@@ -167,6 +167,10 @@ from kaparoo.filters import Glob
 list(Template("shard_{:03d}", range(3)).expand())  # ['shard_000', 'shard_001', 'shard_002']
 list(OneOf(["train", "val", "test"]).expand())     # ['train', 'val', 'test']
 list(Literal("data.bin").expand())                 # ['data.bin']
+
+# multiple axes combine as a cartesian product:
+list(Template("{}_{}.png", ["real", "fake"], range(1, 3)).expand())
+# ['real_1.png', 'real_2.png', 'fake_1.png', 'fake_2.png']
 
 isinstance(Glob("*.png"), Expandable)              # False — open-ended, cannot scaffold
 isinstance(Literal("data.bin"), Expandable)        # True
@@ -186,9 +190,12 @@ Directory(["train", "val"], [
 ])
 ```
 
-`Template` materializes `values` to a tuple at construction and applies a
-single positional `str.format` field; formatting is lazy, so a template
-that cannot accept a value raises from `expand`, not at construction.
+`Template` takes one or more value **axes** (each materialized to a tuple
+at construction) and enumerates `template.format(*combo)` over their
+cartesian product, with one positional field per axis. A single axis is
+the common case; nest Template-named directories, or add axes, for a
+grid. Formatting is lazy, so a template whose field count does not match
+its axes raises from `expand`, not at construction.
 
 Because `Literal` and `Template` are `Filter`s, they participate in the
 filter registry and round-trip through `to_dict` / `Filter.from_dict`
