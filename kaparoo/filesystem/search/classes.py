@@ -27,18 +27,12 @@ class Search(ABC):
         raise NotImplementedError
 
     @classmethod
-    def _filter_part(cls, part: str, filter: Filter | None, /) -> bool:  # noqa: A002
-        return True if filter is None else filter.matches(part)
-
-    @classmethod
-    def _filter_name(cls, name: str, filter: Filter | None, /) -> bool:  # noqa: A002
-        return True if filter is None else filter.matches(name)
-
-    @classmethod
-    def _filter_names(cls, names: Iterable[str], filter: Filter | None, /) -> list[str]:  # noqa: A002
-        if filter is None:
+    def _filter_names(
+        cls, names: Iterable[str], pattern: Filter | None, /
+    ) -> list[str]:
+        if pattern is None:
             return list(names)
-        return [name for name in names if cls._filter_name(name, filter)]
+        return [name for name in names if pattern.matches(name)]
 
     @classmethod
     def _validate_depth_range(cls, min_depth: int, max_depth: int | None) -> None:
@@ -172,7 +166,7 @@ class Search(ABC):
 
             if child_depth >= min_depth and (
                 part_filter is None
-                or cls._filter_part(stringify_path(dirpath, after=root), part_filter)
+                or part_filter.matches(stringify_path(dirpath, after=root))
             ):
                 names = cls._select_names(dirnames, filenames)
                 names = cls._filter_names(names, name_filter)

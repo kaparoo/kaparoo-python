@@ -44,10 +44,6 @@ fold's `initial`).
 
 ### Review cleanups (refactor -- behavior-preserving)
 
-- **`Search._filter_part` / `_filter_name` are byte-identical** and their
-  None-guard is already re-checked at every call site (dead branches).
-  Collapse to one `_matches(name, filter)`; drops ~10 lines and the
-  `# noqa: A002` suppressions.
 - **`StagedFile.commit` / `StagedDirectory.commit` repeat scaffolding** (the
   committed guard, the `_finalizer.alive` check, the inherit-mode block).
   Lift a `StagedTarget._begin_commit()` + `_resolve_commit_mode(default)`;
