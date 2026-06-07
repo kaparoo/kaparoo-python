@@ -55,6 +55,7 @@ class FileListSequence[T, M = Path](DataSequence[T, M]):
 
     def __init__(self, files: StrPaths) -> None:
         self._files = list(stringify_paths(files))
+        self._files_cache: tuple[Path, ...] | None = None
 
     def __len__(self) -> int:
         return len(self._files)
@@ -63,9 +64,12 @@ class FileListSequence[T, M = Path](DataSequence[T, M]):
     def files(self) -> tuple[Path, ...]:
         """Immutable snapshot of the full file paths, in order.
 
-        Returns a fresh `tuple[Path, ...]` on each access.
+        Built once and cached (the paths are immutable), so repeated access
+        returns the same tuple without rebuilding it.
         """
-        return tuple(self.get_file(i) for i in range(len(self)))
+        if self._files_cache is None:
+            self._files_cache = tuple(self.get_file(i) for i in range(len(self)))
+        return self._files_cache
 
     def get_file(self, index: int) -> Path:
         """Full Path of the file at `index`."""

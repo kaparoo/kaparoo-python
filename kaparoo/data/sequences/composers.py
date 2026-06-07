@@ -79,6 +79,12 @@ class SlicedSequence[T, M](DataSequence[T, M]):
     def get_meta(self, index: int) -> M:
         return self._source.get_meta(self._indices[index])
 
+    def get_items(self, indices: Sequence[int]) -> Sequence[T]:
+        return self._source.get_items([self._indices[i] for i in indices])
+
+    def get_metas(self, indices: Sequence[int]) -> Sequence[M]:
+        return self._source.get_metas([self._indices[i] for i in indices])
+
 
 class TransformedSequence[T_in, M_in, T_out = T_in, M_out = M_in](
     DataSequence[T_out, M_out]
@@ -134,6 +140,9 @@ class TransformedSequence[T_in, M_in, T_out = T_in, M_out = M_in](
 
     def get_item(self, index: int) -> T_out:
         return self._transform(self._source.get_item(index))
+
+    def get_items(self, indices: Sequence[int]) -> Sequence[T_out]:
+        return [self._transform(item) for item in self._source.get_items(indices)]
 
     def get_meta(self, index: int) -> M_out:
         # Passthrough -- correct only when M_out == M_in. A subclass with a
@@ -282,9 +291,8 @@ class WindowedSequence[T, M_in, M_out = M_in](DataSequence[tuple[T, ...], M_out]
     def get_item(self, index: int) -> tuple[T, ...]:
         index = self._normalize_index(index)
         start = index * self._step
-        return tuple(
-            self._source.get_item(start + j * self._skip) for j in range(self._size)
-        )
+        stop = start + self._size * self._skip
+        return tuple(self._source.get_items(range(start, stop, self._skip)))
 
     @abstractmethod
     def get_meta(self, index: int) -> M_out:
