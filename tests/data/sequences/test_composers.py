@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 from kaparoo.data.sequences import (
     ConcatSequence,
+    DataSequence,
     SlicedSequence,
     TransformedSequence,
     WindowedSequence,
@@ -14,6 +17,9 @@ from tests.data.sequences.helpers import (
     FirstMetaWindow,
     ListDataSequence,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 # --- shared fixtures --------------------------------------------------------
 
@@ -192,6 +198,61 @@ def test_concat_supports_sequence_mixin_methods():
     assert combined.count("a") == 2
     assert combined.index("a") == 0
     assert list(reversed(combined)) == ["a", "c", "b", "a"]
+
+
+class RecordingSequence(DataSequence[str, str]):
+    """Records the indices passed to each batch `get_items` / `get_metas`."""
+
+    def __init__(self, items: list[str]) -> None:
+        self._items = items
+        self.item_calls: list[list[int]] = []
+        self.meta_calls: list[list[int]] = []
+
+    def __len__(self) -> int:
+        return len(self._items)
+
+    def get_item(self, index: int) -> str:
+        return self._items[index]
+
+    def get_meta(self, index: int) -> str:
+        return f"m{self._items[index]}"
+
+    def get_items(self, indices: Sequence[int]) -> Sequence[str]:
+        self.item_calls.append(list(indices))
+        return [self._items[i] for i in indices]
+
+    def get_metas(self, indices: Sequence[int]) -> Sequence[str]:
+        self.meta_calls.append(list(indices))
+        return [f"m{self._items[i]}" for i in indices]
+
+
+def test_concat_get_items_preserves_order_and_duplicates():
+    a = ListDataSequence(["a0", "a1", "a2"], [0, 1, 2])
+    b = ListDataSequence(["b0", "b1"], [3, 4])
+    combined = ConcatSequence(a, b)  # a -> [0, 2], b -> [3, 4]
+    req = [4, 0, 4, 2, 1]  # spans both sources, out of order, with a duplicate
+    assert combined.get_items(req) == ["b1", "a0", "b1", "a2", "a1"]
+    assert combined.get_metas(req) == [4, 0, 4, 2, 1]
+    assert combined.get_items([]) == []  # empty request
+
+
+def test_concat_get_items_delegates_one_batch_per_source():
+    a = RecordingSequence(["a0", "a1", "a2"])
+    b = RecordingSequence(["b0", "b1"])
+    combined = ConcatSequence(a, b)  # a -> [0, 2], b -> [3, 4]
+    assert combined.get_items([3, 0, 4, 2]) == ["b0", "a0", "b1", "a2"]
+    # each source receives exactly one batched call, locals in request order
+    assert a.item_calls == [[0, 2]]
+    assert b.item_calls == [[0, 1]]
+
+
+def test_concat_get_metas_delegates_one_batch_per_source():
+    a = RecordingSequence(["a0", "a1"])
+    b = RecordingSequence(["b0"])
+    combined = ConcatSequence(a, b)  # a -> [0, 1], b -> [2]
+    assert combined.get_metas([2, 0, 1]) == ["mb0", "ma0", "ma1"]
+    assert a.meta_calls == [[0, 1]]
+    assert b.meta_calls == [[0]]
 
 
 # --- Cross-composition ------------------------------------------------------

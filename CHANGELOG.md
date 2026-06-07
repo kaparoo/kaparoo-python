@@ -149,6 +149,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `re.Pattern` once at construction (like `Regex`), skipping `fnmatch`'s
   per-call cache lookup; and `search` skips the per-directory path
   stringification when no `part_filter` is given.
+- `kaparoo.data.sequences.ConcatSequence` now batch-delegates: `get_items` /
+  `get_metas` group the requested indices per source and issue one call per
+  source (results scattered back into request order), so a source's own
+  batch optimization is used instead of a per-index `get_item` loop. This
+  completes the bulk-delegation already done by the other composers; it
+  matters only when a source overrides `get_items` with a real batch read
+  (order, duplicates, and negative / out-of-range handling are unchanged).
+- `kaparoo.filesystem.ensure_file_exists` / `ensure_dir_exists` test the
+  type (`is_file` / `is_dir`) before falling back to `exists()`, halving the
+  `stat` calls on the success path (and `ensure_dir_exists` drops a redundant
+  post-`mkdir` re-check). Behavior is unchanged.
 
 ## [0.7.0] - 2026-06-04
 

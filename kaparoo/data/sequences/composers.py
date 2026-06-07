@@ -157,7 +157,10 @@ class ConcatSequence[T, M](DataSequence[T, M]):
     Indexing maps to `(source, local_index)` via a precomputed cumulative
     length array and `bisect`, so a lookup is O(log N) in the number of
     sources. Negative indices are normalized; out-of-range indices raise
-    `IndexError`.
+    `IndexError`. Batch access (`get_items` / `get_metas`) groups the
+    requested indices per source and issues one call per source, so each
+    source's own batch optimization is used; results are returned in
+    request order.
 
     Example:
         >>> combined = ConcatSequence(train_a, train_b, train_c)
@@ -179,23 +182,61 @@ class ConcatSequence[T, M](DataSequence[T, M]):
     def __len__(self) -> int:
         return self._cumulative[-1]
 
-    def _locate(self, index: int) -> tuple[DataSequence[T, M], int]:
-        """Resolve a logical index to `(source, local_index)`.
+    def _locate_index(self, index: int) -> tuple[int, int]:
+        """Resolve a logical index to `(source position, local index)`.
 
         Raises:
             IndexError: If `index` is outside `[-len(self), len(self))`.
         """
         index = _resolve_index(index, self._cumulative[-1])
         i = bisect_right(self._cumulative, index) - 1
-        return self._sources[i], index - self._cumulative[i]
+        return i, index - self._cumulative[i]
+
+    def _locate(self, index: int) -> tuple[DataSequence[T, M], int]:
+        """Resolve a logical index to `(source, local_index)`."""
+        i, local = self._locate_index(index)
+        return self._sources[i], local
+
+    def _gather[R](
+        self,
+        indices: Sequence[int],
+        fetch: Callable[[DataSequence[T, M], list[int]], Sequence[R]],
+    ) -> list[R]:
+        """Batch-fetch `indices` per source, preserving request order.
+
+        Resolves each index to its source, groups the locals per source,
+        issues one `fetch` per source (so the source's `get_items` /
+        `get_metas` batch path is used), then scatters the results back into
+        the order `indices` was given. The shared core of `get_items` and
+        `get_metas`, which differ only in the per-source `fetch`.
+        """
+        buckets: dict[int, list[tuple[int, int]]] = {}
+        for position, index in enumerate(indices):
+            source_index, local = self._locate_index(index)
+            buckets.setdefault(source_index, []).append((position, local))
+
+        gathered: dict[int, R] = {}
+        for source_index, entries in buckets.items():
+            fetched = fetch(
+                self._sources[source_index], [local for _, local in entries]
+            )
+            for (position, _), value in zip(entries, fetched, strict=True):
+                gathered[position] = value
+        return [gathered[position] for position in range(len(indices))]
 
     def get_item(self, index: int) -> T:
         source, local = self._locate(index)
         return source.get_item(local)
 
+    def get_items(self, indices: Sequence[int]) -> Sequence[T]:
+        return self._gather(indices, lambda source, locals_: source.get_items(locals_))
+
     def get_meta(self, index: int) -> M:
         source, local = self._locate(index)
         return source.get_meta(local)
+
+    def get_metas(self, indices: Sequence[int]) -> Sequence[M]:
+        return self._gather(indices, lambda source, locals_: source.get_metas(locals_))
 
 
 class WindowedSequence[T, M_in, M_out = M_in](DataSequence[tuple[T, ...], M_out]):

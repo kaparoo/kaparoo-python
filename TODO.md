@@ -69,13 +69,6 @@ and `TransformedSequence` (forwards to its source). Behaviors agree but
 messages differ -- note in `_resolve_index`'s docstring that `SlicedSequence`
 intentionally opts out.
 
-### `ConcatSequence` batch `get_items` (perf)
-
-The other composers delegate batched access to their source; `ConcatSequence`
-still loops `get_item` because batching it means grouping resolved locals by
-source and scattering results back. Worth it once a source implements batch
-reads (the default `get_items` is a scalar loop, so no gain until then).
-
 ---
 
 *Last updated: 2026-06-07*
