@@ -69,22 +69,22 @@ def validate(
     *,
     exclude: Excluder | Iterable[Excluder] | None = None,
 ) -> ValidationReport:
-    """Check the directory at `root` (the container, as in `match`) against
-    the spec `tree`, returning a `ValidationReport`.
+    """Check the directory at `root` against the spec `tree`.
 
-    A path is `unexpected` when it is neither matched nor an ancestor of a
+    `root` is the container (as in `match`); returns a `ValidationReport`. A
+    path is `unexpected` when it is neither matched nor an ancestor of a
     match, so an unspecified directory's contents count too. A `required`
-    enumerable name (`OneOf` / `Template`) is satisfied by *at least one*
-    present match. `exclude` is as in `match`: excluded paths are dropped
-    from `matched` and are not reported `unexpected` (a dropped directory is
-    pruned).
+    entry is satisfied as soon as its name matches one present path -- for an
+    enumerable name (`OneOf` / `Template`) that means *at least one* of the
+    listed names exists, not all. `exclude` is as in `match`: excluded paths
+    are dropped from `matched` and not reported `unexpected` (a dropped
+    directory is pruned).
     """
     return _build_report((tree,), Path(root), exclude)
 
 
 def conforms(spec: Node) -> Callable[[StrPath], bool]:
-    """Build a `search` predicate accepting a path that realizes `spec`'s
-    *top* node.
+    """Build a `search` predicate that accepts a path realizing `spec`'s top.
 
     The returned `Callable[[Path], bool]` accepts `path` when it realizes
     the top of `spec`: a `File` whose name matches (and is a file), or a

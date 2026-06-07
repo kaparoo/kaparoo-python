@@ -27,10 +27,11 @@ metadata channel. Subclasses implement two abstract methods:
 | `get_meta(index) -> M` | Produce the i-th item's metadata. |
 
 The base derives `get_items` / `get_metas` (bulk) and `get_pair` /
-`get_pairs` (item + metadata together). `__getitem__` returns the item
-only — slicing yields a `SlicedSequence`. The `M` type parameter
-defaults to `None`; set it explicitly when items carry meaningful
-metadata (paths, labels, line numbers, ...).
+`get_pairs` (item + metadata together). `__getitem__` returns one item by
+index, or a plain list of items for a slice (`get_items` over the slice's
+range) — not a `SlicedSequence`. The `M` type parameter defaults to `None`;
+set it explicitly when items carry meaningful metadata (paths, labels, line
+numbers, ...).
 
 ```python
 from kaparoo.data.sequences import DataSequence
@@ -182,8 +183,9 @@ implement three methods:
   source path, `M` defaults to `Path` and `get_meta` can be
   `return self.get_file(index)`.
 
-The base exposes `root: Path`, `files: tuple[Path, ...]` (fresh snapshot),
-and `get_file(index) -> Path`. Paths are stored root-relative
+The base exposes `root: Path`, `files: tuple[Path, ...]` (an immutable
+snapshot, built once and cached), and `get_file(index) -> Path`. Paths are
+stored root-relative
 internally, so the sequence stays compact and survives a relocated root.
 
 **Parameterized subclasses**: when `list_files` needs instance options

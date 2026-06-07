@@ -6,7 +6,8 @@ Small, focused helpers — not enough material for their own packages.
 
 - [`timer`](./timer.py) — `Timer`, `SpanTimer`, `SpanRecord`
 - [`aggregate`](./aggregate.py) — `Aggregator` + the `Reduction` family
-  (`Mean`, `Sum`, `Min`, `Max`, `Last`, `Fold`)
+  (`Mean`, `Var`, `Std`, `Sum`, `Min`, `Max`, `Last`, `Fold`; bases
+  `Reduction` / `UnweightedReduction`)
 - [`optional`](./optional.py) — helpers for `T | None` values
 
 ## Timer

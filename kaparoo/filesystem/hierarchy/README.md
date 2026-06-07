@@ -330,8 +330,10 @@ if not report:                     # truthy only when fully conformant
 A path is **unexpected** unless it is matched or an ancestor of a match —
 so anything below an *unspecified* directory counts too (describe the
 contents, or accept them with a wildcard like `File(Glob("*"))`, to keep
-them out of the report). A `required` enumerable name (`OneOf` / `Template`)
-is satisfied by *at least one* present match. `validate` also takes the same
+them out of the report). A `required` entry is satisfied once its name
+matches one present path — for an enumerable name (`OneOf` / `Template`)
+that means *at least one* of the listed names exists, not all. `validate`
+also takes the same
 `exclude=` as `match`; excluded paths are dropped from `matched` and are not
 reported `unexpected`.
 
