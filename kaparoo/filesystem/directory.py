@@ -38,18 +38,23 @@ if TYPE_CHECKING:
 # ========================== #
 
 
-def _ensure_directory_target(path: Path, *, clean: bool) -> None:
-    """Reject a path that cannot serve as a directory target.
+def _ensure_directory_target(path: Path, *, clean: bool) -> bool:
+    """Reject a path that cannot serve as a directory target; report whether
+    it is an existing directory.
 
     Raises `NotADirectoryError` when `path` exists but is not a directory,
     or when `clean` is requested on a symlink -- cleaning must operate on a
     real directory, never through a link (which would otherwise reach the
     link's target). A symlink to a directory is accepted only when `clean`
-    is False.
+    is False. Returns whether `path` is an existing directory, so a caller
+    can reuse the result instead of re-`stat`-ing.
     """
-    if (path.exists() and not path.is_dir()) or (clean and path.is_symlink()):
+    exists = path.exists()
+    is_dir = exists and path.is_dir()
+    if (exists and not is_dir) or (clean and path.is_symlink()):
         msg = f"not a usable directory target: {path}"
         raise NotADirectoryError(msg)
+    return is_dir
 
 
 def _join_root_unchecked(paths: StrPaths, root: StrPath | None) -> StrPaths:
@@ -126,8 +131,8 @@ def make_dir(
     """
     _validate_mode(mode)
     path = Path(path)
-    _ensure_directory_target(path, clean=clean)
-    if clean and path.is_dir():
+    is_dir = _ensure_directory_target(path, clean=clean)
+    if clean and is_dir:
         shutil.rmtree(path)
     path.mkdir(mode=mode, parents=True, exist_ok=exist_ok)
     return stringify_path(path) if stringify else path

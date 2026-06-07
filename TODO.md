@@ -193,21 +193,6 @@ precompute, search `stringify_path` guard). Remaining:
 
 ---
 
-## 🗂️ `kaparoo.filesystem`
-
-### `make_dir` / `make_dirs` redundant `is_dir()` stat (perf — marginal)
-
-`_ensure_directory_target` already establishes whether the path is a
-directory, then the caller re-stats `path.is_dir()` for the `clean` branch.
-The redundancy fires **only** in the `clean=True` + existing-directory case
-(a rare, destructive path). A naive precompute would *regress* the common
-create-new path, where short-circuit evaluation currently skips `is_dir`
-entirely — so a correct fix must read `exists` once, compute `is_dir` only
-when it exists, and return it for the caller to reuse. Low value; do only
-if directory-creation throughput is ever shown to matter.
-
----
-
 ## 🧱 `kaparoo.data.sequences`
 
 ### Batch-delegating `get_items` on composers (perf)
