@@ -284,6 +284,19 @@ match_map(spec, "/data").items()      # iterate (path, nodes) tuples instead
 `match` streams; `match_map` materializes the full mapping before
 returning (its nodes are distinct, in spec-traversal order).
 
+`exclude=` drops specific paths from the results — e.g. punching holes in a
+nested `Template` product, which the name-level `Without` cannot do because
+the axes live at different tree levels. An excluder (or an iterable of
+them, OR-combined) is a concrete **root-relative** `StrPath`, or a callable
+taking the **root-relative** `Path`; a dropped directory has its whole
+subtree pruned:
+
+```python
+match(spec, "/data", exclude=["cam_01/frame_0003.png"])     # drop one cell
+match(spec, "/data", exclude=lambda p: p.suffix == ".tmp")  # drop by rule
+match(spec, "/data", exclude=["scratch", "cam_02/frame_0010.png"])  # branch + cell
+```
+
 `match` reports only what is *present* — a `Group` is treated as "any of
 its entries may appear," so it does not enforce `Exclusive` / `Together`,
 and it does not report missing `required` entries. Those are the job of

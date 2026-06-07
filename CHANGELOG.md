@@ -71,7 +71,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `match` yields one pair per node (lazily, duplicates kept by default; pass
   `unique=True` to suppress identical pairs), while the companion
   `match_map(tree, root)` groups the results into a `{path: (node, ...)}`
-  mapping (distinct nodes, spec-traversal order).
+  mapping (distinct nodes, spec-traversal order). Both take `exclude=` to
+  drop paths from the results (e.g. specific cells of a `Template` product):
+  an excluder — or an iterable of them, OR-combined — is a concrete
+  root-relative `StrPath` or a callable taking the root-relative `Path`, and
+  a dropped directory has its whole subtree pruned.
 - `kaparoo.filesystem.hierarchy.validate(tree, root)`: checks a real
   directory against a spec, returning a `ValidationReport` with `matched`
   (as `match_map`), `unexpected` (paths matching no node — anything not

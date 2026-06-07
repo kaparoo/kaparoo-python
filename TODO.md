@@ -68,71 +68,20 @@ stateless filters; `match` *checks / maps* a real tree against a known
 structural spec (depth, constraints, presence). They share `kaparoo.filters`
 and may share traversal, but answer different questions.
 
-### `match` path exclusion (`exclude=`) — next up
+### `match` path exclusion (`exclude=`) — follow-ups
 
-Generalize the original "cross-level cell exclusion" (drop e.g.
-`cam_01/frame_0003.png` from a nested `Template` × `Template` product) into
-a general path-reject. It lives on the **operation**, not the
-representation: `match` / `match_map` gain an `exclude=` keyword.
+`match` / `match_map` now take `exclude=` (a `StrPath` or
+`Callable[[Path], bool]`, or an iterable of them, over the **root-relative**
+path; a dropped directory is pruned). Remaining:
 
-```python
-match(tree, root, *, unique=False, exclude=None)
-match_map(tree, root, *, exclude=None)
-```
-
-`exclude` accepts an *excluder* or an iterable of mixed excluders
-(OR-combined). Each excluder denotes a set of paths to drop and normalizes
-to a single path-predicate `(relpath) -> bool` (relative to `root`):
-
-| Excluder | Normalization |
-| --- | --- |
-| `StrPath` | membership in a set of root-relative posix paths (concrete cells) |
-| `Node` | a sub-spec (possibly a whole tree); exclude the paths matched by its **terminal nodes** — see below — declarative + serializable |
-| `Callable[[Path], bool]` | used as-is (escape hatch, like `search`'s `predicate`) |
-
-Accepted scope is **`StrPath | Node | Callable`** (single or iterable).
-Deliberately **not** a bare `Filter`: `Glob("*.tmp")` alone is ambiguous
-(match the *name* or the whole *relative path*? which type? what depth?).
-Wrap it in a node instead — `File(Glob("*.tmp"), depth=None)` — which fixes
-name, type, and depth unambiguously. (Revisit if a concrete need for a bare
-`Filter` arises; would have to pin name-vs-path semantics first.)
-
-A `Node` excluder may be a multi-level tree. To make that intuitive,
-exclude only the paths matched by the excluder's **terminal** nodes -- a
-`File`, or a `Directory` with no `children`. A `Directory` that *has*
-children is only an *addressing* path: it is not itself excluded or pruned,
-its children select what to drop. Combined with the directory-pruning rule
-below, one mechanism then covers every case:
-
-| Excluder | Effect |
-| --- | --- |
-| `Directory("build")` (no children) | drop `build` and **prune its whole subtree** (a branch) |
-| `Directory("logs", [File(Glob("*.tmp"))])` | drop only `logs/*.tmp`; keep `logs` and the rest |
-| `File(Glob("*.tmp"), depth=None)` | drop every `.tmp` file at any depth |
-| a deeper tree | drop the leaf cells it addresses, not the containers |
-
-Semantics:
-
-- A matched excluder path is dropped from the results; if it is a
-  **directory, its whole subtree is pruned** (not descended) — so a
-  childless `Directory` excluder removes a whole branch, while a `File`
-  excluder removes just that path.
-- Guard the single-`str`/`PathLike` case (a bare `str` is iterable) by
-  wrapping a lone excluder into a one-element list.
-
-Implementation:
-
-- A normalizer turns each excluder into a `(relpath) -> bool`; `StrPath`
-  builds a set, `Callable` passes through, and a `Node` runs one extra
-  `match` pass up front filtered to terminal nodes —
-  `{p for p, n in match(node, root) if _is_terminal(n)}` where
-  `_is_terminal` is a `File` or a childless `Directory`. Combine with
-  `any(...)`.
-- Thread the combined predicate into the `_walk_depths` `Path.walk` loop
-  (consumed by `_match_children`): one check site skips excluded entries
-  and `dirnames`-prunes excluded directories, so exclusion stays consistent
-  across overlap, `depth` ranges, `unique`, and `match_map`. The core
-  matching logic is untouched.
+- **`validate` does not forward `exclude=`** yet, so excluded paths would
+  still be reported `unexpected`. Thread it through `_build_report` /
+  `_unexpected` when validation needs to ignore the same cells.
+- **`Node` / sub-spec excluder** stays deferred: it would need an extra
+  `match` pass and terminal-node rules, and its main draw (declarative +
+  serializable) barely applies since `exclude` lives on the call, not the
+  serialized representation; the pattern case is covered by a callable.
+  Revisit on concrete need.
 
 ### Attribute conditions on `File` / `Directory`
 

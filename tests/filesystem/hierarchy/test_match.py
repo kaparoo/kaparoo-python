@@ -14,6 +14,7 @@ from kaparoo.filesystem.hierarchy import (
 from kaparoo.filters import Glob, OneOf
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from pathlib import Path
 
 
@@ -28,6 +29,11 @@ def build(root: Path, files: list[str]) -> None:
 def matched(tree: Node, root: Path) -> set[tuple[str, Node]]:
     """match() results as `{(relative_posix_path, node)}`."""
     return {(p.relative_to(root).as_posix(), n) for p, n in match(tree, root)}
+
+
+def rels(pairs: Iterable[tuple[Path, object]], root: Path) -> set[str]:
+    """The relative-posix paths of `(path, node)` pairs."""
+    return {p.relative_to(root).as_posix() for p, _ in pairs}
 
 
 class TestMatch:
@@ -131,3 +137,56 @@ class TestMatchMap:
         # reused node -> match_map collapses it (built on unique=True)
         spec = Directory("d", [File("a.txt"), File("a.txt")])
         assert match_map(spec, tmp_path)[tmp_path / "d" / "a.txt"] == (File("a.txt"),)
+
+
+class TestExclude:
+    def test_concrete_cell(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/a.txt", "d/b.txt"])
+        spec = Directory("d", [File(Glob("*.txt"))])
+        got = rels(match(spec, tmp_path, exclude=["d/b.txt"]), tmp_path)
+        assert "d/a.txt" in got
+        assert "d/b.txt" not in got
+
+    def test_callable(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/a.txt", "d/b.txt"])
+        spec = Directory("d", [File(Glob("*.txt"))])
+        got = rels(match(spec, tmp_path, exclude=lambda p: p.name == "b.txt"), tmp_path)
+        assert "d/a.txt" in got
+        assert "d/b.txt" not in got
+
+    def test_single_strpath_is_not_iterated(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/a.txt", "d/b.txt"])
+        spec = Directory("d", [File(Glob("*.txt"))])
+        got = rels(match(spec, tmp_path, exclude="d/b.txt"), tmp_path)  # one excluder
+        assert "d/a.txt" in got
+        assert "d/b.txt" not in got
+
+    def test_directory_excluder_prunes_subtree(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/keep/x.txt", "d/drop/x.txt"])
+        spec = Directory("d", [File("x.txt", depth=None)])
+        got = rels(match(spec, tmp_path, exclude=["d/drop"]), tmp_path)
+        assert "d/keep/x.txt" in got
+        assert "d/drop/x.txt" not in got  # pruned, never descended
+
+    def test_directory_excluder_via_callable_prunes(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/keep/x.txt", "d/drop/x.txt"])
+        spec = Directory("d", [File("x.txt", depth=None)])
+        got = rels(match(spec, tmp_path, exclude=lambda p: p.name == "drop"), tmp_path)
+        assert "d/keep/x.txt" in got
+        assert "d/drop/x.txt" not in got
+
+    def test_iterable_mixed(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/a.txt", "d/b.txt", "d/c.txt"])
+        spec = Directory("d", [File(Glob("*.txt"))])
+        exclude = ["d/a.txt", lambda p: p.name == "c.txt"]
+        got = rels(match(spec, tmp_path, exclude=exclude), tmp_path)
+        assert "d/b.txt" in got
+        assert "d/a.txt" not in got
+        assert "d/c.txt" not in got
+
+    def test_match_map_exclude(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/a.txt", "d/b.txt"])
+        spec = Directory("d", [File(Glob("*.txt"))])
+        mapping = match_map(spec, tmp_path, exclude=["d/b.txt"])
+        assert (tmp_path / "d" / "a.txt") in mapping
+        assert (tmp_path / "d" / "b.txt") not in mapping
