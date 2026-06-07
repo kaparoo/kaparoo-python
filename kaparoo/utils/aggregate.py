@@ -391,7 +391,10 @@ class Aggregator:
                     f"({own_reduction} vs {reduction})"
                 )
                 raise ValueError(msg)
-            self._metrics[key] = (own_reduction, own_reduction.merge(own_state, other_state))
+            self._metrics[key] = (
+                own_reduction,
+                own_reduction.merge(own_state, other_state),
+            )
 
         self._weight += other.weight
 
