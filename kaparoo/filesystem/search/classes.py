@@ -115,51 +115,22 @@ class Search(ABC):
         ordered: bool = True,
         stringify: bool = False,
     ) -> Sequence[Path] | Sequence[str]:
-        """Walk `root` and return matching paths.
+        """Walk `root` and return the entries matching the configured filters.
 
-        At each visited directory, candidate entries (the set selected by
-        the subclass) pass through three filters in order:
+        The shared engine behind `search_paths` / `search_files` /
+        `search_dirs`, which document the parameters. At each visited
+        directory the subclass's candidate entries pass three filters in
+        order:
 
-            1. `part_filter` -- applied to the visited directory's relative
-               path string. Directories that don't pass yield no entries,
-               but their sub-directories are still visited.
-            2. `name_filter` -- applied to each entry's leaf name.
-            3. `predicate`   -- applied to each surviving entry's full
-               `Path`.
+            1. `part_filter` -- the visited directory's relative path string;
+               a directory that fails yields no entries but is still
+               descended.
+            2. `name_filter` -- each candidate entry's leaf name.
+            3. `predicate`   -- each surviving entry's full `Path`.
 
-        Depth is measured from `root`: a direct child of `root` is at depth
-        1. Entries below `min_depth` are skipped but the walk still descends
-        through them. Entries at `max_depth` are included, but their
-        descendants are not visited. `max_depth=None` means unbounded.
-
-        Args:
-            root: The directory to walk.
-            part_filter: Filter applied to each visited directory's relative
-                path string. Accepts a `Filter` or a `FilterDict`. None
-                (default) accepts all directories.
-            name_filter: Filter applied to each candidate entry's leaf name.
-                Accepts a `Filter` or a `FilterDict`. None (default)
-                accepts all names.
-            predicate: Callable applied to each surviving `Path` for a final
-                boolean check. None (default) accepts all paths.
-            min_depth: Minimum inclusion depth (must be >= 1). Defaults to 1.
-            max_depth: Maximum inclusion depth (must be >= `min_depth`), or
-                None for unlimited. Defaults to None.
-            ordered: If True (default), sort results by `Path` lexicographic
-                order. If False, results follow OS-defined walk order.
-            stringify: If True, return each path as a string. If False
-                (default), return `Path` objects.
-
-        Returns:
-            A sequence of `Path` (or `str` if `stringify=True`) for entries
-            that pass every filter.
-
-        Raises:
-            ValueError: If `min_depth < 1`, `max_depth < 1`,
-                `min_depth > max_depth`, or `part_filter` / `name_filter`
-                is a dict that cannot be deserialized.
-            DirectoryNotFoundError: If `root` does not exist.
-            NotADirectoryError: If `root` exists but is not a directory.
+        Depth is measured from `root` (a direct child is depth 1): entries
+        below `min_depth` are skipped but still descended, and entries at
+        `max_depth` are included but not descended past.
         """
         cls._validate_depth_range(min_depth, max_depth)
 
