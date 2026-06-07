@@ -144,8 +144,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `OrFilter` now share a `NaryLogicalFilter` base.
 - Faster filter matching: `EqualsAny` and `OneOf` test a precomputed
   `frozenset` (O(1) rather than a linear tuple scan -- `OneOf` keeps its
-  ordered tuple for `expand`) and `Template` matches against its expanded
-  names materialized once; `search` skips the per-directory path
+  ordered tuple for `expand`); `Template` matches against its expanded names
+  materialized once; `Glob` translates and compiles its pattern to a
+  `re.Pattern` once at construction (like `Regex`), skipping `fnmatch`'s
+  per-call cache lookup; and `search` skips the per-directory path
   stringification when no `part_filter` is given.
 
 ## [0.7.0] - 2026-06-04
