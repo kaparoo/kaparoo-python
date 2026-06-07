@@ -106,13 +106,15 @@ def ensure_file_exists(path: StrPath, *, stringify: bool = False) -> Path | str:
         FileNotFoundError: If the path does not exist.
         NotAFileError: If the path exists but is not a file.
     """
-    if not path_exists(path := Path(path)):
-        msg = f"no such file: {path}"
-        raise FileNotFoundError(msg)
-    if not path.is_file():
+    if (path := Path(path)).is_file():
+        return stringify_path(path) if stringify else path
+    # Not a file: distinguish "missing" from "exists but wrong kind". The
+    # second stat runs only on this error path, so the success path is one.
+    if path.exists():
         msg = f"not a file: {path}"
         raise NotAFileError(msg)
-    return stringify_path(path) if stringify else path
+    msg = f"no such file: {path}"
+    raise FileNotFoundError(msg)
 
 
 def _validate_mode(mode: int) -> None:
@@ -162,14 +164,16 @@ def ensure_dir_exists(
     """
     if not isinstance(make, bool):
         _validate_mode(make)
-    if not path_exists(path := Path(path)):
-        if make is False:
-            msg = f"no such directory: {path}"
-            raise DirectoryNotFoundError(msg)
-        path.mkdir(mode=0o777 if make is True else make, parents=True)
-    if not path.is_dir():
+    path = Path(path)
+    if path.is_dir():  # existing directory: the common case, one stat
+        return stringify_path(path) if stringify else path
+    if path.exists():  # exists but is not a directory
         msg = f"not a directory: {path}"
         raise NotADirectoryError(msg)
+    if make is False:  # missing, and not allowed to create it
+        msg = f"no such directory: {path}"
+        raise DirectoryNotFoundError(msg)
+    path.mkdir(mode=0o777 if make is True else make, parents=True)
     return stringify_path(path) if stringify else path
 
 
