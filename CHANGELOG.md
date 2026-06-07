@@ -142,9 +142,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   implement `_payload` (the kind-less fields) instead of `to_dict`; the
   serialized output of the built-in filters is unchanged. `AndFilter` /
   `OrFilter` now share a `NaryLogicalFilter` base.
-- Faster filter matching: `EqualsAny` tests a precomputed `frozenset` (O(1)
-  rather than a linear tuple scan) and `Template` matches against its
-  expanded names materialized once; `search` skips the per-directory path
+- Faster filter matching: `EqualsAny` and `OneOf` test a precomputed
+  `frozenset` (O(1) rather than a linear tuple scan -- `OneOf` keeps its
+  ordered tuple for `expand`) and `Template` matches against its expanded
+  names materialized once; `search` skips the per-directory path
   stringification when no `part_filter` is given.
 
 ## [0.7.0] - 2026-06-04

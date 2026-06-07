@@ -9,7 +9,7 @@ __all__ = (
 )
 
 from abc import ABC, abstractmethod
-from dataclasses import FrozenInstanceError, dataclass
+from dataclasses import FrozenInstanceError, dataclass, field
 from itertools import product
 from typing import TYPE_CHECKING, cast
 
@@ -96,13 +96,16 @@ class OneOf(Expandable):
     one of `names`, and expands to each -- `OneOf(["train", "val",
     "test"])`. `names` is materialized to a tuple at construction and
     deduplicated (first occurrence wins); matching is case-sensitive, so
-    `OneOf` is unconditionally `Expandable`.
+    `OneOf` is unconditionally `Expandable`. Membership is tested against a
+    precomputed `frozenset`, so `matches` is O(1) in the number of names;
+    `expand` keeps the ordered tuple.
 
     Raises:
         ValueError: If `names` is empty.
     """
 
     names: Iterable[str]
+    _name_set: frozenset[str] = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         names = tuple(dict.fromkeys(self.names))
@@ -110,9 +113,10 @@ class OneOf(Expandable):
             msg = "OneOf requires at least one name."
             raise ValueError(msg)
         object.__setattr__(self, "names", names)
+        object.__setattr__(self, "_name_set", frozenset(names))
 
     def matches(self, target: str) -> bool:
-        return target in self.names
+        return target in self._name_set
 
     def expand(self) -> Iterator[str]:
         yield from self.names
