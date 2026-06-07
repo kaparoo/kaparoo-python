@@ -16,9 +16,12 @@ class Node(ABC):
     """A member of a hierarchy -- anything that can sit in a directory.
 
     The shared base of `Entry` (named filesystem nodes) and `Group`
-    (unnamed constraint nodes). Nodes are immutable value objects: equal
-    when they are the same concrete type with equal `_key`s, and hashable
-    on the same basis.
+    (unnamed constraint nodes). These are the **only** two direct subtrees:
+    `match` / `validate` rely on this closed world to narrow a `Node` that
+    is not a `Group` to an `Entry` (via `cast`). A third subtree would make
+    those casts unsound, so keep new node kinds under `Entry` or `Group`.
+    Nodes are immutable value objects: equal when they are the same concrete
+    type with equal `_key`s, and hashable on the same basis.
 
     Nodes serialize to a `"node"`-discriminated dict via `to_dict`,
     round-trippable through `Node.from_dict`. The name and child nodes a

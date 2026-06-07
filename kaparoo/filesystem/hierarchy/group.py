@@ -30,7 +30,9 @@ class Group(Node, ABC):
     """A constraint over a group of sibling nodes.
 
     The shared base of `Exclusive` (mutual exclusion) and `Together`
-    (co-occurrence). A group is a `Node` but not an `Entry`: it has no name
+    (co-occurrence) -- its only two subclasses, which `validate` relies on
+    to narrow a non-`Exclusive` `Group` to a `Together`. A group is a `Node`
+    but not an `Entry`: it has no name
     of its own, only the nodes it constrains (which may themselves be
     groups). The keyword-only `required` flag forbids the none-present case
     (its precise meaning is subclass-defined); `entries` exposes the leaf
@@ -69,6 +71,8 @@ def flatten_entries(nodes: Iterable[Node]) -> tuple[Entry, ...]:
         if isinstance(node, Group):
             result.extend(node.entries)
         else:
+            # `Node` is the closed `Entry | Group`, so a non-`Group` is an
+            # `Entry` (see `Node`); `ty` cannot prove it from the open ABC.
             result.append(cast("Entry", node))
     return tuple(result)
 

@@ -227,6 +227,7 @@ class Without(_Frozen, Expandable):
     (`Without(Template("img_{:04d}", range(1000)), Glob("*_999"))`).
 
     Raises:
+        TypeError: If `base` is not `Expandable`.
         ValueError: If no exclusions are given.
     """
 
@@ -234,6 +235,11 @@ class Without(_Frozen, Expandable):
     _excluded: tuple[Filter, ...]
 
     def __init__(self, base: Expandable, *excluded: str | Filter) -> None:
+        if not isinstance(base, Expandable):
+            # Guards `from_dict` too: `expand` requires an enumerable base, so
+            # reject a non-`Expandable` here rather than failing later.
+            msg = f"Without base must be Expandable, got {type(base).__name__}"
+            raise TypeError(msg)
         if not excluded:
             msg = "Without requires at least one exclusion."
             raise ValueError(msg)

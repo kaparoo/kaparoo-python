@@ -103,7 +103,9 @@ def _depth_arg(data: Mapping[str, Any]) -> int | tuple[int, int | None]:
 class Entry(Node, ABC):
     """A named node in a filesystem hierarchy: a `File` or a `Directory`.
 
-    Every entry carries a `name` filter (any `kaparoo.filters.Filter`, so
+    Those are the only two subclasses, which `match` / `validate` rely on to
+    narrow a non-`File` `Entry` to a `Directory`. Every entry carries a
+    `name` filter (any `kaparoo.filters.Filter`, so
     the full DSL describes which siblings it matches). As sugar, a bare
     `str` becomes a `Literal` and a `list[str]` a `OneOf` -- one node
     standing for several literally-named siblings that share a structure.
