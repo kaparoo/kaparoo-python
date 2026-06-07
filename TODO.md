@@ -31,23 +31,16 @@ Once the reduction family is complete (after `Stored` is merged or explicitly
 decided against), remove the `experimental` note from the module docstring,
 class docstrings, CHANGELOG entry, and `kaparoo/utils/README.md`.
 
-### `Aggregator.weight` semantics with heterogeneous updates
+### `Aggregator.weight` per-metric tracking (deferred)
 
-`weight` accumulates across all `update` calls regardless of which metric
-keys were present. Ambiguous when updates have varying key sets. Document
-explicitly or add per-metric weight tracking if a concrete case demands it.
-
-### `Aggregator` single-dict refactor (perf)
-
-`_reductions` and `_states` are parallel dicts keyed identically, so every
-`update` / `compute` / `state` / `merge` does two keyed lookups per metric.
-Collapse them into one `dict[str, tuple[Reduction, state]]`: `update` then
-reads the pair once per metric (via a `_MISSING` sentinel — a `None` state
-is valid for `Min` / `Max` / `Last`, so `.get() is None` cannot
-disambiguate), and `merge` iterates the other aggregator's internals
-directly instead of allocating a full `state()` snapshot. Per-sample hot
-path; behavior-preserving (tuples keep `state()`'s immutable-snapshot
-contract).
+`weight` is now documented as a grand total over all `update` calls,
+independent of each call's key set (so it need not match any single
+metric's effective weight under heterogeneous updates). A parallel
+per-metric weight dict was considered and declined: a weighted reduction
+already tracks its own weight in its state (`Mean`'s `total_weight`,
+`Var` / `Std`'s `weight`), and the number is murky for the unweighted
+reductions that discard weight. Revisit only if a concrete need for a
+uniform per-metric input weight appears.
 
 ---
 
@@ -195,25 +188,16 @@ precompute, search `stringify_path` guard). Remaining:
 
 ## 🧱 `kaparoo.data.sequences`
 
-### Batch-delegating `get_items` on composers (perf)
+### Batch-delegating `get_items` on `ConcatSequence` (perf)
 
-`SlicedSequence`, `TransformedSequence`, `WindowedSequence`, and
-`ConcatSequence` do not override `get_items` / `get_metas`, so the base
-loops `get_item` per element (re-resolving each index). Slicing a composed
-lazy sequence therefore degrades a source's batched fetch to N scalar
-reads — the exact pessimization the `get_items` hook exists to avoid.
-Override each to delegate to `self._source.get_items([...])` (grouping
-resolved indices by source for `ConcatSequence`); `ZippedSequence` already
-implements the pattern. Value depends on sources implementing batch reads.
-
-### `FileListSequence.files` snapshot caching (perf — needs a contract call)
-
-`files` rebuilds `n` `Path` objects (plus `n` joins for
-`FileFolderSequence`) on every access; the docstring advertises "a fresh
-`tuple` on each access." Since `Path` / `tuple` are immutable, a cached
-snapshot is observationally identical except for `is` identity. Build it
-once (through `get_file`) and cache; reword the docstring. Deferred because
-it is a deliberate, if benign, contract change.
+`SlicedSequence` / `TransformedSequence` / `WindowedSequence` now delegate
+batched access to their source's `get_items` (and `ZippedSequence` already
+did). `ConcatSequence` still loops `get_item`, because batching it means
+resolving each index, grouping the locals by source, issuing one
+`source.get_items(...)` per source, and scattering the results back to the
+caller's order. Left for when that complexity is justified by a source
+that implements batch reads (the default `get_items` is a scalar loop, so
+there is no gain until then).
 
 ---
 

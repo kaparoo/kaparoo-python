@@ -401,5 +401,14 @@ class Aggregator:
 
     @property
     def weight(self) -> float:
-        """Total weight folded in via `update` (and absorbed via `merge`)."""
+        """Total weight folded in across all `update` calls (and absorbed via
+        `merge`).
+
+        A grand total over every call, independent of which metric keys each
+        call carried -- so when updates have heterogeneous key sets it need
+        not equal any single metric's effective weight. A weighted reduction
+        already tracks its own per-metric weight inside its state (`Mean`'s
+        `total_weight`, `Var` / `Std`'s `weight`); unweighted reductions
+        (`Sum`, `Min`, `Max`, `Last`) discard weight entirely.
+        """
         return self._weight
