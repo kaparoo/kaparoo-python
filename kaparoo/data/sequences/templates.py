@@ -3,6 +3,7 @@ from __future__ import annotations
 __all__ = ("FileFolderSequence", "FileListSequence", "SingleFileSequence")
 
 from abc import abstractmethod
+from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -37,21 +38,14 @@ class FileListSequence[T, M = Path](DataSequence[T, M]):
 
     def __init__(self, files: StrPaths) -> None:
         self._files = list(stringify_paths(files))
-        self._files_cache: tuple[Path, ...] | None = None
 
     def __len__(self) -> int:
         return len(self._files)
 
-    @property
+    @cached_property
     def files(self) -> tuple[Path, ...]:
-        """Immutable snapshot of the full file paths, in order.
-
-        Built once and cached (the paths are immutable), so repeated access
-        returns the same tuple without rebuilding it.
-        """
-        if self._files_cache is None:
-            self._files_cache = tuple(self.get_file(i) for i in range(len(self)))
-        return self._files_cache
+        """Immutable snapshot of the full file paths, in order (built once)."""
+        return tuple(self.get_file(i) for i in range(len(self)))
 
     def get_file(self, index: int) -> Path:
         """Full Path of the file at `index`."""
