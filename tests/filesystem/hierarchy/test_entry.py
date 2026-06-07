@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from kaparoo.filesystem.hierarchy import Directory, File
+from kaparoo.filesystem.hierarchy.conditions import Size
 from kaparoo.filters import Glob, Literal, OneOf, Template
 
 
@@ -164,6 +165,27 @@ class TestRequired:
         )
         assert repr(File("a", depth=2, required=True)) == (
             "File(Literal(name='a'), depth=2, required=True)"
+        )
+
+
+class TestCondition:
+    def test_defaults_to_none(self) -> None:
+        assert File("a").condition is None
+        assert Directory("d").condition is None
+
+    def test_exposes_the_condition(self) -> None:
+        size = Size(min=1)
+        assert File("a", condition=size).condition is size
+        assert Directory("d", condition=size).condition is size
+
+    def test_is_part_of_identity(self) -> None:
+        assert File("a", condition=Size(min=1)) == File("a", condition=Size(min=1))
+        assert File("a", condition=Size(min=1)) != File("a")
+        assert File("a", condition=Size(min=1)) != File("a", condition=Size(min=2))
+
+    def test_repr_shows_condition(self) -> None:
+        assert repr(File("a", condition=Size(min=1))) == (
+            "File(Literal(name='a'), condition=Size(min=1, max=None))"
         )
 
 

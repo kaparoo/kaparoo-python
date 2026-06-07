@@ -11,11 +11,29 @@ from kaparoo.filesystem.hierarchy import (
     Node,
     Together,
 )
+from kaparoo.filesystem.hierarchy.conditions import And, Content, Size
 from kaparoo.filters import Glob, Template
 
 
 def roundtrip(node: Node) -> Node:
     return Node.from_dict(node.to_dict())
+
+
+class TestConditionSerialization:
+    def test_round_trips_with_condition(self) -> None:
+        node = Directory(
+            "data",
+            [File("model.bin", condition=And((Size(min=1), Content("ok"))))],
+            condition=Size(max=0),  # vacuous on a dir, but exercises round-trip
+        )
+        assert roundtrip(node) == node
+
+    def test_to_dict_includes_condition_only_when_set(self) -> None:
+        assert File("a", condition=Size(min=1)).to_dict()["condition"] == {
+            "kind": "size",
+            "min": 1,
+        }
+        assert "condition" not in File("a").to_dict()
 
 
 class TestFileSerialization:

@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from kaparoo.filesystem.hierarchy.base import Node
+from kaparoo.filesystem.hierarchy.conditions import Condition
 from kaparoo.filesystem.hierarchy.utils import register_node
 from kaparoo.filters import Filter, Literal, OneOf
 
@@ -100,6 +101,12 @@ def _depth_arg(data: Mapping[str, Any]) -> int | tuple[int, int | None]:
     return 1 if depth is None else (depth[0], depth[1])
 
 
+def _condition_arg(data: Mapping[str, Any]) -> Condition | None:
+    """Read the optional `condition` from a node dict (absent -> `None`)."""
+    raw = data.get("condition")
+    return None if raw is None else Condition.from_dict(raw)
+
+
 class Entry(Node, ABC):
     """A named node in a filesystem hierarchy: a `File` or a `Directory`.
 
@@ -109,8 +116,8 @@ class Entry(Node, ABC):
     the full DSL describes which siblings it matches). As sugar, a bare
     `str` becomes a `Literal` and a `list[str]` a `OneOf` -- one node
     standing for several literally-named siblings that share a structure.
-    Entries are immutable value objects -- equal by type, name, depth, and
-    (for a directory) children -- and hashable.
+    Entries are immutable value objects -- equal by type, name, depth,
+    condition, and (for a directory) children -- and hashable.
 
     `depth` is how far below its parent the entry sits, as an inclusive
     `(min_depth, max_depth)` range past intermediate directories of unknown
@@ -128,13 +135,17 @@ class Entry(Node, ABC):
         required: Whether the entry must be present. Defaults to `False`
             (opt-in): `validate` reports a `missing` entry only for
             `required` ones, so a spec asserts nothing exists until asked.
+        condition: An optional `Condition` on the matched path's filesystem
+            attributes (size, child count, content hook, ...), checked by
+            `validate` (not by `match`, which stays structural). Defaults to
+            `None`.
 
     Raises:
         ValueError: If a sugar name contains a path separator, a depth
             bound is below 1, or `max` is below `min`.
     """
 
-    __slots__ = ("_depth", "_name", "_required")
+    __slots__ = ("_condition", "_depth", "_name", "_required")
 
     def __init__(
         self,
@@ -142,10 +153,12 @@ class Entry(Node, ABC):
         *,
         depth: int | tuple[int, int | None] | None = 1,
         required: bool = False,
+        condition: Condition | None = None,
     ) -> None:
         self._name = _as_filter(name)
         self._depth = _normalize_depth(depth)
         self._required = required
+        self._condition = condition
 
     @property
     def name(self) -> Filter:
@@ -167,21 +180,28 @@ class Entry(Node, ABC):
         """Whether this entry must be present (vs optional)."""
         return self._required
 
+    @property
+    def condition(self) -> Condition | None:
+        """The optional attribute condition `validate` checks (or `None`)."""
+        return self._condition
+
     @abstractmethod
     def _fields(self) -> tuple[object, ...]:
         """Return the identity fields shown in `repr`, excluding `depth`."""
         raise NotImplementedError
 
     def _key(self) -> tuple[object, ...]:
-        return (*self._fields(), self._depth, self._required)
+        return (*self._fields(), self._depth, self._required, self._condition)
 
     def _payload(self) -> dict[str, Any]:
-        """The non-default `depth` / `required` fragments of `to_dict`."""
+        """The non-default `depth` / `required` / `condition` `to_dict` parts."""
         payload: dict[str, Any] = {}
         if self._depth != (1, 1):
             payload["depth"] = list(self._depth)
         if self._required:
             payload["required"] = True
+        if self._condition is not None:
+            payload["condition"] = self._condition.to_dict()
         return payload
 
     def __repr__(self) -> str:
@@ -189,6 +209,8 @@ class Entry(Node, ABC):
         suffix = _depth_suffix(self._depth)
         if self._required:
             suffix += ", required=True"
+        if self._condition is not None:
+            suffix += f", condition={self._condition!r}"
         return f"{type(self).__name__}({inner}{suffix})"
 
 
@@ -210,6 +232,7 @@ class File(Entry):
             Filter.from_dict(data["name"]),
             depth=_depth_arg(data),
             required=data.get("required", False),
+            condition=_condition_arg(data),
         )
 
 
@@ -233,8 +256,9 @@ class Directory(Entry):
         *,
         depth: int | tuple[int, int | None] | None = 1,
         required: bool = False,
+        condition: Condition | None = None,
     ) -> None:
-        super().__init__(name, depth=depth, required=required)
+        super().__init__(name, depth=depth, required=required, condition=condition)
         self._children = tuple(children)
 
     @property
@@ -260,4 +284,5 @@ class Directory(Entry):
             children,
             depth=_depth_arg(data),
             required=data.get("required", False),
+            condition=_condition_arg(data),
         )
