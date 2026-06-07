@@ -13,6 +13,7 @@ __all__ = (
     "conforms",
     "match",
     "match_map",
+    "scaffold",
     "validate",
 )
 
@@ -20,6 +21,7 @@ from kaparoo.filesystem.hierarchy.base import Node
 from kaparoo.filesystem.hierarchy.entry import Directory, Entry, File
 from kaparoo.filesystem.hierarchy.group import Exclusive, Group, Together
 from kaparoo.filesystem.hierarchy.match import match, match_map
+from kaparoo.filesystem.hierarchy.scaffold import scaffold
 from kaparoo.filesystem.hierarchy.validate import (
     ValidationReport,
     Violation,

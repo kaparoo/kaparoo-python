@@ -40,17 +40,6 @@ fold's `initial`).
 
 ---
 
-## 🌳 `kaparoo.filesystem.hierarchy`
-
-### `scaffold` (the remaining spec operation)
-
-`scaffold(tree, root)` -- the write op that creates the tree on disk from
-`Expandable` names (and `required`). A free function alongside `match` /
-`validate` / `conforms`. The lazy plan-vs-apply / early-stop design was
-discussed but parked for a closer look before building.
-
----
-
 ## 🗂️ `kaparoo.filesystem`
 
 ### Review cleanups (refactor -- behavior-preserving)

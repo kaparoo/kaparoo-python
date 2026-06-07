@@ -60,8 +60,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the filter registry), so specs can be stored as JSON. The package
   depends on `kaparoo.filters` but nothing in `kaparoo.filesystem.search`.
   This first cut is the representation plus name-level semantics and the
-  read-only disk operations `match`, `validate`, and `conforms` (below);
-  `scaffold` is not implemented yet.
+  disk operations `match`, `validate`, `conforms`, and `scaffold` (below).
 - `kaparoo.filesystem.hierarchy.match(tree, root)`: the first operation
   that applies a spec to a real filesystem. It maps each on-disk path
   under `root` (the container) to the spec node(s) it matches — by name
@@ -99,6 +98,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   is realized by any one of its alternatives / members. The path is always
   tested as the top of `spec`, never an inner node. (Checking whether a path
   or sub-spec is *contained* within a spec is a separate future capability.)
+- `kaparoo.filesystem.hierarchy.scaffold(tree, root)`: the write operation —
+  creates the structure a spec describes under `root` (the container, made if
+  absent) and returns the newly created paths in creation order. Only
+  *enumerable* nodes are materialized: a node is creatable when its `name` is
+  an `Expandable` filter (`Literal` / `OneOf` / `Template` / `Without` and the
+  `str` / `list[str]` sugar) **and** it sits at a fixed `depth` of 1; open
+  names (`Glob`, `Regex`) and non-fixed depths are acceptance patterns, so
+  they are skipped when optional and raise when `required`. `Together` creates
+  all members (all-or-nothing — a non-creatable member skips the whole set
+  unless `required`); `Exclusive` creates the first fully-creatable
+  alternative (declaration order is the priority). Files are created empty;
+  creation is idempotent (existing directories are descended, existing files
+  never clobbered) and a wrong-kind path is a conflict that raises. Pass
+  `dry_run=True` to return the paths that *would* be created without touching
+  disk (a faithful preview that still raises on an unsatisfiable `required`).
 - `kaparoo.filesystem.hierarchy.conditions`: a declarative, serializable
   condition DSL over a matched path's filesystem attributes (the `Path`-level
   counterpart of `kaparoo.filters`). `File` / `Directory` take a keyword-only

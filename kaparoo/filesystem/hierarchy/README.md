@@ -5,13 +5,11 @@ and files as immutable objects, with names drawn from the
 [`kaparoo.filters`](../../filters/) DSL so a single node can stand for a
 run of regularly-named siblings.
 
-> **Scope.** Today this package is the *representation* plus name-level
-> semantics (filter `matches` and, where applicable, `expand`) and the
-> read-only disk operations [`match`](#matching-match),
-> [`validate`](#validation-validate), and
-> [`conforms`](#filtering-paths-conforms). The remaining operation it is
-> designed to drive — scaffolding a new tree on disk — is not implemented
-> yet.
+> **Scope.** This package is the *representation* plus name-level semantics
+> (filter `matches` and, where applicable, `expand`) and the disk
+> operations [`match`](#matching-match),
+> [`validate`](#validation-validate), [`conforms`](#filtering-paths-conforms)
+> (read), and [`scaffold`](#scaffolding-scaffold) (write).
 
 ## Nodes
 
@@ -221,8 +219,9 @@ Exclusive(
 )
 ```
 
-`on_conflict` is part of the spec, so it serializes and feeds future write
-operations (a resolved `Exclusive` has a single, deterministic choice).
+`on_conflict` is part of the spec, so it serializes and the same priority
+also drives [`scaffold`](#scaffolding-scaffold), which creates the first
+alternative (a resolved `Exclusive` has a single, deterministic choice).
 
 ## Co-occurrence: `Together`
 
@@ -258,11 +257,12 @@ The structured view (`alternatives` / `members`) keeps the nesting;
 
 ## Enumerable names
 
-A node's name can be any filter, but **scaffolding** (creating the tree
-on disk) needs names it can *list*, not just *match*. Those are the
-`Expandable` filters from [`kaparoo.filters`](../../filters/) — `Literal`,
-`OneOf`, and `Template`. Open-ended filters (`Glob`, `Regex`, ...) match
-but cannot enumerate, so they describe structure for matching only.
+A node's name can be any filter, but [**scaffolding**](#scaffolding-scaffold)
+(creating the tree on disk) needs names it can *list*, not just *match*.
+Those are the `Expandable` filters from [`kaparoo.filters`](../../filters/) —
+`Literal`, `OneOf`, `Template`, and `Without`. Open-ended filters (`Glob`,
+`Regex`, ...) match but cannot enumerate, so they describe structure for
+matching only.
 
 ```python
 from kaparoo.filters import Expandable, Glob, Literal
@@ -440,6 +440,45 @@ accepts a conforming `dataset/` directory, not the files inside it. (File
 *attribute* conditions — size, mtime, … — are planned and will tighten the
 file case. Checking whether a concrete path or sub-spec is *contained*
 anywhere within a spec is a separate, future capability.)
+
+## Scaffolding: `scaffold`
+
+`scaffold(tree, root)` is the **write** counterpart of `match` / `validate`:
+it creates on disk the structure the spec describes, under `root` (the
+container, created if absent), and returns the newly created paths:
+
+```python
+from kaparoo.filesystem.hierarchy import Directory, Exclusive, File, scaffold
+from kaparoo.filters import Glob, Template
+
+spec = Directory("project", [
+    File("README.md"),
+    Directory(["train", "val"], [File("data.csv")]),     # both subtrees
+    File(Template("shard_{:02d}.bin", range(4))),         # shard_00 … shard_03
+    Exclusive(File("pyproject.toml"), File("setup.py")),  # the first one
+    File(Glob("*.log")),                                  # open → skipped
+])
+scaffold(spec, "/tmp/out")          # creates the tree, returns new paths
+scaffold(spec, "/tmp/out", dry_run=True)   # preview only, touches nothing
+```
+
+Only **enumerable** nodes are materialized: a node is creatable when its
+name is an `Expandable` filter (`Literal` / `OneOf` / `Template` / `Without`,
+and the `str` / `list[str]` sugar) **and** it sits at a fixed `depth` of 1.
+Open names (`Glob`, `Regex`) and non-fixed depths are *acceptance patterns*,
+not generators — they are **skipped** when optional, but a `required` one
+cannot be satisfied and raises. `Together` creates all its members
+(all-or-nothing — a non-creatable member skips the whole set unless
+`required`); `Exclusive` creates the **first fully-creatable alternative**
+(declaration order is the priority, the same rule as
+[`on_conflict`](#resolving-conflicts-by-priority-on_conflict)).
+
+Files are created **empty** (the skeleton, not its contents). Creation is
+**idempotent**: an existing directory is descended unchanged and an existing
+file is never clobbered, so only newly created paths are returned and a
+re-run is a no-op. A path that exists with the wrong kind (a file where a
+directory is described, or vice versa) is a conflict and raises. `dry_run`
+runs every check but no write, returning the paths that *would* be created.
 
 ## See also
 
