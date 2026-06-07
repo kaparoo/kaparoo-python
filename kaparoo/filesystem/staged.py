@@ -15,8 +15,9 @@ from typing import TYPE_CHECKING, cast, overload
 from kaparoo.filesystem.utils import reserve_path
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from types import TracebackType
-    from typing import IO, Literal, Self
+    from typing import IO, ClassVar, Literal, Self
 
     from kaparoo.filesystem.types import StrPath
 
@@ -87,15 +88,23 @@ class StagedTarget(ABC):
     `commit`. Excluded from `__all__` -- use `StagedFile` or `StagedDirectory`.
     """
 
-    __slots__ = ("__weakref__", "_committed", "_finalizer")
+    __slots__ = ("__weakref__", "_committed", "_finalizer", "_overwrite", "_path")
 
     _committed: bool
     _finalizer: weakref.finalize
+    _overwrite: bool
+    _path: Path
+    _noun: ClassVar[str]  # what an abort error calls this target ("writer", ...)
 
     @property
     def committed(self) -> bool:
         """Whether the staged content has been committed to the destination."""
         return self._committed
+
+    @property
+    def path(self) -> Path:
+        """The destination path the staged content commits to."""
+        return self._path
 
     @abstractmethod
     def commit(self) -> Path:
@@ -110,6 +119,36 @@ class StagedTarget(ABC):
         if self._committed:
             return
         self._finalizer()
+
+    def _begin_commit(self) -> bool:
+        """Guard the commit entry; return True when it is a no-op (committed).
+
+        Raises:
+            ValueError: If the target was aborted.
+        """
+        if self._committed:
+            return True
+        if not self._finalizer.alive:
+            msg = f"cannot commit an aborted {self._noun}"
+            raise ValueError(msg)
+        return False
+
+    def _resolve_commit_mode(self, default: Callable[[], int]) -> int:
+        """The committed path's mode: inherit the replaced one, else `default()`.
+
+        `default` is called only when nothing is inherited, so its umask read is
+        skipped when overwriting an existing path.
+        """
+        if self._overwrite:
+            with contextlib.suppress(OSError):
+                return stat.S_IMODE(self._path.stat().st_mode)
+        return default()
+
+    def _finish_commit(self) -> Path:
+        """Mark committed, release the finalizer, and return the destination."""
+        self._committed = True
+        self._finalizer.detach()
+        return self._path
 
     def __enter__(self) -> Self:
         return self
@@ -168,12 +207,9 @@ class StagedFile[AnyStrT: (str, bytes)](StagedTarget):
     directory must already exist, unless `make_parents=True`.
     """
 
-    __slots__ = (
-        "_file",
-        "_overwrite",
-        "_path",
-        "_temp_path",
-    )
+    __slots__ = ("_file", "_temp_path")
+
+    _noun = "writer"
 
     @overload
     def __init__(
@@ -246,11 +282,6 @@ class StagedFile[AnyStrT: (str, bytes)](StagedTarget):
         )
 
     @property
-    def path(self) -> Path:
-        """The destination path the staged content commits to."""
-        return self._path
-
-    @property
     def file(self) -> IO[AnyStrT]:
         """The underlying open file object (full file API).
 
@@ -293,11 +324,8 @@ class StagedFile[AnyStrT: (str, bytes)](StagedTarget):
                 appeared after this writer opened. The staged file is
                 discarded and the existing file is left intact.
         """
-        if self._committed:
+        if self._begin_commit():
             return self._path
-        if not self._finalizer.alive:
-            msg = "cannot commit an aborted writer"
-            raise ValueError(msg)
         if self._file.closed:
             msg = "cannot commit: the underlying file was closed externally"
             raise ValueError(msg)
@@ -307,13 +335,7 @@ class StagedFile[AnyStrT: (str, bytes)](StagedTarget):
         self._file.flush()
         os.fsync(self._file.fileno())
         self._file.close()
-        mode = _default_file_mode()
-        if self._overwrite:
-            # Inherit the replaced file's mode; fall back to the default when
-            # the destination does not exist yet.
-            with contextlib.suppress(OSError):
-                mode = stat.S_IMODE(self._path.stat().st_mode)
-        self._temp_path.chmod(mode)
+        self._temp_path.chmod(self._resolve_commit_mode(_default_file_mode))
         if self._overwrite:
             self._temp_path.replace(self._path)
         else:
@@ -337,9 +359,7 @@ class StagedFile[AnyStrT: (str, bytes)](StagedTarget):
             else:
                 self._temp_path.unlink()
         _fsync_parent(self._path)
-        self._committed = True
-        self._finalizer.detach()
-        return self._path
+        return self._finish_commit()
 
 
 class StagedDirectory(StagedTarget):
@@ -386,11 +406,9 @@ class StagedDirectory(StagedTarget):
     collection.
     """
 
-    __slots__ = (
-        "_overwrite",
-        "_path",
-        "_workdir",
-    )
+    __slots__ = ("_workdir",)
+
+    _noun = "staged directory"
 
     def __init__(
         self,
@@ -423,11 +441,6 @@ class StagedDirectory(StagedTarget):
         self._finalizer = weakref.finalize(self, _discard_dir, self._workdir)
 
     @property
-    def path(self) -> Path:
-        """The destination path the staged directory commits to."""
-        return self._path
-
-    @property
     def workdir(self) -> Path:
         """The staging directory to populate before commit."""
         return self._workdir
@@ -448,11 +461,8 @@ class StagedDirectory(StagedTarget):
             OSError: If replacing an existing directory and moving the staged
                 one into place fails; the original is restored first.
         """
-        if self._committed:
+        if self._begin_commit():
             return self._path
-        if not self._finalizer.alive:
-            msg = "cannot commit an aborted staged directory"
-            raise ValueError(msg)
         exists = self._path.exists()
         if exists:
             if not self._overwrite:
@@ -464,13 +474,7 @@ class StagedDirectory(StagedTarget):
             if not self._path.is_dir():
                 msg = f"not a directory: {self._path}"
                 raise NotADirectoryError(msg)
-        mode = _default_dir_mode()
-        if self._overwrite:
-            # Inherit the replaced directory's mode; fall back to the default
-            # when the destination does not exist yet.
-            with contextlib.suppress(OSError):
-                mode = stat.S_IMODE(self._path.stat().st_mode)
-        self._workdir.chmod(mode)
+        self._workdir.chmod(self._resolve_commit_mode(_default_dir_mode))
         if exists:
             # Replacing an existing directory. There is no portable atomic
             # directory replace, so swap the old one aside, move the staged one
@@ -490,6 +494,4 @@ class StagedDirectory(StagedTarget):
         else:
             self._workdir.rename(self._path)
         _fsync_parent(self._path)
-        self._committed = True
-        self._finalizer.detach()
-        return self._path
+        return self._finish_commit()

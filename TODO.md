@@ -44,10 +44,6 @@ fold's `initial`).
 
 ### Review cleanups (refactor -- behavior-preserving)
 
-- **`StagedFile.commit` / `StagedDirectory.commit` repeat scaffolding** (the
-  committed guard, the `_finalizer.alive` check, the inherit-mode block).
-  Lift a `StagedTarget._begin_commit()` + `_resolve_commit_mode(default)`;
-  also compute the umask-reading default only in the branch that uses it.
 - **`_ensure_directory_target` does 2-3 stats per path in `make_dirs`** --
   apply the single-`exists`-then-`is_dir` shape (per-path only; caching
   `is_dir` across the validate->create gap changes behavior for nested
