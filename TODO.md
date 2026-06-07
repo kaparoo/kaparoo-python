@@ -42,6 +42,20 @@ already tracks its own weight in its state (`Mean`'s `total_weight`,
 reductions that discard weight. Revisit only if a concrete need for a
 uniform per-metric input weight appears.
 
+### `Min` / `Max` / `Last` duplication (refactor — deferred)
+
+The three "optional float" reductions repeat the same shape: a `float |
+None` state, `result` projecting `None -> nan`, and a `merge` with `None`
+as the identity (`if a is None: return b` / `if b is None: return a`). A
+small `_OptionalFold` mixin (state `float | None`, the shared `merge` /
+`result`, an abstract `_combine`) would remove ~20 lines. Deferred:
+`aggregate` is experimental, so hold the extra hierarchy layer until the
+API stabilizes -- and add a one-line comment on `Min` / `Max` explaining
+why they are *not* `Fold(min, inf)` / `Fold(max, -inf)` (their empty case
+is `nan`, not the fold's `initial`), so a future maintainer does not
+"simplify" them away. (The positive-weight contract from the review is
+already documented on `Reduction`.)
+
 ---
 
 ## 🌳 `kaparoo.filesystem.hierarchy`
@@ -146,7 +160,48 @@ precompute, search `stringify_path` guard). Remaining:
 
 ---
 
+## 🗂️ `kaparoo.filesystem`
+
+### Cleanups from the workspace review (refactor — deferred)
+
+Behavior-preserving tidy-ups; low urgency, deferred to avoid churn:
+
+- **`Search._filter_part` / `_filter_name` are byte-identical** and the
+  None-guard inside them is already re-checked at the call sites
+  (`Search.run` guards `part_filter is None`; `_filter_names` guards before
+  calling `_filter_name`), so those `if filter is None` branches are dead on
+  the real path. Collapse to one `_matches(name, filter)` helper, dropping
+  ~10 lines and the `# noqa: A002` shadow-builtin suppressions.
+- **`StagedFile.commit` / `StagedDirectory.commit` repeat scaffolding** --
+  the `if self._committed: return` guard, the `_finalizer.alive` check, and
+  the inherit-mode (`_default_*_mode()` + `contextlib.suppress(OSError)`)
+  block. Lift a `StagedTarget._begin_commit()` guard and a
+  `_resolve_commit_mode(default)` helper so each `commit` keeps only its
+  genuinely different middle (atomic file move vs directory swap). Also
+  reorder so the umask-reading default mode is computed only in the branch
+  that uses it (skip it on the `overwrite=True` + existing-dest path).
+- **`_ensure_directory_target` still does 2–3 stats per path in
+  `make_dirs`** (the `make_dir` redundant-stat was already addressed). Apply
+  the same single-`exists`-then-`is_dir` shape, threading the result through
+  the validate→create loop -- but note caching `is_dir` across that gap can
+  change behavior for overlapping / nested path lists (see the `make_dir`
+  commit), so only the per-path stat collapse is safe, not cross-pass reuse.
+
+---
+
 ## 🧱 `kaparoo.data.sequences`
+
+### Index-resolution consistency (doc — deferred)
+
+`SlicedSequence` resolves indices by **tuple semantics** (negative wraps
+against the slice length, out-of-range raises a bare `IndexError`), while
+`ConcatSequence` / `WindowedSequence` / `ZippedSequence` use `_resolve_index`
+(`IndexError("index {i} out of range for length {n}")`) and
+`TransformedSequence` forwards the raw index to its source. The behaviors
+agree in spirit but the *error messages* differ. It is defensible (and
+partly documented on `SlicedSequence`), but note in `_resolve_index`'s
+docstring that `SlicedSequence` intentionally opts out, so the divergence is
+discoverable.
 
 ### Batch-delegating `get_items` on `ConcatSequence` (perf)
 
