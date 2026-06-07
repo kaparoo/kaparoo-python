@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from typing import Any, Self
 
 
-class _Frozen:
+class Frozen:
     """Re-establish frozen semantics for a non-`@dataclass` `Expandable`.
 
     `Template` / `Without` take varargs, so they cannot be `@dataclass` and
@@ -126,7 +126,7 @@ class OneOf(Expandable):
 
 
 @register_filter("template")
-class Template(_Frozen, Expandable):
+class Template(Frozen, Expandable):
     """A filter enumerating `template.format(*combo)` over value `axes`.
 
     A single axis condenses a run of regularly-named siblings --
@@ -212,7 +212,7 @@ def _as_filter(value: str | Filter) -> Filter:
 
 
 @register_filter("without")
-class Without(_Frozen, Expandable):
+class Without(Frozen, Expandable):
     """`base` minus every name matching any of `excluded`.
 
     The `Expandable` form of `And(base, Not(...))`: it both *matches* and

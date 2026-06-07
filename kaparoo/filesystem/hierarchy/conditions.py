@@ -125,7 +125,7 @@ class Condition(ABC):
 
 
 @dataclass(frozen=True)
-class _Bound(Condition, ABC):
+class Bound(Condition, ABC):
     """A condition on an integer measurement within an inclusive range.
 
     The shared base of `Size` (a file's bytes) and `ChildCount` (a
@@ -172,7 +172,7 @@ class _Bound(Condition, ABC):
 
 @register_condition("size")
 @dataclass(frozen=True)
-class Size(_Bound):
+class Size(Bound):
     """An inclusive bound, in bytes, on a file's size (`min` / `max`)."""
 
     def _measure(self, path: Path) -> int:
@@ -181,7 +181,7 @@ class Size(_Bound):
 
 @register_condition("child_count")
 @dataclass(frozen=True)
-class ChildCount(_Bound):
+class ChildCount(Bound):
     """An inclusive bound on a directory's number of entries (`min` / `max`)."""
 
     def _measure(self, path: Path) -> int:
