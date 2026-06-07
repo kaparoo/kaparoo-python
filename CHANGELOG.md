@@ -85,8 +85,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Exclusive` with more than one side present, or a partly-present
   `Together`). `report.ok` (and its truthiness) is `True` only when the
   last three are empty. A `required` enumerable name (`OneOf` / `Template`)
-  is satisfied by at least one present match. Also exports the
-  `ValidationReport` and `Violation` result types.
+  is satisfied by at least one present match. `validate` also accepts the
+  same `exclude=` as `match`, so excluded paths are dropped from `matched`
+  and not reported `unexpected`. Also exports the `ValidationReport` and
+  `Violation` result types.
 - `kaparoo.filesystem.hierarchy.conforms(spec)`: builds a path predicate (a
   `search` predicate) that accepts a path realizing `spec`'s *top* node — a
   file matching a top `File`'s name, or a directory matching a top

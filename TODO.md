@@ -68,15 +68,13 @@ stateless filters; `match` *checks / maps* a real tree against a known
 structural spec (depth, constraints, presence). They share `kaparoo.filters`
 and may share traversal, but answer different questions.
 
-### `match` path exclusion (`exclude=`) — follow-ups
+### `match` path exclusion (`exclude=`) — follow-up
 
-`match` / `match_map` now take `exclude=` (a `StrPath` or
+`match` / `match_map` / `validate` take `exclude=` (a `StrPath` or
 `Callable[[Path], bool]`, or an iterable of them, over the **root-relative**
-path; a dropped directory is pruned). Remaining:
+path; a dropped directory is pruned, and excluded paths are not reported
+`unexpected`). Remaining:
 
-- **`validate` does not forward `exclude=`** yet, so excluded paths would
-  still be reported `unexpected`. Thread it through `_build_report` /
-  `_unexpected` when validation needs to ignore the same cells.
 - **`Node` / sub-spec excluder** stays deferred: it would need an extra
   `match` pass and terminal-node rules, and its main draw (declarative +
   serializable) barely applies since `exclude` lives on the call, not the

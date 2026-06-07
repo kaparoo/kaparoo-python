@@ -174,3 +174,26 @@ class TestConforms:
     def test_childless_directory_with_contents_rejected(self, tmp_path: Path) -> None:
         build(tmp_path, ["logs/a.txt"])
         assert not conforms(Directory("logs"))(tmp_path / "logs")
+
+
+class TestValidateExclude:
+    def test_excluded_path_neither_matched_nor_unexpected(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/a.txt", "d/b.txt"])
+        spec = Directory("d", [File(Glob("*.txt"))])
+        report = validate(spec, tmp_path, exclude=["d/b.txt"])
+        assert (tmp_path / "d" / "b.txt") not in report.matched  # dropped
+        assert report.unexpected == ()  # and not reported as unexpected
+        assert report.ok
+
+    def test_exclude_silences_an_unexpected_file(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/a.txt", "d/junk.txt"])
+        spec = Directory("d", [File("a.txt")])
+        assert not validate(spec, tmp_path).ok  # junk.txt is unexpected
+        assert validate(spec, tmp_path, exclude=["d/junk.txt"]).ok
+
+    def test_exclude_silences_an_unexpected_directory(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/a.txt", "d/scratch/x.txt"])
+        spec = Directory("d", [File("a.txt")])
+        report = validate(spec, tmp_path, exclude=["d/scratch"])
+        assert report.ok
+        assert (tmp_path / "d" / "scratch") not in report.unexpected

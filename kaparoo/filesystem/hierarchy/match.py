@@ -59,7 +59,7 @@ def match(
         order, a path's overlapping nodes in spec order.
     """
     root_path = Path(root)
-    excluded = _build_excluder(exclude, root_path)
+    excluded = build_excluder(exclude, root_path)
     pairs = _match_children((tree,), root_path, excluded)
     if not unique:
         yield from pairs
@@ -91,7 +91,7 @@ def match_map(
     return {path: tuple(nodes) for path, nodes in grouped.items()}
 
 
-def _build_excluder(
+def build_excluder(
     exclude: Excluder | Iterable[Excluder] | None, root: Path
 ) -> Callable[[Path], bool] | None:
     """Normalize `exclude` to one predicate over an absolute candidate path.
@@ -99,6 +99,7 @@ def _build_excluder(
     The predicate relativizes the candidate to `root` and tests it against
     the collected concrete paths (set membership) and callables (each given
     the root-relative `Path`). Returns `None` when nothing is excluded.
+    Shared with `validate`, which reuses it to skip excluded paths.
     """
     if exclude is None:
         return None

@@ -13,12 +13,13 @@ from kaparoo.filesystem.hierarchy.group import (
     Together,
     flatten_entries,
 )
-from kaparoo.filesystem.hierarchy.match import match_map
+from kaparoo.filesystem.hierarchy.match import build_excluder, match_map
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
 
     from kaparoo.filesystem.hierarchy.base import Node
+    from kaparoo.filesystem.hierarchy.match import Excluder
     from kaparoo.filesystem.types import StrPath
 
 
@@ -62,16 +63,23 @@ class ValidationReport:
         return self.ok
 
 
-def validate(tree: Node, root: StrPath) -> ValidationReport:
+def validate(
+    tree: Node,
+    root: StrPath,
+    *,
+    exclude: Excluder | Iterable[Excluder] | None = None,
+) -> ValidationReport:
     """Check the directory at `root` (the container, as in `match`) against
     the spec `tree`, returning a `ValidationReport`.
 
     A path is `unexpected` when it is neither matched nor an ancestor of a
     match, so an unspecified directory's contents count too. A `required`
     enumerable name (`OneOf` / `Template`) is satisfied by *at least one*
-    present match.
+    present match. `exclude` is as in `match`: excluded paths are dropped
+    from `matched` and are not reported `unexpected` (a dropped directory is
+    pruned).
     """
-    return _build_report((tree,), Path(root))
+    return _build_report((tree,), Path(root), exclude)
 
 
 def conforms(spec: Node) -> Callable[[StrPath], bool]:
@@ -114,9 +122,13 @@ def _node_conforms(entry: Entry, path: Path) -> bool:
     return _build_report(directory.children, path).ok
 
 
-def _build_report(top_nodes: tuple[Node, ...], root_path: Path) -> ValidationReport:
+def _build_report(
+    top_nodes: tuple[Node, ...],
+    root_path: Path,
+    exclude: Excluder | Iterable[Excluder] | None = None,
+) -> ValidationReport:
     """Validate `top_nodes` matched directly under `root_path`."""
-    matched = _merge_matched(top_nodes, root_path)
+    matched = _merge_matched(top_nodes, root_path, exclude)
     present: set[Node] = {node for nodes in matched.values() for node in nodes}
 
     missing: list[Node] = []
@@ -134,21 +146,24 @@ def _build_report(top_nodes: tuple[Node, ...], root_path: Path) -> ValidationRep
                 if group_missing:
                     missing.append(group)
 
+    excluded = build_excluder(exclude, root_path)
     return ValidationReport(
         matched=matched,
-        unexpected=tuple(_unexpected(root_path, matched)),
+        unexpected=tuple(_unexpected(root_path, matched, excluded)),
         missing=tuple(missing),
         violations=tuple(violations),
     )
 
 
 def _merge_matched(
-    top_nodes: tuple[Node, ...], root_path: Path
+    top_nodes: tuple[Node, ...],
+    root_path: Path,
+    exclude: Excluder | Iterable[Excluder] | None,
 ) -> dict[Path, tuple[Node, ...]]:
     """Union the `match_map` of each top node, by path (spec order kept)."""
     merged: dict[Path, tuple[Node, ...]] = {}
     for node in top_nodes:
-        for path, nodes in match_map(node, root_path).items():
+        for path, nodes in match_map(node, root_path, exclude=exclude).items():
             merged[path] = merged.get(path, ()) + nodes
     return merged
 
@@ -174,28 +189,36 @@ def _check_group(group: Group, present: set[Node]) -> tuple[Violation | None, bo
     return None, together.required and not present_members
 
 
-def _unexpected(root_path: Path, matched: dict[Path, tuple[Node, ...]]) -> list[Path]:
+def _unexpected(
+    root_path: Path,
+    matched: dict[Path, tuple[Node, ...]],
+    excluded: Callable[[Path], bool] | None,
+) -> list[Path]:
     """List paths under `root_path` matching no node (subtrees included).
 
-    A path is unexpected unless it is matched or an ancestor of a match;
-    an unexpected directory is reported once and not descended.
+    A path is unexpected unless it is matched or an ancestor of a match; an
+    unexpected directory is reported once and not descended. An `excluded`
+    path is neither reported nor descended (it was dropped on purpose).
     """
     allowed: set[Path] = set(matched)
     for path in matched:
         allowed.update(path.parents)
 
+    def keep(candidate: Path) -> bool:
+        return candidate in allowed or (excluded is not None and excluded(candidate))
+
     result: list[Path] = []
     for dirpath, dirnames, filenames in root_path.walk(top_down=True):
         for name in filenames:
             candidate = dirpath / name
-            if candidate not in allowed:
+            if not keep(candidate):
                 result.append(candidate)
         kept: list[str] = []
         for name in dirnames:
             candidate = dirpath / name
             if candidate in allowed:
-                kept.append(name)
-            else:
+                kept.append(name)  # descend (matched dir or ancestor of a match)
+            elif not keep(candidate):  # not allowed, not excluded -> report and prune
                 result.append(candidate)
         dirnames[:] = kept
     return result
