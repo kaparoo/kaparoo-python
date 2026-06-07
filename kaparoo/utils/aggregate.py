@@ -315,8 +315,7 @@ class Aggregator:
         """
         self._default: Reduction[Any] = Mean() if reduction is None else reduction
         self._overrides: dict[str, Reduction[Any]] = dict(overrides or {})
-        self._reductions: dict[str, Reduction[Any]] = {}
-        self._states: dict[str, Any] = {}
+        self._metrics: dict[str, tuple[Reduction[Any], Any]] = {}
         self._weight: float = 0.0
 
     def update(self, values: Mapping[str, float], *, weight: float = 1.0) -> None:
@@ -334,27 +333,28 @@ class Aggregator:
             msg = f"weight must be positive (got {weight})"
             raise ValueError(msg)
 
+        metrics = self._metrics
         for key, value in values.items():
-            reduction = self._reductions.get(key)
-            if reduction is None:
+            entry = metrics.get(key)
+            if entry is None:
                 reduction = self._overrides.get(key, self._default)
-                self._reductions[key] = reduction
-                self._states[key] = reduction.identity()
-            self._states[key] = reduction.step(self._states[key], value, weight)
+                state = reduction.identity()
+            else:
+                reduction, state = entry
+            metrics[key] = (reduction, reduction.step(state, value, weight))
 
         self._weight += weight
 
     def compute(self) -> dict[str, float]:
         """Project every accumulated metric to its final scalar."""
         return {
-            key: self._reductions[key].result(state)
-            for key, state in self._states.items()
+            key: reduction.result(state)
+            for key, (reduction, state) in self._metrics.items()
         }
 
     def reset(self) -> None:
         """Clear all accumulated state, keeping the reduction configuration."""
-        self._reductions.clear()
-        self._states.clear()
+        self._metrics.clear()
         self._weight = 0.0
 
     def state(self) -> dict[str, tuple[Reduction[Any], Any]]:
@@ -363,7 +363,7 @@ class Aggregator:
         States are immutable, so the snapshot is safe to keep or restore --
         useful for `merge` and for checkpointing a long run.
         """
-        return {key: (self._reductions[key], self._states[key]) for key in self._states}
+        return dict(self._metrics)
 
     def merge(self, other: Aggregator) -> None:
         """Fold another `Aggregator`'s state into this one, in place.
@@ -379,18 +379,19 @@ class Aggregator:
         Raises:
             ValueError: If a shared metric's reductions differ.
         """
-        for key, (reduction, other_state) in other.state().items():
-            if key not in self._states:
-                self._reductions[key] = reduction
-                self._states[key] = other_state
+        for key, (reduction, other_state) in other._metrics.items():
+            entry = self._metrics.get(key)
+            if entry is None:
+                self._metrics[key] = (reduction, other_state)
                 continue
-            if self._reductions[key] != reduction:
+            own_reduction, own_state = entry
+            if own_reduction != reduction:
                 msg = (
                     f"cannot merge metric {key!r}: reductions differ "
-                    f"({self._reductions[key]} vs {reduction})"
+                    f"({own_reduction} vs {reduction})"
                 )
                 raise ValueError(msg)
-            self._states[key] = reduction.merge(self._states[key], other_state)
+            self._metrics[key] = (own_reduction, own_reduction.merge(own_state, other_state))
 
         self._weight += other.weight
 
