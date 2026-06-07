@@ -59,16 +59,4 @@ fold's `initial`).
 
 ---
 
-## 🧱 `kaparoo.data.sequences`
-
-### `SlicedSequence` index-resolution note (doc)
-
-`SlicedSequence` resolves indices by tuple semantics (negative wraps, a bare
-`IndexError`), unlike the `_resolve_index` users (Concat / Windowed / Zipped)
-and `TransformedSequence` (forwards to its source). Behaviors agree but
-messages differ -- note in `_resolve_index`'s docstring that `SlicedSequence`
-intentionally opts out.
-
----
-
 *Last updated: 2026-06-07*
