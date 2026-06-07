@@ -94,9 +94,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   file matching a top `File`'s name, or a directory matching a top
   `Directory`'s name whose subtree conforms (via `validate`); a top `Group`
   is realized by any one of its alternatives / members. The path is always
-  tested as the top of `spec`, never an inner node. (File attribute
-  conditions, planned, will tighten the file case; checking whether a path
+  tested as the top of `spec`, never an inner node. (Checking whether a path
   or sub-spec is *contained* within a spec is a separate future capability.)
+- `kaparoo.filesystem.hierarchy.conditions`: a declarative, serializable
+  condition DSL over a matched path's filesystem attributes (the `Path`-level
+  counterpart of `kaparoo.filters`). `File` / `Directory` take a keyword-only
+  `condition`; `validate` checks it on each matched path and lists the
+  failures in `report.failed` (and `report.ok` requires it empty), while
+  `match` stays purely structural. Conditions: `Size` and `ChildCount`
+  (inclusive `min` / `max`), polymorphic `Empty` / `NonEmpty`, `Content` (a
+  named content hook), and `And` / `Or` / `Not`. Arbitrary content checks —
+  unserializable as callables — are referenced by `Content("name")` (only
+  the name is stored) and supplied to `validate` / `conforms` as
+  `checks={name: callable}`; an absent name is governed by
+  `on_missing="error" | "skip"`. The metadata conditions round-trip through
+  `to_dict` / `from_dict`.
 
 ### Changed
 

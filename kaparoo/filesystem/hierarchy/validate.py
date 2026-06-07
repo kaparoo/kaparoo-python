@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
 
+from kaparoo.filesystem.hierarchy.conditions import CheckContext
 from kaparoo.filesystem.hierarchy.entry import Directory, Entry, File
 from kaparoo.filesystem.hierarchy.group import (
     Exclusive,
@@ -16,11 +17,16 @@ from kaparoo.filesystem.hierarchy.group import (
 from kaparoo.filesystem.hierarchy.match import build_excluder, match_map
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Iterator
+    from collections.abc import Callable, Iterable, Iterator, Mapping
 
     from kaparoo.filesystem.hierarchy.base import Node
     from kaparoo.filesystem.hierarchy.match import Excluder
     from kaparoo.filesystem.types import StrPath
+
+    type ContentChecks = Mapping[str, Callable[[Path], bool]]
+
+
+_NO_CHECKS = CheckContext()
 
 
 @dataclass(frozen=True)
@@ -45,19 +51,21 @@ class ValidationReport:
     `matched` maps each on-disk path to the node(s) it matched (exactly
     `match_map`); `unexpected` are paths matching no node; `missing` are
     `required` entries / groups left unsatisfied; `violations` are broken
-    `Exclusive` / `Together` constraints. `ok` -- and the report's
-    truthiness -- is `True` only when `unexpected`, `missing`, and
-    `violations` are all empty.
+    `Exclusive` / `Together` constraints; `failed` are `(path, node)` pairs
+    where the matched path broke the node's attribute `condition`. `ok` --
+    and the report's truthiness -- is `True` only when `unexpected`,
+    `missing`, `violations`, and `failed` are all empty.
     """
 
     matched: dict[Path, tuple[Node, ...]]
     unexpected: tuple[Path, ...]
     missing: tuple[Node, ...]
     violations: tuple[Violation, ...]
+    failed: tuple[tuple[Path, Node], ...]
 
     @property
     def ok(self) -> bool:
-        return not (self.unexpected or self.missing or self.violations)
+        return not (self.unexpected or self.missing or self.violations or self.failed)
 
     def __bool__(self) -> bool:
         return self.ok
@@ -68,6 +76,8 @@ def validate(
     root: StrPath,
     *,
     exclude: Excluder | Iterable[Excluder] | None = None,
+    checks: ContentChecks | None = None,
+    on_missing: Literal["error", "skip"] = "error",
 ) -> ValidationReport:
     """Check the directory at `root` against the spec `tree`.
 
@@ -79,53 +89,72 @@ def validate(
     listed names exists, not all. `exclude` is as in `match`: excluded paths
     are dropped from `matched` and not reported `unexpected` (a dropped
     directory is pruned).
+
+    An entry's attribute `condition` is checked on each matched path and the
+    failures collected in `report.failed`. `checks` supplies the callables
+    for `Content` conditions (keyed by name); `on_missing` decides what
+    happens when a `Content` name is absent (`"error"` raises, `"skip"`
+    treats it as satisfied).
     """
-    return _build_report((tree,), Path(root), exclude)
+    ctx = CheckContext(checks or {}, on_missing)
+    return _build_report((tree,), Path(root), exclude, ctx)
 
 
-def conforms(spec: Node) -> Callable[[StrPath], bool]:
+def conforms(
+    spec: Node,
+    *,
+    checks: ContentChecks | None = None,
+    on_missing: Literal["error", "skip"] = "error",
+) -> Callable[[StrPath], bool]:
     """Build a `search` predicate that accepts a path realizing `spec`'s top.
 
     The returned `Callable[[Path], bool]` accepts `path` when it realizes
-    the top of `spec`: a `File` whose name matches (and is a file), or a
-    `Directory` whose name matches *and* whose subtree conforms (via
-    `validate`); a top `Group` is realized by any one of its alternatives /
-    members. The path is always tested as the top of `spec`, never against
-    one of its inner nodes -- e.g. `conforms(Directory("dataset", [...]))`
-    accepts a conforming `dataset/` directory, not the files inside it.
+    the top of `spec`: a `File` whose name matches (and is a file) and whose
+    `condition` holds, or a `Directory` whose name matches, whose subtree
+    conforms (via `validate`), and whose `condition` holds; a top `Group` is
+    realized by any one of its alternatives / members. The path is always
+    tested as the top of `spec`, never against one of its inner nodes -- e.g.
+    `conforms(Directory("dataset", [...]))` accepts a conforming `dataset/`
+    directory, not the files inside it. `checks` / `on_missing` supply and
+    resolve `Content` conditions as in `validate`.
 
-    (File *attribute* conditions are planned and will tighten the file
-    case. Checking whether a concrete path or a sub-spec is *contained*
-    anywhere within a spec is a separate, future capability.)
+    (Checking whether a concrete path or a sub-spec is *contained* anywhere
+    within a spec is a separate, future capability.)
     """
+    ctx = CheckContext(checks or {}, on_missing)
 
     def check(path: StrPath) -> bool:
-        return _top_conforms(spec, Path(path))
+        return _top_conforms(spec, Path(path), ctx)
 
     return check
 
 
-def _top_conforms(node: Node, path: Path) -> bool:
+def _top_conforms(node: Node, path: Path, ctx: CheckContext) -> bool:
     """Whether `path` realizes `node` as the top of a spec."""
     if isinstance(node, Group):
-        return any(_node_conforms(entry, path) for entry in node.entries)
-    return _node_conforms(cast("Entry", node), path)
+        return any(_node_conforms(entry, path, ctx) for entry in node.entries)
+    return _node_conforms(cast("Entry", node), path, ctx)
 
 
-def _node_conforms(entry: Entry, path: Path) -> bool:
-    """Whether `path` realizes `entry` (a file match, or a conforming dir)."""
+def _node_conforms(entry: Entry, path: Path, ctx: CheckContext) -> bool:
+    """Whether `path` realizes `entry` (a file / conforming dir + condition)."""
     if isinstance(entry, File):
-        return path.is_file() and entry.name.matches(path.name)
-    directory = cast("Directory", entry)
-    if not (path.is_dir() and directory.name.matches(path.name)):
-        return False
-    return _build_report(directory.children, path).ok
+        structural = path.is_file() and entry.name.matches(path.name)
+    else:
+        directory = cast("Directory", entry)
+        structural = (
+            path.is_dir()
+            and directory.name.matches(path.name)
+            and _build_report(directory.children, path, ctx=ctx).ok
+        )
+    return structural and (entry.condition is None or entry.condition.check(path, ctx))
 
 
 def _build_report(
     top_nodes: tuple[Node, ...],
     root_path: Path,
     exclude: Excluder | Iterable[Excluder] | None = None,
+    ctx: CheckContext = _NO_CHECKS,
 ) -> ValidationReport:
     """Validate `top_nodes` matched directly under `root_path`."""
     matched = _merge_matched(top_nodes, root_path, exclude)
@@ -146,12 +175,22 @@ def _build_report(
                 if group_missing:
                     missing.append(group)
 
+    failed = tuple(
+        (path, node)
+        for path, nodes in matched.items()
+        for node in nodes
+        if isinstance(node, Entry)
+        and node.condition is not None
+        and not node.condition.check(path, ctx)
+    )
+
     excluded = build_excluder(exclude, root_path)
     return ValidationReport(
         matched=matched,
         unexpected=tuple(_unexpected(root_path, matched, excluded)),
         missing=tuple(missing),
         violations=tuple(violations),
+        failed=failed,
     )
 
 

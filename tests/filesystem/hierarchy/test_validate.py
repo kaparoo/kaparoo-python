@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 from kaparoo.filesystem.hierarchy import (
     Directory,
     Exclusive,
@@ -10,6 +12,7 @@ from kaparoo.filesystem.hierarchy import (
     conforms,
     validate,
 )
+from kaparoo.filesystem.hierarchy.conditions import Content, Size
 from kaparoo.filters import Glob, OneOf
 
 if TYPE_CHECKING:
@@ -204,6 +207,44 @@ class TestRequiredEnumerable:
         (tmp_path / "d").mkdir()
         node = File(OneOf(["train", "val"]), required=True)
         assert node in validate(Directory("d", [node]), tmp_path).missing
+
+
+class TestValidateCondition:
+    def test_failing_condition_is_reported(self, tmp_path: Path) -> None:
+        (tmp_path / "d").mkdir()
+        (tmp_path / "d" / "model.bin").write_bytes(b"")  # 0 bytes
+        node = File("model.bin", condition=Size(min=1))
+        report = validate(Directory("d", [node]), tmp_path)
+        assert not report.ok
+        assert (tmp_path / "d" / "model.bin", node) in report.failed
+
+    def test_passing_condition_is_ok(self, tmp_path: Path) -> None:
+        (tmp_path / "d").mkdir()
+        (tmp_path / "d" / "model.bin").write_bytes(b"x")  # 1 byte
+        spec = Directory("d", [File("model.bin", condition=Size(min=1))])
+        assert validate(spec, tmp_path).ok
+
+    def test_content_check_is_supplied_at_call_time(self, tmp_path: Path) -> None:
+        (tmp_path / "d").mkdir()
+        (tmp_path / "d" / "data.json").write_text("ok")
+        spec = Directory("d", [File("data.json", condition=Content("valid"))])
+        assert validate(
+            spec, tmp_path, checks={"valid": lambda p: p.read_text() == "ok"}
+        ).ok
+        assert not validate(spec, tmp_path, checks={"valid": lambda _: False}).ok
+
+    def test_missing_content_check_errors_or_skips(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/data.json"])
+        spec = Directory("d", [File("data.json", condition=Content("absent"))])
+        with pytest.raises(ValueError, match="no check supplied"):
+            validate(spec, tmp_path)  # on_missing defaults to "error"
+        assert validate(spec, tmp_path, on_missing="skip").ok
+
+    def test_conforms_checks_the_condition(self, tmp_path: Path) -> None:
+        (tmp_path / "f").write_bytes(b"")  # empty
+        assert not conforms(File("f", condition=Size(min=1)))(tmp_path / "f")
+        (tmp_path / "g").write_bytes(b"x")
+        assert conforms(File(Glob("*"), condition=Size(min=1)))(tmp_path / "g")
 
 
 class TestValidateExclude:

@@ -95,18 +95,20 @@ path; a dropped directory is pruned, and excluded paths are not reported
   serialized representation; the pattern case is covered by a callable.
   Revisit on concrete need.
 
-### Attribute conditions on `File` / `Directory`
+### Attribute conditions on `File` / `Directory` — landed; extensions deferred
 
-Beyond the name filter and the `required` presence flag, an entry may need
-*attribute* conditions on the actual filesystem object — file size,
-emptiness, extension, mtime; directory child count, etc. (needed for both
-files and directories).
+The `conditions` DSL has landed (`conditions.py`): `File` / `Directory`
+take a `condition`, `validate` checks it and reports `failed`, content
+checks go through the `Content` named hook + `validate(checks=...)`. New
+condition *kinds* can be added non-breakingly when a concrete need appears:
 
-Must stay **declarative and serializable** (the representation round-trips
-through `to_dict` / `from_dict`), so this is a small condition DSL over
-metadata, not an arbitrary Python callable (a lambda cannot be serialized
-or value-compared). Design alongside the matcher / validator, which is
-what consumes such conditions.
+- **`mtime` / age** — serializable as an absolute timestamp but
+  time/environment-dependent, so a poor fit for a value-compared spec;
+  cover one-offs via a `Content` callable for now.
+- **`Symlink(bool)`**, **`Checksum(algo, hex)`** (a serializable content
+  check), **`ChildCount(kind="file" | "dir")`** — all niche; defer.
+- **permissions / mode** — Windows ignores mode, so non-deterministic;
+  avoid.
 
 ### `required` default — decided: keep `False`
 

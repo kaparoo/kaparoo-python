@@ -106,8 +106,45 @@ reports a `missing` entry **only** for `required` ones. The default is
 deliberately opt-in: a pattern entry like `File(Glob("*.png"))` naturally
 means "zero or more", so describing a layout never *requires* anything
 until you say so. For an "everything listed must exist" layout, mark each
-entry `required=True`. (Attribute conditions — size, emptiness, ... — are a
-separate, planned feature; see `TODO.md`.)
+entry `required=True`.
+
+## Attribute conditions: `condition=`
+
+Beyond name, type, and presence, an entry can assert a `condition` on the
+matched path's filesystem attributes — a serializable `Condition` from
+[`conditions.py`](./conditions.py):
+
+```python
+from kaparoo.filesystem.hierarchy import Directory, File
+from kaparoo.filesystem.hierarchy.conditions import (
+    And, ChildCount, Content, NonEmpty, Size,
+)
+
+File("model.bin", condition=Size(min=1))                # at least one byte
+File("cache.tmp", condition=Size(max=0))                # an empty file
+Directory("data", condition=NonEmpty())                 # a non-empty directory
+Directory("shards", condition=ChildCount(min=8))        # 8+ entries
+File("a", condition=And((Size(min=1), Size(max=1000))))  # And / Or / Not compose
+```
+
+Conditions are a **validation** concern: `match` still maps paths by name /
+type / depth alone, while `validate` checks each matched path's `condition`
+and lists the failures in `report.failed` (`report.ok` requires it empty);
+`conforms` likewise requires the top node's `condition` to hold. The
+metadata conditions (`Size`, `ChildCount`, `Empty` / `NonEmpty`) are
+declarative and round-trip through `to_dict` / `from_dict`.
+
+For arbitrary file **content** checks — which a callable cannot serialize —
+`Content("name")` stores only a serializable reference; the callable is
+supplied at validation time, so the spec stays serializable and
+value-comparable:
+
+```python
+report = validate(spec, root, checks={"valid_schema": lambda p: ...})
+```
+
+When a `Content` name is absent from `checks`, `on_missing` decides:
+`"error"` (the default) raises, `"skip"` treats it as satisfied.
 
 ## Mutual exclusion: `Exclusive`
 
@@ -325,7 +362,8 @@ if not report:                     # truthy only when fully conformant
 | `unexpected` | paths matching no node (see below) |
 | `missing` | a `required` entry, or a `required` `Exclusive` / `Together` with nothing present |
 | `violations` | `Exclusive` with more than one side present, or `Together` only partly present |
-| `ok` | `True` (and the report is truthy) when the three above are empty |
+| `failed` | `(path, node)` pairs where the matched path broke the node's attribute [`condition`](#attribute-conditions-condition) |
+| `ok` | `True` (and the report is truthy) when the four above are empty |
 
 A path is **unexpected** unless it is matched or an ancestor of a match —
 so anything below an *unspecified* directory counts too (describe the
