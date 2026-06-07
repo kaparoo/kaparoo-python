@@ -49,29 +49,6 @@ fold's `initial`).
 `validate` / `conforms`. The lazy plan-vs-apply / early-stop design was
 discussed but parked for a closer look before building.
 
-### Deferred extensions
-
-- **`exclude=` `Node` / sub-spec excluder** -- a sub-spec whose terminal
-  nodes' matches are dropped. Needs an extra `match` pass + terminal rules,
-  and the declarative/serializable draw barely applies (exclude lives on the
-  call, not the representation; patterns are covered by a callable).
-- **More condition kinds** -- `mtime` / age (time-dependent; use a `Content`
-  callable for now), `Symlink`, `Checksum(algo, hex)`, `ChildCount(kind=)`;
-  mode is skipped (Windows ignores it). Each is a non-breaking new kind.
-- **Spec containment** -- `conforms` tests a path as the *top* node only;
-  whether a path or sub-spec is *contained* anywhere within a spec is a
-  separate future op (`contains(spec, path)` / `contains(spec, subspec)`).
-
-### Operation throughput (perf)
-
-- **`validate` walks the disk twice** (`match_map` spec-driven + `_unexpected`
-  disk-driven) -- a constant 2x factor. Collapsing it needs a disk-driven
-  single pass; done right the results match *as sets* but `report.matched`
-  key order shifts, and the inversion is subtle, so guard it with the
-  existing tests (made order-insensitive). Defer until profiled.
-- **`conforms` re-validates per candidate** (O(paths x subtree)) -- inherent
-  to the per-path semantics; documented cost.
-
 ---
 
 ## 🗂️ `kaparoo.filesystem`
