@@ -35,6 +35,17 @@ class Search(ABC):
         return [name for name in names if pattern.matches(name)]
 
     @classmethod
+    def _part_ok(cls, part_filter: Filter | None, dirpath: Path, root: Path) -> bool:
+        """Whether `dirpath` passes `part_filter` (a `None` filter admits any).
+
+        Stringifies the path only when a filter is set, so an unused
+        `part_filter` skips the per-directory work.
+        """
+        if part_filter is None:
+            return True
+        return part_filter.matches(stringify_path(dirpath, after=root))
+
+    @classmethod
     def _validate_depth_range(cls, min_depth: int, max_depth: int | None) -> None:
         if min_depth < 1:
             msg = f"min_depth must be positive (got {min_depth})"
@@ -164,10 +175,7 @@ class Search(ABC):
         for dirpath, dirnames, filenames in root.walk():
             child_depth = len(dirpath.parts) - root_depth + 1
 
-            if child_depth >= min_depth and (
-                part_filter is None
-                or part_filter.matches(stringify_path(dirpath, after=root))
-            ):
+            if child_depth >= min_depth and cls._part_ok(part_filter, dirpath, root):
                 names = cls._select_names(dirnames, filenames)
                 names = cls._filter_names(names, name_filter)
 
