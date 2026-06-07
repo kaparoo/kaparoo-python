@@ -58,7 +58,7 @@ def scaffold(tree: Node, root: StrPath, *, dry_run: bool = False) -> list[Path]:
     root_path = Path(root)
     if not dry_run:
         root_path.mkdir(parents=True, exist_ok=True)
-    worker = _Scaffolder(dry_run=dry_run)
+    worker = Scaffolder(dry_run=dry_run)
     worker.visit(tree, root_path)
     return worker.created
 
@@ -85,7 +85,7 @@ def _node_creatable(node: Node) -> bool:
     )
 
 
-class _Scaffolder:
+class Scaffolder:
     """A single scaffold run: walks a spec, accumulating the paths it makes.
 
     Bundles the `dry_run` flag and the `created` accumulator so the recursive
