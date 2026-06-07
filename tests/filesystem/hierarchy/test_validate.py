@@ -155,9 +155,7 @@ class TestExclusivePriority:
 
     def test_required_none_present_is_missing(self, tmp_path: Path) -> None:
         (tmp_path / "d").mkdir()
-        group = Exclusive(
-            File("a"), File("b"), required=True, on_conflict="priority"
-        )
+        group = Exclusive(File("a"), File("b"), required=True, on_conflict="priority")
         report = validate(Directory("d", [group]), tmp_path)
         assert group in report.missing
 
