@@ -9,7 +9,7 @@ __all__ = (
 )
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import FrozenInstanceError, dataclass
 from itertools import product
 from typing import TYPE_CHECKING, cast
 
@@ -19,6 +19,27 @@ from kaparoo.filters.utils import register_filter
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
     from typing import Any, Self
+
+
+class _Frozen:
+    """Re-establish frozen semantics for a non-`@dataclass` `Expandable`.
+
+    `Template` / `Without` take varargs, so they cannot be `@dataclass` and
+    define their own `__init__`. They would otherwise be *mutable*:
+    `Expandable`'s inherited frozen `__setattr__` only guards assignments on
+    `Expandable` itself, not a subclass's own attributes. This blocks
+    assignment after construction (which uses `object.__setattr__`).
+    """
+
+    __slots__ = ()
+
+    def __setattr__(self, name: str, value: object) -> None:
+        msg = f"cannot assign to field {name!r}"
+        raise FrozenInstanceError(msg)
+
+    def __delattr__(self, name: str) -> None:
+        msg = f"cannot delete field {name!r}"
+        raise FrozenInstanceError(msg)
 
 
 @dataclass(frozen=True)
@@ -105,7 +126,7 @@ class OneOf(Expandable):
 
 
 @register_filter("template")
-class Template(Expandable):
+class Template(_Frozen, Expandable):
     """A filter enumerating `template.format(*combo)` over value `axes`.
 
     A single axis condenses a run of regularly-named siblings --
@@ -191,7 +212,7 @@ def _as_filter(value: str | Filter) -> Filter:
 
 
 @register_filter("without")
-class Without(Expandable):
+class Without(_Frozen, Expandable):
     """`base` minus every name matching any of `excluded`.
 
     The `Expandable` form of `And(base, Not(...))`: it both *matches* and

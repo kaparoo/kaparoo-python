@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import FrozenInstanceError
+
 import pytest
 
 from kaparoo.filters import Expandable, Filter, Glob, Literal, OneOf, Template, Without
@@ -201,3 +203,26 @@ class TestWithout:
         assert repr(Without(OneOf(["a", "b"]), "a")) == (
             "Without(OneOf(names=('a', 'b')), Literal(name='a'))"
         )
+
+
+class TestFrozen:
+    """`Template` / `Without` are non-`@dataclass` `Expandable`s, so guard
+    that they are still frozen (they would silently be mutable otherwise).
+
+    Probing a private field is the point of the test, so `SLF001` is waived.
+    """
+
+    def test_template_rejects_assignment(self) -> None:
+        template = Template("x_{}", range(2))
+        with pytest.raises(FrozenInstanceError):
+            template._template = "y_{}"  # noqa: SLF001
+
+    def test_template_rejects_deletion(self) -> None:
+        template = Template("x_{}", range(2))
+        with pytest.raises(FrozenInstanceError):
+            del template._axes  # noqa: SLF001
+
+    def test_without_rejects_assignment(self) -> None:
+        without = Without(Literal("a"), "b")
+        with pytest.raises(FrozenInstanceError):
+            without._base = Literal("z")  # noqa: SLF001

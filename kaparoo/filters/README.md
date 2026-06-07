@@ -21,8 +21,9 @@ f.matches("__init__.py")    # False
 ## Filter catalog
 
 Concrete classes end in `Filter`; the short TitleCase forms (`Equals`,
-`And`, ...) are aliases. All filters are frozen `dataclass`es and
-support `==` / `hash`.
+`And`, ...) are aliases. All filters are immutable, hashable value objects
+(`==` / `hash`) — most are frozen `dataclass`es; the varargs ones
+(`Template`, `Without`) are frozen by hand.
 
 ### Pattern filters ([`pattern.py`](./pattern.py))
 
