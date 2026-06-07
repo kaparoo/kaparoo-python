@@ -2,8 +2,7 @@
 
 WORK IN PROGRESS -- the public API of this module is experimental and may
 change or be removed before the next release; it is not yet covered by the
-project's SemVer guarantees. In particular, store-all reductions for
-non-decomposable statistics (median, quantiles) are still under design.
+project's SemVer guarantees.
 """
 
 from __future__ import annotations
@@ -14,9 +13,13 @@ __all__ = (
     "Last",
     "Max",
     "Mean",
+    "Median",
     "Min",
+    "OptionalFold",
+    "Quantile",
     "Reduction",
     "Std",
+    "Stored",
     "Sum",
     "UnweightedReduction",
     "Var",
@@ -24,11 +27,13 @@ __all__ = (
 
 import math
 from abc import ABC, abstractmethod
+from bisect import bisect_left
 from dataclasses import dataclass
+from itertools import accumulate
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, Mapping, Sequence
     from typing import Any
 
 
@@ -191,67 +196,64 @@ class Sum(UnweightedReduction[float]):
         return state
 
 
-@dataclass(frozen=True)
-class Min(UnweightedReduction[float | None]):
-    """Running minimum; `None` until the first sample. Empty -> `nan`."""
+class OptionalFold(UnweightedReduction[float | None]):
+    """Base for unweighted folds seeded by the first sample (`None` until then).
 
-    def identity(self) -> float | None:
-        return None
+    `None` is the identity, so an empty stream projects to `nan`; the first
+    sample seeds the state, and later samples and merges combine via the
+    abstract `_combine`. Subclasses supply only that binary operator.
 
-    def accumulate(self, state: float | None, value: float) -> float | None:
-        return value if state is None else min(state, value)
-
-    def merge(self, a: float | None, b: float | None) -> float | None:
-        if a is None:
-            return b
-        if b is None:
-            return a
-        return min(a, b)
-
-    def result(self, state: float | None) -> float:
-        return float("nan") if state is None else state
-
-
-@dataclass(frozen=True)
-class Max(UnweightedReduction[float | None]):
-    """Running maximum; `None` until the first sample. Empty -> `nan`."""
-
-    def identity(self) -> float | None:
-        return None
-
-    def accumulate(self, state: float | None, value: float) -> float | None:
-        return value if state is None else max(state, value)
-
-    def merge(self, a: float | None, b: float | None) -> float | None:
-        if a is None:
-            return b
-        if b is None:
-            return a
-        return max(a, b)
-
-    def result(self, state: float | None) -> float:
-        return float("nan") if state is None else state
-
-
-@dataclass(frozen=True)
-class Last(UnweightedReduction[float | None]):
-    """Most recently seen value; empty -> `nan`.
-
-    Under `merge`, the right operand wins (it is the later sub-stream).
+    Distinct from `Fold`, which seeds with a concrete `initial` and so reports
+    that `initial` -- not `nan` -- on an empty stream. `Min` / `Max` need
+    empty -> `nan`, which is exactly what the `None` identity gives.
     """
 
     def identity(self) -> float | None:
         return None
 
-    def accumulate(self, state: float | None, value: float) -> float | None:  # noqa: ARG002
-        # "last" discards the prior `state` by definition.
-        return value
+    def accumulate(self, state: float | None, value: float) -> float | None:
+        return value if state is None else self._combine(state, value)
 
     def merge(self, a: float | None, b: float | None) -> float | None:
-        return a if b is None else b
+        if a is None:
+            return b
+        if b is None:
+            return a
+        return self._combine(a, b)
 
     def result(self, state: float | None) -> float:
         return float("nan") if state is None else state
+
+    @abstractmethod
+    def _combine(self, a: float, b: float) -> float:
+        """Combine two present (non-`None`) values."""
+
+
+@dataclass(frozen=True)
+class Min(OptionalFold):
+    """Running minimum; `None` until the first sample. Empty -> `nan`."""
+
+    def _combine(self, a: float, b: float) -> float:
+        return min(a, b)
+
+
+@dataclass(frozen=True)
+class Max(OptionalFold):
+    """Running maximum; `None` until the first sample. Empty -> `nan`."""
+
+    def _combine(self, a: float, b: float) -> float:
+        return max(a, b)
+
+
+@dataclass(frozen=True)
+class Last(OptionalFold):
+    """Most recently seen value; empty -> `nan`.
+
+    Both `accumulate` and `merge` keep the later (right) value.
+    """
+
+    def _combine(self, a: float, b: float) -> float:  # noqa: ARG002
+        return b
 
 
 @dataclass(frozen=True)
@@ -282,6 +284,109 @@ class Fold(UnweightedReduction[float]):
 
     def result(self, state: float) -> float:
         return state if self.finalize is None else self.finalize(state)
+
+
+def _weighted_quantile(
+    values: Sequence[float], weights: Sequence[float], q: float
+) -> float:
+    """Smallest value whose cumulative weight reaches fraction `q` of the total.
+
+    A step-function (non-interpolating) weighted quantile: samples are sorted
+    by value and their weights accumulated; the result is the first value at
+    which the running fraction reaches `q`. For `q=0.5` with equal weights
+    this is the lower median (not the mean of the two middle values); use
+    `Stored(reduce=...)` with e.g. `numpy.quantile` for other conventions.
+    Assumes a non-empty input with positive weights.
+    """
+    ordered = sorted(zip(values, weights, strict=True))
+    cumulative = list(accumulate(weight for _, weight in ordered))
+    index = bisect_left(cumulative, q * cumulative[-1])
+    return ordered[min(index, len(ordered) - 1)][0]
+
+
+class StoredReduction(Reduction[list[tuple[float, float]]], ABC):
+    """Base for store-all reductions: keep every `(value, weight)` pair.
+
+    The escape hatch for non-decomposable statistics (median, quantiles) that
+    no online fold can express -- `result` reduces the full gathered samples.
+    **O(n) memory**, breaking the module's constant-memory contract; reach for
+    it only when no decomposable reduction expresses the statistic. The
+    accumulator is a list appended to in `step` (O(1) per sample), so -- unlike
+    every other reduction -- the state is mutable: a `state()` snapshot shares
+    the list and changes under further `update`s. Subclasses reduce the
+    gathered `values` / `weights` (both non-empty) in `_reduce`.
+    """
+
+    def identity(self) -> list[tuple[float, float]]:
+        return []
+
+    def step(
+        self, state: list[tuple[float, float]], value: float, weight: float
+    ) -> list[tuple[float, float]]:
+        state.append((value, weight))
+        return state
+
+    def merge(
+        self, a: list[tuple[float, float]], b: list[tuple[float, float]]
+    ) -> list[tuple[float, float]]:
+        return [*a, *b]
+
+    def result(self, state: list[tuple[float, float]]) -> float:
+        if not state:
+            return float("nan")
+        values = [value for value, _ in state]
+        weights = [weight for _, weight in state]
+        return self._reduce(values, weights)
+
+    @abstractmethod
+    def _reduce(self, values: Sequence[float], weights: Sequence[float]) -> float:
+        """Reduce the gathered samples to the final scalar."""
+
+
+@dataclass(frozen=True)
+class Stored(StoredReduction):
+    """Store-all reduction with a pluggable `reduce` callable. Empty -> `nan`.
+
+    `reduce(values, weights)` is applied to the full gathered samples (both
+    non-empty) -- e.g. `Stored(lambda v, w: statistics.median(v))`. For value
+    equality (which `Aggregator.merge` compares), pass a stable callable such
+    as a module-level function, not a fresh lambda per instance.
+    """
+
+    reduce: Callable[[Sequence[float], Sequence[float]], float]
+
+    def _reduce(self, values: Sequence[float], weights: Sequence[float]) -> float:
+        return self.reduce(values, weights)
+
+
+@dataclass(frozen=True)
+class Quantile(StoredReduction):
+    """Weighted `q`-quantile (`0 <= q <= 1`); empty -> `nan`.
+
+    Non-interpolating -- the smallest value whose cumulative weight reaches
+    `q` of the total.
+
+    Raises:
+        ValueError: If `q` is outside `[0, 1]`.
+    """
+
+    q: float
+
+    def __post_init__(self) -> None:
+        if not 0.0 <= self.q <= 1.0:
+            msg = f"q must be in [0, 1] (got {self.q})"
+            raise ValueError(msg)
+
+    def _reduce(self, values: Sequence[float], weights: Sequence[float]) -> float:
+        return _weighted_quantile(values, weights, self.q)
+
+
+@dataclass(frozen=True)
+class Median(StoredReduction):
+    """Weighted median (the 0.5-quantile); empty -> `nan`."""
+
+    def _reduce(self, values: Sequence[float], weights: Sequence[float]) -> float:
+        return _weighted_quantile(values, weights, 0.5)
 
 
 class Aggregator:
@@ -364,8 +469,11 @@ class Aggregator:
     def state(self) -> dict[str, tuple[Reduction[Any], Any]]:
         """Snapshot each metric's `(reduction, accumulator state)`.
 
-        States are immutable, so the snapshot is safe to keep or restore --
-        useful for `merge` and for checkpointing a long run.
+        A shallow copy. Most reduction states are immutable values, so the
+        snapshot is safe to keep or restore (for `merge` or checkpointing a
+        long run); a store-all reduction (`Stored` and friends) instead
+        accumulates a mutable list, whose snapshotted state changes under
+        further `update`s -- deep-copy it if you need a stable one.
         """
         return dict(self._metrics)
 

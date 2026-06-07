@@ -126,6 +126,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `checks={name: callable}`; an absent name is governed by
   `on_missing="error" | "skip"`. The metadata conditions round-trip through
   `to_dict` / `from_dict`.
+- `kaparoo.utils.aggregate` (still experimental) gains store-all reductions
+  for non-decomposable statistics: `Stored(reduce)` keeps every
+  `(value, weight)` pair and applies `reduce` to the full sample on `result`
+  (O(n) memory -- a documented escape hatch from the constant-memory
+  contract), with `Median()` and `Quantile(q)` built on top (a weighted,
+  non-interpolating quantile). Unlike the online reductions their state is a
+  mutable list, so a `state()` snapshot of such a metric changes under
+  further `update`s. Also adds an `OptionalFold` base (the `None`-seeded fold
+  shared by `Min` / `Max` / `Last`, subclassed by supplying a single
+  `_combine`).
 
 ### Changed
 

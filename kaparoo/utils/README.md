@@ -6,8 +6,9 @@ Small, focused helpers — not enough material for their own packages.
 
 - [`timer`](./timer.py) — `Timer`, `SpanTimer`, `SpanRecord`
 - [`aggregate`](./aggregate.py) — `Aggregator` + the `Reduction` family
-  (`Mean`, `Var`, `Std`, `Sum`, `Min`, `Max`, `Last`, `Fold`; bases
-  `Reduction` / `UnweightedReduction`)
+  (`Mean`, `Var`, `Std`, `Sum`, `Min`, `Max`, `Last`, `Fold`; store-all
+  `Stored`, `Median`, `Quantile`; bases `Reduction` / `UnweightedReduction` /
+  `OptionalFold`)
 - [`optional`](./optional.py) — helpers for `T | None` values
 
 ## Timer
@@ -170,6 +171,12 @@ print(run.compute())
 | `Min()` / `Max()` | running min / max (weight ignored) | `nan` |
 | `Last()` | most recent value | `nan` |
 | `Fold(combine, initial)` | scalar monoid from a callable | `initial` |
+| `Median()` / `Quantile(q)` | weighted median / `q`-quantile (store-all) | `nan` |
+| `Stored(reduce)` | apply `reduce` to all gathered `(value, weight)` pairs | `nan` |
+
+`Median` / `Quantile` / `Stored` are **store-all** reductions for statistics
+no online fold can express -- they keep every sample (O(n) memory) instead of
+a constant-size state, so use them only when a decomposable reduction cannot.
 
 Custom reductions extend the family two ways. For a scalar monoid, pass a
 callable to `Fold`:

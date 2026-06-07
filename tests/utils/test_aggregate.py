@@ -12,9 +12,13 @@ from kaparoo.utils.aggregate import (
     Last,
     Max,
     Mean,
+    Median,
     Min,
+    OptionalFold,
+    Quantile,
     Reduction,
     Std,
+    Stored,
     Sum,
     Var,
 )
@@ -102,6 +106,103 @@ def _accumulate(reduction: Reduction[object], values: list[float]) -> object:
     for v in values:
         state = reduction.step(state, v, 1.0)
     return state
+
+
+def _accumulate_weighted(
+    reduction: Reduction[object], pairs: list[tuple[float, float]]
+) -> object:
+    state = reduction.identity()
+    for value, weight in pairs:
+        state = reduction.step(state, value, weight)
+    return state
+
+
+# --- Store-all reductions (Stored / Median / Quantile) ----------------------
+
+
+def test_optional_fold_is_abstract():
+    with pytest.raises(TypeError):
+        OptionalFold()  # abstract `_combine`
+
+
+def test_median_lower_for_even_count():
+    assert Median().result(_accumulate(Median(), [1.0, 2.0, 3.0])) == 2.0
+    # even count: the lower median, not the 2.5 interpolation
+    assert Median().result(_accumulate(Median(), [1.0, 2.0, 3.0, 4.0])) == 2.0
+
+
+def test_median_weighted():
+    med = Median()
+    # 10 carries weight 3 of the total 4, so it holds the 0.5 mark
+    state = _accumulate_weighted(med, [(10.0, 3.0), (20.0, 1.0)])
+    assert med.result(state) == 10.0
+
+
+def test_median_empty_is_nan():
+    assert math.isnan(Median().result(Median().identity()))
+
+
+def test_median_merge_concatenates():
+    med = Median()
+    a = _accumulate(med, [1.0])
+    b = _accumulate(med, [3.0, 5.0])
+    assert med.result(med.merge(a, b)) == 3.0  # median(1, 3, 5)
+
+
+def test_quantile_endpoints_are_min_and_max():
+    q0, q1 = Quantile(0.0), Quantile(1.0)
+    assert q0.result(_accumulate(q0, [5.0, 1.0, 3.0])) == 1.0
+    assert q1.result(_accumulate(q1, [5.0, 1.0, 3.0])) == 5.0
+
+
+def test_quantile_half_equals_median():
+    values = [4.0, 2.0, 8.0, 6.0, 1.0]
+    q = Quantile(0.5)
+    assert q.result(_accumulate(q, values)) == Median().result(
+        _accumulate(Median(), values)
+    )
+
+
+def test_quantile_out_of_range_raises():
+    with pytest.raises(ValueError, match=r"q must be in \[0, 1\]"):
+        Quantile(1.5)
+    with pytest.raises(ValueError, match="q must be in"):
+        Quantile(-0.1)
+
+
+def test_stored_with_custom_reduce_and_empty():
+    s = Stored(lambda values, weights: sum(values) / len(values))
+    assert s.result(_accumulate(s, [2.0, 4.0, 6.0])) == 4.0
+    assert math.isnan(s.result(s.identity()))
+
+
+def test_stored_merge_concatenates():
+    s = Stored(lambda values, _weights: max(values))
+    a = _accumulate(s, [1.0, 2.0])
+    b = _accumulate(s, [9.0])
+    assert s.result(s.merge(a, b)) == 9.0
+
+
+def test_store_all_value_equality():
+    assert Stored(max) == Stored(max)  # a stable callable -> equal
+    assert Median() == Median()
+    assert Quantile(0.9) == Quantile(0.9)
+    assert Quantile(0.9) != Quantile(0.5)
+
+
+def test_stored_state_is_mutable_in_place():
+    # documented exception to the immutable-state contract: `step` appends
+    med = Median()
+    state = med.identity()
+    assert med.step(state, 1.0, 1.0) is state  # same list, mutated in place
+    assert state == [(1.0, 1.0)]
+
+
+def test_store_all_via_aggregator():
+    agg = Aggregator(Median())
+    for x in (4.0, 2.0, 8.0, 6.0):
+        agg.update({"loss": x})
+    assert agg.compute()["loss"] == 4.0  # lower median of (2, 4, 6, 8)
 
 
 def test_var_population_value():
