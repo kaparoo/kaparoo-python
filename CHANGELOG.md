@@ -84,14 +84,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   is satisfied by at least one present match. Also exports the
   `ValidationReport` and `Violation` result types.
 - `kaparoo.filesystem.hierarchy.conforms(spec)`: builds a path predicate (a
-  `search` predicate) that accepts a path realizing *any* entry in `spec` —
-  a file matching a `File` node's name, or a directory matching a
-  `Directory` node's name whose subtree conforms (via `validate`). One spec
-  thus acts as a catalogue of acceptable sub-structures; because files (and
-  childless directories) match by name and type regardless of position, it
-  answers "a well-formed instance of something `spec` describes?", not "in
-  the right place?". (File attribute conditions, planned, will tighten the
-  file case.)
+  `search` predicate) that accepts a path realizing `spec`'s *top* node — a
+  file matching a top `File`'s name, or a directory matching a top
+  `Directory`'s name whose subtree conforms (via `validate`); a top `Group`
+  is realized by any one of its alternatives / members. The path is always
+  tested as the top of `spec`, never an inner node. (File attribute
+  conditions, planned, will tighten the file case; checking whether a path
+  or sub-spec is *contained* within a spec is a separate future capability.)
 
 ### Changed
 

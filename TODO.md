@@ -147,26 +147,33 @@ metadata, not an arbitrary Python callable (a lambda cannot be serialized
 or value-compared). Design alongside the matcher / validator, which is
 what consumes such conditions.
 
-### `required` default
+### `required` default — decided: keep `False`
 
-The presence flag defaults to `False` (opt-in). When the validator lands,
-reconsider whether a strict "listed = required" default, or a
-`validate(require_all=...)` mode, reads better.
+The presence flag stays opt-in (`required=False`). Flipping it to
+"listed = required" is rejected: it breaks pattern entries whose natural
+meaning is zero-or-more (`File(Glob("*.png"))`). The opt-in policy is now
+documented (Entry docstring / README); a `validate(require_all=...)` mode
+remains a non-breaking future option if a concrete need appears.
 
-### Possible path-name sugar
+### Path-name sugar — decided: no
 
 Node-name sugar (`File("x")`, `Directory(["a", "b"])`) names a *single*
-path component; a separator (`/` or `\`) is rejected with `ValueError`.
+path component; a separator (`/` or `\`) stays a `ValueError`. Expanding a
+separator-containing name into nested nodes (`Directory("a/b/c", children)`
+-> nested directories) is **not** added to the `str` sugar: it would
+overload the string (sometimes one `Literal`, sometimes a whole subtree)
+and interact awkwardly with `depth` (which level applies?). If a concrete
+need arises, add it as a *separate, explicit* API (e.g. a `nested(...)`
+factory whose meaning is unambiguous), never via the `str` sugar.
 
-A separate convenience could let a separator-containing name expand to
-nested nodes — e.g. `Directory("a/b/c", children)` becoming
-`Directory("a", [Directory("b", [Directory("c", children)])])`, and
-`File("a/b.txt")` the file `b.txt` two levels down.
+### Spec containment / inclusion (future)
 
-Deferred because it overloads the `str` sugar (a name string would
-sometimes mean one `Literal`, sometimes a whole subtree) and interacts
-awkwardly with `depth` (which level would `depth` apply to?). Add as an
-explicit, separate feature if a concrete need arises.
+`conforms(spec)` tests a path as `spec`'s *top* node only. The broader
+question -- is a concrete path, or another (sub-)spec, *contained* anywhere
+within a spec? -- is deliberately left out of `conforms` and is a separate
+future capability (e.g. `contains(spec, path)` / `contains(spec, subspec)`).
+This is what the earlier "match any entry in the spec" idea becomes once it
+is given its own, explicit operation rather than overloading `conforms`.
 
 ### Operation throughput (perf — deferred)
 
@@ -178,7 +185,13 @@ precompute, search `stringify_path` guard). Remaining:
   and once in `_unexpected` (disk-driven). It is a constant 2× factor, not
   an algorithmic blow-up; collapsing it needs a disk-driven pass that
   classifies matched vs unexpected in a single walk. Defer until profiling
-  shows it matters.
+  shows it matters. **Note on equivalence**: done correctly the results are
+  identical *as sets* (`ok`, `missing`, `violations` unchanged), but the
+  order of `report.matched` keys would shift from spec-traversal to
+  disk-traversal order; and the inversion (carrying active spec nodes +
+  ancestor-relative depth down the disk walk) is subtle enough to risk an
+  accidental behavioral change, so guard it with the existing 100% tests
+  (made order-insensitive) before adopting.
 - **`conforms(spec)` re-validates per candidate** — used as a `search`
   predicate over many directories, it re-walks each candidate's subtree
   (O(paths × subtree)). Inherent to the per-path "is this a conforming

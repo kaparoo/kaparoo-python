@@ -75,25 +75,33 @@ def validate(tree: Node, root: StrPath) -> ValidationReport:
 
 
 def conforms(spec: Node) -> Callable[[StrPath], bool]:
-    """Build a `search` predicate accepting a path that realizes *any* entry
-    in `spec` -- so one spec doubles as a catalogue of acceptable
-    sub-structures.
+    """Build a `search` predicate accepting a path that realizes `spec`'s
+    *top* node.
 
-    A path realizes a `File` entry when it is a file whose name matches, and
-    a `Directory` entry when it is a directory whose name matches *and*
-    whose subtree conforms (via `validate`). Because files (and childless
-    directories) are accepted by name and type regardless of where they sit,
-    the predicate answers "a well-formed instance of something `spec`
-    describes?", not "in the right place?". (File *attribute* conditions are
-    planned and will tighten the file case.)
+    The returned `Callable[[Path], bool]` accepts `path` when it realizes
+    the top of `spec`: a `File` whose name matches (and is a file), or a
+    `Directory` whose name matches *and* whose subtree conforms (via
+    `validate`); a top `Group` is realized by any one of its alternatives /
+    members. The path is always tested as the top of `spec`, never against
+    one of its inner nodes -- e.g. `conforms(Directory("dataset", [...]))`
+    accepts a conforming `dataset/` directory, not the files inside it.
+
+    (File *attribute* conditions are planned and will tighten the file
+    case. Checking whether a concrete path or a sub-spec is *contained*
+    anywhere within a spec is a separate, future capability.)
     """
-    entries = tuple(node for node in _walk_nodes(spec) if isinstance(node, Entry))
 
     def check(path: StrPath) -> bool:
-        candidate = Path(path)
-        return any(_node_conforms(entry, candidate) for entry in entries)
+        return _top_conforms(spec, Path(path))
 
     return check
+
+
+def _top_conforms(node: Node, path: Path) -> bool:
+    """Whether `path` realizes `node` as the top of a spec."""
+    if isinstance(node, Group):
+        return any(_node_conforms(entry, path) for entry in node.entries)
+    return _node_conforms(cast("Entry", node), path)
 
 
 def _node_conforms(entry: Entry, path: Path) -> bool:

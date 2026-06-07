@@ -131,33 +131,41 @@ class TestTogether:
 
 
 class TestConforms:
-    def test_accepts_any_matching_part(self, tmp_path: Path) -> None:
+    def test_top_directory_conforms(self, tmp_path: Path) -> None:
         build(tmp_path, ["dataset/metadata.json", "dataset/images/a.png"])
         keep = conforms(dataset_spec())
-        # the whole dataset (top Directory + conforming subtree)
-        assert keep(tmp_path / "dataset")
-        # an inner images/ dir (matched by the nested Directory node)
-        assert keep(tmp_path / "dataset" / "images")
-        # individual files matched by File nodes anywhere
-        assert keep(tmp_path / "dataset" / "metadata.json")
-        assert keep(tmp_path / "dataset" / "images" / "a.png")
+        assert keep(tmp_path / "dataset")  # top node, conforming subtree
 
-    def test_rejects_file_matching_no_node(self, tmp_path: Path) -> None:
-        build(tmp_path, ["stray.bin"])
+    def test_inner_nodes_are_not_accepted(self, tmp_path: Path) -> None:
+        # The path is tested as the *top* node only, never an inner one.
+        build(tmp_path, ["dataset/metadata.json", "dataset/images/a.png"])
         keep = conforms(dataset_spec())
-        assert not keep(tmp_path / "stray.bin")
+        assert not keep(tmp_path / "dataset" / "images")
+        assert not keep(tmp_path / "dataset" / "metadata.json")
+        assert not keep(tmp_path / "dataset" / "images" / "a.png")
 
-    def test_directory_with_nonconforming_subtree_rejected(
-        self, tmp_path: Path
-    ) -> None:
-        build(tmp_path, ["images/x.txt"])  # 'images' node wants *.png only
+    def test_top_dir_nonconforming_subtree_rejected(self, tmp_path: Path) -> None:
+        build(tmp_path, ["dataset/metadata.json", "dataset/junk.bin"])  # junk: extra
         keep = conforms(dataset_spec())
-        assert not keep(tmp_path / "images")
+        assert not keep(tmp_path / "dataset")
 
-    def test_directory_name_mismatch_rejected(self, tmp_path: Path) -> None:
+    def test_top_dir_name_mismatch_rejected(self, tmp_path: Path) -> None:
         (tmp_path / "other").mkdir()
-        keep = conforms(dataset_spec())
-        assert not keep(tmp_path / "other")
+        assert not conforms(dataset_spec())(tmp_path / "other")
+
+    def test_top_file(self, tmp_path: Path) -> None:
+        build(tmp_path, ["a.csv", "b.txt"])
+        (tmp_path / "d").mkdir()
+        keep = conforms(File(Glob("*.csv")))
+        assert keep(tmp_path / "a.csv")  # file, name matches
+        assert not keep(tmp_path / "b.txt")  # file, name mismatch
+        assert not keep(tmp_path / "d")  # not a file
+
+    def test_top_group(self, tmp_path: Path) -> None:
+        build(tmp_path, ["a", "c"])
+        keep = conforms(Exclusive(File("a"), File("b")))
+        assert keep(tmp_path / "a")  # realizes one alternative
+        assert not keep(tmp_path / "c")  # realizes neither
 
     def test_childless_directory_must_be_empty(self, tmp_path: Path) -> None:
         (tmp_path / "logs").mkdir()

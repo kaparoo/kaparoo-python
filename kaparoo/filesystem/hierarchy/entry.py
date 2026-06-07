@@ -123,7 +123,9 @@ class Entry(Node, ABC):
             `None` is any depth (one or more levels), and a `(min, max)`
             tuple is an inclusive range whose `max` may be `None` for
             unbounded. Defaults to `1`.
-        required: Whether the entry must be present. Defaults to `False`.
+        required: Whether the entry must be present. Defaults to `False`
+            (opt-in): `validate` reports a `missing` entry only for
+            `required` ones, so a spec asserts nothing exists until asked.
 
     Raises:
         ValueError: If a sugar name contains a path separator, a depth

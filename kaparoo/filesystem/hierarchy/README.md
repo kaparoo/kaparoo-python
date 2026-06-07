@@ -101,9 +101,13 @@ scaffolding.
 Each entry takes a keyword-only `required` flag (default `False`) asserting
 that it must be present — `File("metadata.json", required=True)`. By
 default the spec describes structure (what *may* be there); `required=True`
-adds a "must be there" assertion that a validator enforces. (Attribute
-conditions — size, emptiness, ... — are a separate, planned feature; see
-`TODO.md`.)
+adds a "must be there" assertion, and [`validate`](#validation-validate)
+reports a `missing` entry **only** for `required` ones. The default is
+deliberately opt-in: a pattern entry like `File(Glob("*.png"))` naturally
+means "zero or more", so describing a layout never *requires* anything
+until you say so. For an "everything listed must exist" layout, mark each
+entry `required=True`. (Attribute conditions — size, emptiness, ... — are a
+separate, planned feature; see `TODO.md`.)
 
 ## Mutual exclusion: `Exclusive`
 
@@ -319,11 +323,10 @@ is satisfied by *at least one* present match.
 ## Filtering paths: `conforms`
 
 `conforms(spec)` builds a path predicate (a `search` predicate) that
-accepts a path when it realizes *any* entry in `spec` — so one spec doubles
-as a catalogue of acceptable sub-structures:
+accepts a path when it realizes `spec`'s **top** node:
 
 ```python
-from kaparoo.filesystem.search import search_paths
+from kaparoo.filesystem.search import search_dirs
 from kaparoo.filesystem.hierarchy import Directory, File, conforms
 from kaparoo.filters import Glob
 
@@ -332,16 +335,19 @@ spec = Directory("dataset", [
     Directory("images", [File(Glob("*.png"))]),
 ])
 keep = conforms(spec)
-search_paths("/data", predicate=keep)   # keep only paths spec recognizes
+# keep the subdirectories that are themselves a conforming `dataset`
+search_dirs("/data", predicate=keep)
 ```
 
-A path realizes an entry when it is a **file** matching a `File` node's
-name, or a **directory** matching a `Directory` node's name *whose subtree
-conforms* (via `validate`). Because files (and childless directories) are
-accepted by name and type regardless of position, `conforms` answers "is
-this a well-formed instance of something `spec` describes?" — not "is it in
-the right place?". (File *attribute* conditions — size, mtime, … — are a
-planned feature that will tighten the file case.)
+A path realizes the top node when it is a **file** matching a top `File`'s
+name, or a **directory** matching a top `Directory`'s name *whose subtree
+conforms* (via `validate`); a top `Group` is realized by any one of its
+alternatives / members. The path is always tested as the *top* of `spec`,
+never against an inner node — `conforms(Directory("dataset", [...]))`
+accepts a conforming `dataset/` directory, not the files inside it. (File
+*attribute* conditions — size, mtime, … — are planned and will tighten the
+file case. Checking whether a concrete path or sub-spec is *contained*
+anywhere within a spec is a separate, future capability.)
 
 ## See also
 
