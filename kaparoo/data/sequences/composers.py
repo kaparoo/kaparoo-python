@@ -21,6 +21,10 @@ if TYPE_CHECKING:
 def _resolve_index(index: int, length: int) -> int:
     """Normalize a possibly-negative index against `length`, validating range.
 
+    Used by `ConcatSequence`, `WindowedSequence`, and `ZippedSequence`.
+    `SlicedSequence` intentionally opts out -- it indexes its `indices` tuple
+    directly, which wraps and raises the same way but with the builtin message.
+
     Raises:
         IndexError: If `index` is outside `[-length, length)`.
     """
@@ -34,22 +38,15 @@ def _resolve_index(index: int, length: int) -> int:
 
 
 class SlicedSequence[T, M](DataSequence[T, M]):
-    """A view of `source` exposing only items at the given `indices`.
+    """A view of `source` exposing only the items at `indices`, in that order.
 
-    `indices` is materialized as a tuple at construction time so that the
-    view has a stable length and supports O(1) random access. Negative
-    and out-of-range indices delegate to Python's tuple semantics
-    (negative wraps, out-of-range raises `IndexError`).
-
-    `indices` is taken as-is: duplicates are allowed (the same source
-    item is yielded multiple times) and order is preserved (no sorting).
-    Bounds against `source` are not validated at construction; an
-    out-of-range entry surfaces only when that position is accessed.
+    `indices` is taken as-is -- duplicates repeat the source item, order is
+    preserved -- and is not bounds-checked against `source` until a position
+    is accessed. A negative view index wraps; out of range raises `IndexError`.
 
     Example:
         >>> sliced = SlicedSequence(full_dataset, [3, 7, 11])
         >>> sliced[0]  # == full_dataset[3]
-        >>> sliced[1]  # == full_dataset[7]
     """
 
     def __init__(
@@ -91,35 +88,22 @@ class TransformedSequence[T_in, M_in, T_out = T_in, M_out = M_in](
 ):
     """A view of `source` with `transform` applied lazily to each item.
 
-    `transform` is called on demand in `get_item`; nothing is loaded or
-    converted at construction time. `get_meta` passes through
-    `source.get_meta` unchanged by default -- override it in a subclass
-    when `M_out` differs from `M_in`.
-
-    Type Parameters:
-        T_in: Item type of `source`.
-        M_in: Metadata type of `source`.
-        T_out: Item type after the transform. Defaults to `T_in`.
-        M_out: Metadata type exposed by this view. Defaults to `M_in`. The
-            default `get_meta` passes `source.get_meta` through, which is
-            correct only when `M_out == M_in`. **Always override `get_meta`**
-            when `M_out != M_in`: the default's `cast` silences the type
-            checker and Python erases generics at runtime, so a forgotten
-            override silently returns an `M_in` value typed as `M_out` -- a
-            wrong-typed value that surfaces only later in use, never at
-            construction.
+    `transform` runs on demand in `get_item`; nothing is converted at
+    construction. `get_meta` passes `source.get_meta` through unchanged, which
+    is correct only when the metadata type is unchanged (the default
+    `M_out == M_in`). **Override `get_meta` whenever `M_out != M_in`**: the
+    passthrough's `cast` cannot catch a missing override -- generics are erased
+    at runtime -- so a forgotten one silently yields an `M_in` value mistyped
+    as `M_out`.
 
     Example:
         >>> # Item-only transform; metadata passes through unchanged.
         >>> normalized = TransformedSequence(image_folder, normalize)
 
-        >>> # Meta transform via subclassing:
+        >>> # Metadata transform via subclassing:
         >>> class Augmented(TransformedSequence[ndarray, Path, ndarray, AugMeta]):
         ...     def get_meta(self, index: int) -> AugMeta:
-        ...         return AugMeta(
-        ...             path=self.source.get_meta(index),
-        ...             applied="normalize",
-        ...         )
+        ...         return AugMeta(self.source.get_meta(index), applied="normalize")
     """
 
     def __init__(
@@ -154,13 +138,11 @@ class TransformedSequence[T_in, M_in, T_out = T_in, M_out = M_in](
 class ConcatSequence[T, M](DataSequence[T, M]):
     """The end-to-end concatenation of zero or more `sources`.
 
-    Indexing maps to `(source, local_index)` via a precomputed cumulative
-    length array and `bisect`, so a lookup is O(log N) in the number of
-    sources. Negative indices are normalized; out-of-range indices raise
-    `IndexError`. Batch access (`get_items` / `get_metas`) groups the
-    requested indices per source and issues one call per source, so each
-    source's own batch optimization is used; results are returned in
-    request order.
+    A logical index maps to the `(source, local index)` it falls in -- an
+    O(log N) lookup in the number of sources. Negative indices wrap; out of
+    range raises `IndexError`. Batch access (`get_items` / `get_metas`)
+    delegates one grouped call per source, so a source's own batch
+    optimization is used, with results kept in request order.
 
     Example:
         >>> combined = ConcatSequence(train_a, train_b, train_c)
@@ -202,13 +184,10 @@ class ConcatSequence[T, M](DataSequence[T, M]):
         indices: Sequence[int],
         fetch: Callable[[DataSequence[T, M], list[int]], Sequence[R]],
     ) -> list[R]:
-        """Batch-fetch `indices` per source, preserving request order.
+        """Batch-fetch `indices` with one grouped `fetch` per source.
 
-        Resolves each index to its source, groups the locals per source,
-        issues one `fetch` per source (so the source's `get_items` /
-        `get_metas` batch path is used), then scatters the results back into
-        the order `indices` was given. The shared core of `get_items` and
-        `get_metas`, which differ only in the per-source `fetch`.
+        The shared core of `get_items` / `get_metas`, which differ only in the
+        per-source `fetch`; results are scattered back into request order.
         """
         buckets: dict[int, list[tuple[int, int]]] = {}
         for position, index in enumerate(indices):
@@ -242,29 +221,18 @@ class ConcatSequence[T, M](DataSequence[T, M]):
 class WindowedSequence[T, M_in, M_out = M_in](DataSequence[tuple[T, ...], M_out]):
     """An abstract sliding-window view over `source`.
 
-    Each item is a tuple of `size` items from `source`, starting at
-    position `i * step`, with intra-window stride `skip`. Indexed item
-    access (`get_item`) is implemented; **the window's metadata
-    strategy is intentionally left abstract** so the relationship
-    between per-frame `M_in` and window-level `M_out` is decided at
-    subclass-definition time.
-
-    Subclasses use the `source`, `size`, `step`, `skip` properties and
-    should call `_normalize_index` from `get_meta` so negative and
-    out-of-range window indices behave the same way as in `get_item`.
-
-    Type Parameters:
-        T: Item type of `source` (also the per-frame type within each
-            window).
-        M_in: Metadata type of `source` (per-frame metadata).
-        M_out: Metadata type of the window. Defaults to `M_in`.
-            Determined by the subclass's `get_meta` return.
+    Each item is a tuple of `size` items from `source`, the window starting at
+    `i * step` with intra-window stride `skip`. `get_item` is implemented;
+    **the window's metadata is intentionally left abstract** so a subclass
+    decides how per-frame metadata becomes window metadata (`M_in` -> `M_out`).
+    Subclasses should call `_normalize_index` in their `get_meta` so window
+    indices behave as in `get_item`.
 
     Args:
         source: The sequence to window over.
-        size: Number of items per window. Must be positive.
-        step: Position advance between consecutive windows. Defaults
-            to 1 (overlapping windows by `size - 1`).
+        size: Items per window. Must be positive.
+        step: Advance between consecutive windows. Defaults to 1 (windows
+            overlap by `size - 1`).
         skip: Intra-window stride. Defaults to 1 (consecutive frames).
 
     Raises:
@@ -349,26 +317,10 @@ class ZippedSequence[T1, T2, M1 = None, M2 = None](
     `(first.get_meta(i), second.get_meta(i))` -- the "paired image + label"
     pattern that `ConcatSequence` (end-to-end) cannot express.
 
-    With `strict=True` (the default) the two sequences must have the same
-    length; a mismatch raises `ValueError` at construction. With
-    `strict=False` the view is truncated to the shorter length, like the
-    builtin `zip`. For a different combined-metadata shape, subclass and
-    override `get_meta`.
-
-    Type Parameters:
-        T1: Item type of the first source.
-        T2: Item type of the second source.
-        M1: Metadata type of the first source. Defaults to `None`.
-        M2: Metadata type of the second source. Defaults to `None`.
-
-    Args:
-        first: The first sequence.
-        second: The second sequence.
-        strict: When True (default), require equal lengths and raise on a
-            mismatch. When False, truncate to the shorter length.
-
-    Raises:
-        ValueError: If `strict` is True and the sequences differ in length.
+    With `strict=True` (the default) the sequences must be the same length, or
+    construction raises `ValueError`; with `strict=False` the view truncates to
+    the shorter, like the builtin `zip`. For a different combined-metadata
+    shape, subclass and override `get_meta`.
 
     Example:
         >>> pairs = ZippedSequence(images, labels)

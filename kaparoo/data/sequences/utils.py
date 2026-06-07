@@ -18,39 +18,30 @@ def generate_batches[T](
     stop: int | None = None,
     drop_last: bool = True,
 ) -> Iterator[Sequence[T]]:
-    """Yield sliding windows from `sequence`.
+    """Yield sliding windows from `sequence`, each a slice of `size` items.
 
-    Each yielded batch is `sequence[head : tail : skip]` where `head`
-    advances by `step` per iteration. With the defaults (`size=3,
-    step=1, skip=1, drop_last=True`), this produces overlapping
-    consecutive-frame windows; pair this with a non-overlapping `step
-    >= size` for a classic non-overlapping batch loader.
-
-    Traversal is constrained to the index range `[start, stop)`.
-    `stop=None` defaults to `len(sequence)`. An empty range (`start ==
-    stop`) yields nothing -- the function returns without error.
+    The window advances by `step` and strides by `skip` within itself. The
+    defaults (`size`/`step`/`skip` = 3/1/1) give overlapping consecutive-item
+    windows; `step >= size` gives non-overlapping batches. Traversal is
+    confined to `[start, stop)` (`stop=None` means the full length); an empty
+    range yields nothing.
 
     Args:
-        sequence: The sequence to slide windows over.
-        size: Number of items per window. Must be positive.
-        step: Position advance between consecutive windows. Defaults
-            to 1 (overlapping windows by `size - 1`).
+        size: Items per window. Must be positive.
+        step: Advance between windows. Defaults to 1 (overlap by `size - 1`).
         skip: Intra-window stride. Defaults to 1 (consecutive items).
         start: Inclusive lower bound on source indices. Defaults to 0.
-            Must satisfy `0 <= start <= stop`.
-        stop: Exclusive upper bound on source indices. Defaults to
-            `len(sequence)`. The partial window (when `drop_last=False`)
-            respects `stop` and never extends past it.
-        drop_last: If False, yield a final partial (possibly shorter
-            than `size`) window when items remain after the last full
-            window. Defaults to True.
+        stop: Exclusive upper bound. Defaults to `len(sequence)`; a partial
+            window (with `drop_last=False`) never extends past it.
+        drop_last: If False, yield a final shorter window for leftover items.
+            Defaults to True.
 
     Yields:
-        Sub-sequences of `sequence` obtained by slicing.
+        Sub-sequences of `sequence`.
 
     Raises:
-        ValueError: If `size`, `step`, or `skip` is non-positive, or
-            if the range is not `0 <= start <= stop <= len(sequence)`.
+        ValueError: If `size`, `step`, or `skip` is non-positive, or the range
+            is not `0 <= start <= stop <= len(sequence)`.
     """
     if size <= 0 or step <= 0 or skip <= 0:
         msg = (
