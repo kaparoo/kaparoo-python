@@ -87,6 +87,7 @@ class TestGroupSerialization:
             Together(File("cert.pem"), File("key.pem")),
             Together(File("a"), File("b"), required=True),
             Exclusive(Together(File("a"), File("b")), File("c")),  # nested
+            Exclusive(File("a"), File("b"), on_conflict="priority"),
         ),
     )
     def test_round_trips(self, node: Group) -> None:
@@ -95,6 +96,11 @@ class TestGroupSerialization:
     def test_required_omitted_when_false(self) -> None:
         assert "required" not in Exclusive(File("a"), File("b")).to_dict()
         assert "required" not in Together(File("a"), File("b")).to_dict()
+
+    def test_on_conflict_omitted_when_error(self) -> None:
+        assert "on_conflict" not in Exclusive(File("a"), File("b")).to_dict()
+        priority = Exclusive(File("a"), File("b"), on_conflict="priority")
+        assert priority.to_dict()["on_conflict"] == "priority"
 
 
 class TestTreeSerialization:

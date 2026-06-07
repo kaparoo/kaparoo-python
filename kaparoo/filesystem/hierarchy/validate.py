@@ -162,18 +162,31 @@ def _build_report(
 
     missing: list[Node] = []
     violations: list[Violation] = []
+    demoted: set[int] = set()
     for top in top_nodes:
         for node in _walk_nodes(top):
+            if id(node) in demoted:
+                continue  # under a priority Exclusive's losing side
             if isinstance(node, Entry):
                 if node.required and node not in present:
                     missing.append(node)
             else:
                 group = cast("Group", node)
-                violation, group_missing = _check_group(group, present)
+                violation, group_missing, group_demoted = _check_group(group, present)
                 if violation is not None:
                     violations.append(violation)
                 if group_missing:
                     missing.append(group)
+                demoted.update(id(n) for n in group_demoted)
+
+    if demoted:
+        # Drop the resolved-away nodes so their paths fall through to
+        # `unexpected`; identity-keyed, as nodes compare by value.
+        matched = {
+            path: kept
+            for path, nodes in matched.items()
+            if (kept := tuple(n for n in nodes if id(n) not in demoted))
+        }
 
     failed = tuple(
         (path, node)
@@ -207,16 +220,32 @@ def _merge_matched(
     return merged
 
 
-def _check_group(group: Group, present: set[Node]) -> tuple[Violation | None, bool]:
-    """Inspect one constraint; return its `(violation, is_missing)`."""
+def _check_group(
+    group: Group, present: set[Node]
+) -> tuple[Violation | None, bool, tuple[Node, ...]]:
+    """Inspect one constraint; return `(violation, is_missing, demoted)`.
+
+    `demoted` is non-empty only when a `priority` `Exclusive` resolves a
+    multi-side conflict: it is every node beneath the losing (lower-priority)
+    present sides, which the caller drops from `matched` (so they surface as
+    `unexpected`) and skips in the spec walk.
+    """
     if isinstance(group, Exclusive):
         present_sides = [
             side for side in group.alternatives if _present_leaves(side, present)
         ]
         if len(present_sides) > 1:
+            if group.on_conflict == "priority":
+                demoted = tuple(
+                    descendant
+                    for side in present_sides[1:]
+                    for node in side
+                    for descendant in _walk_nodes(node)
+                )
+                return None, False, demoted
             leaves = _present_leaves(group.entries, present)
-            return Violation("exclusive", group, leaves), False
-        return None, group.required and not present_sides
+            return Violation("exclusive", group, leaves), False, ()
+        return None, group.required and not present_sides, ()
 
     together = cast("Together", group)
     present_members = [
@@ -224,8 +253,8 @@ def _check_group(group: Group, present: set[Node]) -> tuple[Violation | None, bo
     ]
     if 0 < len(present_members) < len(together.members):
         leaves = _present_leaves(together.entries, present)
-        return Violation("together", together, leaves), False
-    return None, together.required and not present_members
+        return Violation("together", together, leaves), False, ()
+    return None, together.required and not present_members, ()
 
 
 def _unexpected(

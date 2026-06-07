@@ -46,6 +46,15 @@ class TestExclusive:
         assert Exclusive(File("a"), File("b")).required is False
         assert Exclusive(File("a"), File("b"), required=True).required is True
 
+    def test_on_conflict_defaults_to_error(self) -> None:
+        assert Exclusive(File("a"), File("b")).on_conflict == "error"
+        ex = Exclusive(File("a"), File("b"), on_conflict="priority")
+        assert ex.on_conflict == "priority"
+
+    def test_invalid_on_conflict_raises(self) -> None:
+        with pytest.raises(ValueError, match="on_conflict"):
+            Exclusive(File("a"), File("b"), on_conflict="first")  # ty: ignore[invalid-argument-type]
+
     def test_files_and_directories_are_both_accepted(self) -> None:
         ex = Exclusive(Directory("build"), Directory("dist"))
         assert ex.alternatives == ((Directory("build"),), (Directory("dist"),))
@@ -63,6 +72,9 @@ class TestExclusive:
         assert Exclusive(File("a"), File("b")) != Exclusive(File("a"), File("c"))
         assert Exclusive(File("a"), File("b")) != Exclusive(
             File("a"), File("b"), required=True
+        )
+        assert Exclusive(File("a"), File("b")) != Exclusive(
+            File("a"), File("b"), on_conflict="priority"
         )
         assert hash(Exclusive(File("a"), File("b"))) == hash(
             Exclusive(File("a"), File("b"))
@@ -86,6 +98,10 @@ class TestExclusive:
         assert repr(Exclusive([File("a"), File("b")], File("c"))) == (
             "Exclusive((File(Literal(name='a')), File(Literal(name='b'))), "
             "File(Literal(name='c')))"
+        )
+        assert repr(Exclusive(File("a"), File("b"), on_conflict="priority")) == (
+            "Exclusive(File(Literal(name='a')), File(Literal(name='b')), "
+            "on_conflict='priority')"
         )
 
 

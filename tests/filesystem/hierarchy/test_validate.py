@@ -111,6 +111,65 @@ class TestExclusive:
         assert set(violation.present) == {File("a"), File("b"), File("c")}
 
 
+class TestExclusivePriority:
+    def test_lower_priority_side_becomes_unexpected(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/pyproject.toml", "d/setup.py"])
+        group = Exclusive(
+            File("pyproject.toml"), File("setup.py"), on_conflict="priority"
+        )
+        report = validate(Directory("d", [group]), tmp_path)
+        assert report.violations == ()  # resolved, not flagged
+        assert (tmp_path / "d" / "pyproject.toml") in report.matched  # winner kept
+        assert report.unexpected == (tmp_path / "d" / "setup.py",)  # loser demoted
+        assert not report.ok
+
+    def test_declaration_order_sets_the_winner(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/a", "d/b"])
+        # 'b' is declared first, so 'b' wins and 'a' is demoted.
+        group = Exclusive(File("b"), File("a"), on_conflict="priority")
+        report = validate(Directory("d", [group]), tmp_path)
+        assert (tmp_path / "d" / "b") in report.matched
+        assert report.unexpected == (tmp_path / "d" / "a",)
+
+    def test_single_side_present_is_clean(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/setup.py"])
+        group = Exclusive(
+            File("pyproject.toml"), File("setup.py"), on_conflict="priority"
+        )
+        report = validate(Directory("d", [group]), tmp_path)
+        assert report.ok
+        assert report.unexpected == ()
+
+    def test_losing_directory_subtree_reported_once(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/keep/x.txt", "d/legacy/y.txt"])
+        group = Exclusive(
+            Directory("keep", [File("x.txt")]),
+            Directory("legacy", [File("y.txt")]),
+            on_conflict="priority",
+        )
+        report = validate(Directory("d", [group]), tmp_path)
+        assert report.violations == ()
+        assert (tmp_path / "d" / "keep" / "x.txt") in report.matched  # winner subtree
+        assert report.unexpected == (tmp_path / "d" / "legacy",)  # once, then pruned
+        assert (tmp_path / "d" / "legacy" / "y.txt") not in report.unexpected
+
+    def test_required_none_present_is_missing(self, tmp_path: Path) -> None:
+        (tmp_path / "d").mkdir()
+        group = Exclusive(
+            File("a"), File("b"), required=True, on_conflict="priority"
+        )
+        report = validate(Directory("d", [group]), tmp_path)
+        assert group in report.missing
+
+    def test_conforms_rejects_when_a_loser_is_present(self, tmp_path: Path) -> None:
+        build(tmp_path, ["proj/pyproject.toml", "proj/setup.py"])
+        group = Exclusive(
+            File("pyproject.toml"), File("setup.py"), on_conflict="priority"
+        )
+        # the loser is unexpected, so the resolved subtree is not clean
+        assert not conforms(Directory("proj", [group]))(tmp_path / "proj")
+
+
 class TestTogether:
     def test_partial_is_a_violation(self, tmp_path: Path) -> None:
         build(tmp_path, ["d/a"])  # 'b' missing

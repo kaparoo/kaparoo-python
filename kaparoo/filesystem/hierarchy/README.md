@@ -187,6 +187,26 @@ Alternatives (and `Together` members) are `Node`s, so constraints **nest**
 Exclusive(Together(File("a"), File("b")), File("c"))   # {a and b together} or c
 ```
 
+### Resolving conflicts by priority: `on_conflict`
+
+By default, several alternatives present at once is a `violation`
+(`on_conflict="error"`). Set `on_conflict="priority"` to instead *resolve*
+the ambiguity by **declaration order** — the first present alternative
+wins, and the lower-priority present ones are reported as `unexpected`
+(their files no longer belong to the resolved tree). Reorder the
+alternatives to change the priority:
+
+```python
+Exclusive(
+    File("pyproject.toml"),   # preferred when both exist ...
+    File("setup.py"),         # ... this one becomes `unexpected`
+    on_conflict="priority",
+)
+```
+
+`on_conflict` is part of the spec, so it serializes and feeds future write
+operations (a resolved `Exclusive` has a single, deterministic choice).
+
 ## Co-occurrence: `Together`
 
 Some siblings are meaningless apart and must come as a set — a sharded
@@ -361,7 +381,7 @@ if not report:                     # truthy only when fully conformant
 | `matched` | `{path: (node, ...)}`, exactly `match_map` |
 | `unexpected` | paths matching no node (see below) |
 | `missing` | a `required` entry, or a `required` `Exclusive` / `Together` with nothing present |
-| `violations` | `Exclusive` with more than one side present, or `Together` only partly present |
+| `violations` | `Exclusive` with more than one side present (unless `on_conflict="priority"` resolves it — losers fall to `unexpected` instead), or `Together` only partly present |
 | `failed` | `(path, node)` pairs where the matched path broke the node's attribute [`condition`](#attribute-conditions-condition) |
 | `ok` | `True` (and the report is truthy) when the four above are empty |
 

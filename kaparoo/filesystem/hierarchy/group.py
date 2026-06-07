@@ -14,7 +14,7 @@ from kaparoo.filesystem.hierarchy.utils import register_node
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
-    from typing import Any, Self
+    from typing import Any, Literal, Self
 
     from kaparoo.filesystem.hierarchy.entry import Entry
 
@@ -89,23 +89,36 @@ class Exclusive(Group):
     b), c)` is "{a and b} or c". `required=True` additionally requires at
     least one alternative present.
 
+    When more than one alternative is present, `on_conflict` decides the
+    outcome: `"error"` (the default) reports an `exclusive` violation, while
+    `"priority"` resolves the conflict by *declaration order* -- the first
+    present alternative wins and the lower-priority present ones are treated
+    as `unexpected` (their files no longer belong to the resolved tree).
+    Reorder the alternatives to set the priority.
+
     Args:
         *alternatives: Two or more alternatives, each a `Node` or an
-            iterable of nodes sharing one side of the exclusion.
+            iterable of nodes sharing one side of the exclusion. Their order
+            is the priority used by `on_conflict="priority"`.
         required: If True, at least one alternative must be present; if
             False (the default), at most one.
+        on_conflict: How a multi-side conflict is resolved -- `"error"` (the
+            default) flags it; `"priority"` keeps the first present side and
+            demotes the rest to `unexpected`.
 
     Raises:
-        ValueError: If fewer than two alternatives are given, or any
-            alternative is empty.
+        ValueError: If fewer than two alternatives are given, any
+            alternative is empty, or `on_conflict` is not `"error"` /
+            `"priority"`.
     """
 
-    __slots__ = ("_alternatives",)
+    __slots__ = ("_alternatives", "_on_conflict")
 
     def __init__(
         self,
         *alternatives: Node | Iterable[Node],
         required: bool = False,
+        on_conflict: Literal["error", "priority"] = "error",
     ) -> None:
         normalized = tuple(_normalize_alternative(alt) for alt in alternatives)
         if len(normalized) < 2:
@@ -114,7 +127,14 @@ class Exclusive(Group):
         if any(not alt for alt in normalized):
             msg = "each Exclusive alternative must be non-empty."
             raise ValueError(msg)
+        if on_conflict not in ("error", "priority"):
+            msg = (
+                "Exclusive on_conflict must be 'error' or 'priority', "
+                f"got {on_conflict!r}"
+            )
+            raise ValueError(msg)
         self._alternatives = normalized
+        self._on_conflict: Literal["error", "priority"] = on_conflict
         super().__init__(required=required)
 
     @property
@@ -123,11 +143,16 @@ class Exclusive(Group):
         return self._alternatives
 
     @property
+    def on_conflict(self) -> Literal["error", "priority"]:
+        """How a multi-side conflict resolves (`"error"` flags, `"priority"` picks)."""
+        return self._on_conflict
+
+    @property
     def entries(self) -> tuple[Entry, ...]:
         return flatten_entries(node for alt in self._alternatives for node in alt)
 
     def _key(self) -> tuple[object, ...]:
-        return (self._alternatives, self._required)
+        return (self._alternatives, self._required, self._on_conflict)
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {
@@ -138,6 +163,8 @@ class Exclusive(Group):
         }
         if self._required:
             result["required"] = True
+        if self._on_conflict != "error":
+            result["on_conflict"] = self._on_conflict
         return result
 
     @classmethod
@@ -145,7 +172,11 @@ class Exclusive(Group):
         alternatives = [
             [Node.from_dict(node) for node in alt] for alt in data["alternatives"]
         ]
-        return cls(*alternatives, required=data.get("required", False))
+        return cls(
+            *alternatives,
+            required=data.get("required", False),
+            on_conflict=data.get("on_conflict", "error"),
+        )
 
     def __repr__(self) -> str:
         parts = [
@@ -153,6 +184,8 @@ class Exclusive(Group):
         ]
         if self._required:
             parts.append("required=True")
+        if self._on_conflict != "error":
+            parts.append(f"on_conflict={self._on_conflict!r}")
         return f"Exclusive({', '.join(parts)})"
 
 

@@ -44,7 +44,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   can sit among a directory's
   children: `Exclusive` (the present siblings may come from at most one of
   its alternatives, each a set of independent nodes on one side of the
-  exclusion; `required=True` requires at least one) and `Together` (its
+  exclusion; `required=True` requires at least one; `on_conflict="priority"`
+  resolves a multi-side conflict by declaration order — the first present
+  alternative wins and the rest become `unexpected` — instead of the default
+  `"error"`) and `Together` (its
   members are all-or-nothing -- all present or all absent; `required=True`
   requires all). Both take `Node`s, so constraints nest --
   `Exclusive(Together(a, b), c)` is "{a and b} or c". `File` / `Directory`
