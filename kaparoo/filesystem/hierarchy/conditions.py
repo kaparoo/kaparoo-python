@@ -234,6 +234,13 @@ class Content(Condition):
     inspect arbitrary file content -- is supplied to `validate` as
     `checks={name: callable}`. When `name` is absent from `checks`,
     `CheckContext.on_missing` decides: `"error"` raises, `"skip"` passes.
+
+    The callable receives the matched *absolute* `Path` (a live filesystem
+    handle, not just a name), so it may navigate to siblings and ancestors
+    -- `path.parent`, `iterdir()`, `glob(...)` -- to relate its node to
+    others at the same or a higher level (e.g. comparing this file's line
+    count to the entry count of a sibling directory). Navigation is relative
+    to the matched path, not the validation root.
     """
 
     name: str

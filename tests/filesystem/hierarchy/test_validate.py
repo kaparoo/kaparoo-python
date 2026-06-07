@@ -305,6 +305,30 @@ class TestValidateCondition:
         (tmp_path / "g").write_bytes(b"x")
         assert conforms(File(Glob("*"), condition=Size(min=1)))(tmp_path / "g")
 
+    def test_content_check_can_reach_a_sibling(self, tmp_path: Path) -> None:
+        # the callable gets a live Path, so it may navigate to a sibling dir
+        build(tmp_path, ["d/manifest.txt", "d/other/a", "d/other/b"])
+        (tmp_path / "d" / "manifest.txt").write_text("l1\nl2\n")  # 2 lines
+
+        def lines_match_sibling_count(path: Path) -> bool:
+            lines = len(path.read_text().splitlines())
+            return lines == sum(1 for _ in (path.parent / "other").iterdir())
+
+        spec = Directory(
+            "d",
+            [
+                File("manifest.txt", condition=Content("match")),
+                Directory("other", [File(Glob("*"))]),  # accept any sibling files
+            ],
+        )
+        checks = {"match": lines_match_sibling_count}
+        assert validate(spec, tmp_path, checks=checks).ok  # 2 lines == 2 files
+
+        (tmp_path / "d" / "other" / "c").write_text("x")  # now 3 files -> mismatch
+        report = validate(spec, tmp_path, checks=checks)
+        assert report.unexpected == ()  # 'c' is accepted, so only the check fails
+        assert (tmp_path / "d" / "manifest.txt", spec.children[0]) in report.failed
+
 
 class TestValidateExclude:
     def test_excluded_path_neither_matched_nor_unexpected(self, tmp_path: Path) -> None:

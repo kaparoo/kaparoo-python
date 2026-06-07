@@ -143,6 +143,23 @@ value-comparable:
 report = validate(spec, root, checks={"valid_schema": lambda p: ...})
 ```
 
+The callable receives the matched **absolute path** — a live `pathlib.Path`,
+not just a name — so it is free to navigate to siblings and ancestors with
+`.parent`, `iterdir()`, `glob(...)`, etc. A condition can therefore relate
+its node to others at the same or a higher level. For example, "this file's
+line count equals the number of files in a sibling folder":
+
+```python
+def lines_match_sibling_count(path: Path) -> bool:
+    lines = len(path.read_text().splitlines())
+    return lines == sum(1 for _ in (path.parent / "other").iterdir())
+
+validate(spec, root, checks={"lines_match": lines_match_sibling_count})
+```
+
+The path is the only argument — navigation is relative to the matched path,
+not to `root` — so anchor cross-references off `path.parent`.
+
 When a `Content` name is absent from `checks`, `on_missing` decides:
 `"error"` (the default) raises, `"skip"` treats it as satisfied.
 
