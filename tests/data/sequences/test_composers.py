@@ -520,3 +520,19 @@ def test_zipped_strict_false_truncates_to_shorter():
     assert zipped.get_metas([1, 0]) == [(1, "y"), (0, "x")]
     with pytest.raises(IndexError):
         zipped[2]
+
+
+# --- batch get_items / get_metas equal the scalar path ----------------------
+
+
+def test_sliced_batch_matches_scalar(src: ListDataSequence[str, int]):
+    sliced = SlicedSequence(src, [3, 7, 1, 9])
+    idx = [2, 0, 3]
+    assert sliced.get_items(idx) == [sliced.get_item(i) for i in idx]
+    assert sliced.get_metas(idx) == [sliced.get_meta(i) for i in idx]
+
+
+def test_transformed_batch_matches_scalar(src: ListDataSequence[str, int]):
+    transformed = TransformedSequence(src, str.upper)
+    idx = [0, 4, 2]
+    assert transformed.get_items(idx) == [transformed.get_item(i) for i in idx]

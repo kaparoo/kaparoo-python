@@ -230,7 +230,9 @@ def test_dict_filter_works_across_all_wrappers(
     search_fn, tmp_filesystem: TmpFilesystem
 ):
     spec: PatternFilterDict = {"kind": "ends_with", "pattern": ".txt"}
-    search_fn(tmp_filesystem.root, name_filter=spec)
+    from_dict = search_fn(tmp_filesystem.root, name_filter=spec)
+    from_obj = search_fn(tmp_filesystem.root, name_filter=EndsWith(".txt"))
+    assert set(from_dict) == set(from_obj)
 
 
 def test_dict_filter_invalid_raises(tmp_filesystem: TmpFilesystem):
@@ -283,3 +285,16 @@ def test_search_ordered_stable_across_calls(search_fn, tmp_filesystem: TmpFilesy
     first = list(search_fn(tmp_filesystem.root, ordered=True))
     second = list(search_fn(tmp_filesystem.root, ordered=True))
     assert first == second
+
+
+def test_search_min_depth_skips_shallow_but_descends_deeper(tmp_path: Path):
+    # Three levels: top.txt + a/ at depth 1, a/b/ at depth 2, a/b/c.txt at 3.
+    (tmp_path / "a" / "b").mkdir(parents=True)
+    (tmp_path / "a" / "b" / "c.txt").write_text("x")
+    (tmp_path / "top.txt").write_text("x")
+    # min_depth=2 omits the depth-1 entries from the results, yet still
+    # descends through them to reach depth-2 and depth-3 paths.
+    assert set(search_paths(tmp_path, min_depth=2)) == {
+        tmp_path / "a" / "b",
+        tmp_path / "a" / "b" / "c.txt",
+    }

@@ -41,6 +41,10 @@ class Reduction[S](ABC):
     exactly across loop levels (batch -> epoch -> run) and stays online --
     constant memory per metric, no per-sample storage.
 
+    Weights are assumed **positive** -- `Aggregator` enforces `weight > 0`,
+    and `step` / `merge` are undefined for zero or negative weight (`Var`,
+    for instance, divides by the running total weight).
+
     Type Parameters:
         S: The reduction's internal accumulator state.
 

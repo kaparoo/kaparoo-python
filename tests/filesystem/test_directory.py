@@ -17,6 +17,7 @@ from kaparoo.filesystem.directory import (
     make_dir,
     make_dirs,
 )
+from kaparoo.filesystem.exceptions import DirectoryNotFoundError
 
 from .helpers import _stringify
 
@@ -307,3 +308,13 @@ def test_dirs_not_empty_with_root(tmp_path: Path, tmp_dirnames: list[str]):
     # Empty dirs -> not all non-empty; `root` handled identically by both.
     assert dirs_not_empty(tmp_dirnames, root=tmp_path) is False
     assert dirs_not_empty_unsafe(tmp_dirnames, root=tmp_path) is False
+
+
+def test_unsafe_variants_skip_existence_validation(tmp_path: Path) -> None:
+    missing = tmp_path / "nope"
+    # the safe variant validates first and raises the project's error...
+    with pytest.raises(DirectoryNotFoundError):
+        dir_empty(missing)
+    # ...the unsafe variant skips validation, so the raw OSError surfaces
+    with pytest.raises(FileNotFoundError):
+        dir_empty_unsafe(missing)

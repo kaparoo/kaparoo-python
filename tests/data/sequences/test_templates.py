@@ -316,3 +316,33 @@ def test_single_file_missing_raises(unknown_path: Path):
 def test_single_file_is_a_directory_raises(tmp_dir: Path):
     with pytest.raises(NotAFileError):
         TextLinesFile(tmp_dir)
+
+
+def test_file_folder_files_is_cached(tmp_dir: Path):
+    (tmp_dir / "a.txt").write_bytes(b"x")
+    folder = BytesFolder(tmp_dir)
+    assert folder.files is folder.files  # built once, then cached
+
+
+def test_file_folder_list_files_outside_root_raises(tmp_dir: Path):
+    class EscapingFolder(FileFolderSequence[bytes]):
+        def list_files(self, root: Path) -> list[Path]:
+            return [root.parent / "outside.txt"]  # not under root
+
+        def get_meta(self, index: int) -> Path:
+            return self.get_file(index)
+
+        def load_file(self, path: Path) -> bytes:
+            return path.read_bytes()
+
+    with pytest.raises(ValueError, match="not in the subpath"):
+        EscapingFolder(tmp_dir)
+
+
+def test_file_folder_paths_survive_root_relocation(tmp_dir: Path, tmp_path: Path):
+    (tmp_dir / "a.txt").write_bytes(b"x")
+    folder = BytesFolder(tmp_dir)
+    relocated = tmp_path / "moved"
+    folder._root = relocated  # noqa: SLF001  (simulate moving the dataset root)
+    # paths are stored root-relative, so get_file re-prepends the new root
+    assert folder.get_file(0) == relocated / "a.txt"

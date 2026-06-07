@@ -10,7 +10,7 @@ from kaparoo.filesystem.hierarchy import (
     conforms,
     validate,
 )
-from kaparoo.filters import Glob
+from kaparoo.filters import Glob, OneOf
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -174,6 +174,36 @@ class TestConforms:
     def test_childless_directory_with_contents_rejected(self, tmp_path: Path) -> None:
         build(tmp_path, ["logs/a.txt"])
         assert not conforms(Directory("logs"))(tmp_path / "logs")
+
+
+class TestValidateDepth:
+    def test_intermediate_dir_is_an_allowed_ancestor(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/mid/x.txt"])
+        spec = Directory("d", [File("x.txt", depth=2)])
+        report = validate(spec, tmp_path)
+        assert report.ok  # d/mid is an ancestor of a match, not unexpected
+        assert (tmp_path / "d" / "mid" / "x.txt") in report.matched
+
+    def test_stray_inside_a_nested_matched_dir_is_unexpected(
+        self, tmp_path: Path
+    ) -> None:
+        build(tmp_path, ["d/mid/x.txt", "d/mid/stray.txt"])
+        spec = Directory("d", [File("x.txt", depth=2)])
+        report = validate(spec, tmp_path)
+        assert not report.ok
+        assert (tmp_path / "d" / "mid" / "stray.txt") in report.unexpected
+
+
+class TestRequiredEnumerable:
+    def test_satisfied_by_one_present_name(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/train"])  # 'val' absent
+        spec = Directory("d", [File(OneOf(["train", "val"]), required=True)])
+        assert validate(spec, tmp_path).missing == ()  # one name is enough
+
+    def test_missing_when_no_name_present(self, tmp_path: Path) -> None:
+        (tmp_path / "d").mkdir()
+        node = File(OneOf(["train", "val"]), required=True)
+        assert node in validate(Directory("d", [node]), tmp_path).missing
 
 
 class TestValidateExclude:

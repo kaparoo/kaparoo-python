@@ -329,3 +329,23 @@ def test_custom_reduction_subclass_nests_correctly():
         / sum(n for ep in epochs for (_, n) in ep)
     ) ** 0.5
     assert run.compute()["x"] == pytest.approx(flat)
+
+
+def test_var_single_sample_is_zero():
+    # Population convention (ddof=0): one sample has zero variance, not nan.
+    var = Var()
+    state = var.step(var.identity(), 5.0, 1.0)
+    assert var.result(state) == 0.0
+    assert Std().result(state) == 0.0
+
+
+def test_mean_propagates_nan():
+    mean = Mean()
+    state = mean.step(mean.identity(), float("nan"), 1.0)
+    assert math.isnan(mean.result(state))
+
+
+def test_var_propagates_nan():
+    var = Var()
+    state = var.step(var.step(var.identity(), 1.0, 1.0), float("nan"), 1.0)
+    assert math.isnan(var.result(state))
