@@ -19,6 +19,22 @@ correctness, edge cases, and API shape against the rest of the library:
 
 ---
 
+## 📝 Documentation pass (library-wide)
+
+A consistency sweep over the prose, independent of the per-module review:
+
+- **Docstrings** — rewrite to consistent Google style; replace
+  mechanism-focused or over-written summaries with intent / contract per the
+  AGENTS.md philosophy (one-line summary, then only what the signature
+  cannot convey).
+- **Comments** — shorten unnecessarily long comments to the load-bearing
+  "why"; drop any that merely restate the code.
+- **README.md** — improve how the public API is presented (description
+  style) and tighten / fix the examples (idiomatic usage, public over
+  private members, copy-pasteable).
+
+---
+
 ## 🧮 `kaparoo.utils.aggregate`
 
 ### Remove the `experimental` tag
