@@ -198,6 +198,16 @@ def test_stored_state_is_mutable_in_place():
     assert state == [(1.0, 1.0)]
 
 
+def test_aggregate_names_reexported_from_package():
+    from kaparoo import utils
+
+    assert utils.Aggregator is Aggregator
+    assert utils.Median is Median
+    assert utils.OptionalFold is OptionalFold
+    assert utils.Quantile is Quantile
+    assert utils.Stored is Stored
+
+
 def test_store_all_via_aggregator():
     agg = Aggregator(Median())
     for x in (4.0, 2.0, 8.0, 6.0):
@@ -231,6 +241,26 @@ def test_var_merge_matches_flat():
 def test_var_merge_of_empties_is_empty():
     var = Var()
     assert var.merge(var.identity(), var.identity()) == var.identity()
+
+
+def test_var_merge_with_one_empty_side():
+    # Merging an empty partial with a populated one yields the populated one.
+    data = [2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0]
+    var = Var()
+    populated = _accumulate(var, data)
+    assert var.merge(var.identity(), populated) == pytest.approx(populated)
+    assert var.merge(populated, var.identity()) == pytest.approx(populated)
+
+
+def test_var_numerically_stable_under_large_offset():
+    # The whole point of Welford over naive sum-of-squares: a tiny spread
+    # riding on a huge mean must not lose precision.
+    var = Var()
+    shifted = [1e9 + 1.0, 1e9 + 2.0, 1e9 + 3.0]
+    assert var.result(_accumulate(var, shifted)) == pytest.approx(2.0 / 3.0)
+    assert Std().result(_accumulate(Std(), shifted)) == pytest.approx(
+        (2.0 / 3.0) ** 0.5
+    )
 
 
 def test_var_weight_equals_repetition():

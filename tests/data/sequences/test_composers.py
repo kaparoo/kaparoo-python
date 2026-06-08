@@ -170,6 +170,16 @@ def test_concat_out_of_range_raises(src: ListDataSequence[str, int]):
         _ = combined.get_item(-100)
 
 
+def test_concat_no_sources_is_empty():
+    # The docstring promises "zero or more" sources; the empty case is a
+    # valid, empty sequence.
+    combined = ConcatSequence()
+    assert len(combined) == 0
+    assert list(combined) == []
+    with pytest.raises(IndexError, match="out of range"):
+        _ = combined.get_item(0)
+
+
 def test_concat_sources_property():
     a = ListDataSequence(["a"], [0])
     b = ListDataSequence(["b"], [1])

@@ -131,6 +131,17 @@ class TestExclusivePriority:
         assert (tmp_path / "d" / "b") in report.matched
         assert report.unexpected == (tmp_path / "d" / "a",)
 
+    def test_three_sides_present_keeps_only_first(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/a", "d/b", "d/c"])
+        # All three alternatives present: the first declared wins, the rest
+        # (b and c) are both demoted to `unexpected`.
+        group = Exclusive(File("a"), File("b"), File("c"), on_conflict="priority")
+        report = validate(Directory("d", [group]), tmp_path)
+        assert report.violations == ()
+        assert (tmp_path / "d" / "a") in report.matched
+        assert set(report.unexpected) == {tmp_path / "d" / "b", tmp_path / "d" / "c"}
+        assert not report.ok
+
     def test_single_side_present_is_clean(self, tmp_path: Path) -> None:
         build(tmp_path, ["d/setup.py"])
         group = Exclusive(
