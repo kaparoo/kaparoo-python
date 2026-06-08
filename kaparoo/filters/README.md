@@ -36,7 +36,7 @@ Take a single string `pattern` and a `case_sensitive` flag (default `True`).
 | `EndsWithFilter` / `EndsWith` | ends with the pattern |
 | `ContainsFilter` / `Contains` | contains the pattern |
 | `RegexFilter` / `Regex` | fully matches the regex (via `re.fullmatch`) |
-| `GlobFilter` / `Glob` | matches the glob (via `fnmatch.fnmatchcase`) |
+| `GlobFilter` / `Glob` | matches the glob (`*`, `?`, `[seq]`, `[!seq]`) |
 
 ```python
 from kaparoo.filters import EndsWith, Glob, Regex
@@ -185,8 +185,9 @@ class LengthAboveFilter(Filter):
     def matches(self, target: str) -> bool:
         return len(target) > self.threshold
 
-    def to_dict(self) -> dict[str, Any]:
-        return {"kind": "length_above", "threshold": self.threshold}
+    def _payload(self) -> dict[str, Any]:
+        # Kind-less fields only; `to_dict` injects `"kind"` from `_kind`.
+        return {"threshold": self.threshold}
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Self:

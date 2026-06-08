@@ -21,10 +21,10 @@ def generate_batches[T](
     """Yield sliding windows from `sequence`, each a slice of `size` items.
 
     The window advances by `step` and strides by `skip` within itself. The
-    defaults (`size`/`step`/`skip` = 3/1/1) give overlapping consecutive-item
-    windows; `step >= size` gives non-overlapping batches. Traversal is
-    confined to `[start, stop)` (`stop=None` means the full length); an empty
-    range yields nothing.
+    default `step`/`skip` of 1/1 gives overlapping consecutive-item windows;
+    `step >= size` gives non-overlapping batches. Traversal is confined to
+    `[start, stop)` (`stop=None` means the full length); an empty range yields
+    nothing.
 
     Args:
         size: Items per window. Must be positive.

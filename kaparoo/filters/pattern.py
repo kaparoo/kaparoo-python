@@ -41,17 +41,11 @@ class PatternFilter(Filter, ABC):
 
     Attributes:
         pattern: The string compared against the input. When
-            `case_sensitive=False`, the pattern is `casefold`-ed at
-            construction time and the normalized form is what gets
-            stored and serialized.
-        case_sensitive: If False, matching is performed case-insensitively
-            via Unicode `str.casefold()`. Note that `casefold()` is more
-            aggressive than `str.lower()` (e.g. ``"ß".casefold() == "ss"``,
-            ``"ﬁ".casefold() == "fi"``), so two filenames that the
-            underlying filesystem treats as distinct may still match each
-            other here. This is the "caseless linguistic equivalence"
-            interpretation that Python recommends for case-insensitive
-            string matching. Defaults to True.
+            `case_sensitive=False`, the stored and serialized form is
+            `casefold`-ed.
+        case_sensitive: If False, matching uses Unicode `str.casefold()`.
+            Defaults to True. See the module README's "Case sensitivity"
+            section for the linguistic-equivalence caveat.
     """
 
     pattern: str

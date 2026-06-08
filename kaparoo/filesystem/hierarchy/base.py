@@ -40,8 +40,8 @@ class Node(ABC):
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a `"node"`-discriminated dict.
 
-        Round-trippable via `Node.from_dict`. Default-valued fields (a
-        `(1, 1)` depth, `required=False`) are omitted for compactness.
+        Round-trippable via `Node.from_dict`. Subclasses may omit
+        default-valued fields for compactness.
         """
         raise NotImplementedError
 

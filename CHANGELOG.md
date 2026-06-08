@@ -170,6 +170,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   type (`is_file` / `is_dir`) before falling back to `exists()`, halving the
   `stat` calls on the success path (and `ensure_dir_exists` drops a redundant
   post-`mkdir` re-check). Behavior is unchanged.
+- `kaparoo.utils.unwrap_or_defaults` / `unwrap_or_factories` now annotate
+  their return as `list[T]` (was `Sequence[T]`), matching what they have
+  always returned. A type-hint-only refinement; callers relying on the
+  wider `Sequence` type are unaffected.
 
 ## [0.7.0] - 2026-06-04
 

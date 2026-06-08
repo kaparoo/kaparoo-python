@@ -21,15 +21,7 @@ if TYPE_CHECKING:
 
 
 def replace_if_none[T](optional: T | None, surrogate: T) -> T:
-    """Replace the value if it is None.
-
-    Args:
-        optional: The optional value to be checked.
-        surrogate: The value to be returned if `optional` is None.
-
-    Returns:
-        The `optional` value if it is not None, otherwise the `surrogate` value.
-    """
+    """Return `optional`, or `surrogate` when `optional` is None."""
     return surrogate if optional is None else optional
 
 
@@ -38,16 +30,10 @@ def unwrap_or_default[T](
     default: T,
     callback: Callable[[T], T] | None = None,
 ) -> T:
-    """Unwrap the optional value or replace it with a default if it is None.
+    """Return `optional` (or `default` when None), optionally mapped by `callback`.
 
-    Args:
-        optional: The optional value to be checked.
-        default: The value to be returned if `optional` is None.
-        callback: An optional callable to be applied to the result. If provided,
-            it is applied to the result before returning. Defaults to None.
-
-    Returns:
-        The `optional` value if it is not None, otherwise the `default` value.
+    `callback`, when given, is applied to whichever value is returned --
+    including `default`, not only the unwrapped `optional`.
     """
     result = replace_if_none(optional, default)
     return callback(result) if callback is not None else result
@@ -57,17 +43,11 @@ def unwrap_or_defaults[T](
     optionals: Sequence[T | None],
     default: T,
     callback: Callable[[T], T] | None = None,
-) -> Sequence[T]:
-    """Unwrap each optional value or replace it with a default if it is None.
+) -> list[T]:
+    """Unwrap each value in `optionals`, substituting `default` for None.
 
-    Args:
-        optionals: The sequence of optional values to be checked.
-        default: The value to be used for elements that are None.
-        callback: An optional callable to be applied to the result. If provided,
-            it is applied to the result before returning. Defaults to None.
-
-    Returns:
-        A sequence containing the unwrapped values from `optionals` or their defaults.
+    `callback`, when given, is applied to every result element, substituted
+    defaults included.
     """
     if callback is None:
         return [default if o is None else o for o in optionals]
@@ -80,15 +60,7 @@ def unwrap_or_defaults[T](
 
 
 def factory_if_none[T](optional: T | None, factory: Callable[[], T]) -> T:
-    """Replace the value using the factory if it is None.
-
-    Args:
-        optional: The optional value to be checked.
-        factory: A callable that creates a value if `optional` is None.
-
-    Returns:
-        The `optional` value if it is not None, otherwise the value created by `factory`.
-    """
+    """Return `optional`, or `factory()` when `optional` is None."""
     return factory() if optional is None else optional
 
 
@@ -97,16 +69,10 @@ def unwrap_or_factory[T](
     factory: Callable[[], T],
     callback: Callable[[T], T] | None = None,
 ) -> T:
-    """Unwrap the optional value or replace it using the factory if it is None.
+    """Return `optional` (or `factory()` when None), optionally mapped by `callback`.
 
-    Args:
-        optional: The optional value to be checked.
-        factory: A callable that creates a value if `optional` is None.
-        callback: An optional callable to be applied to the result. If provided,
-            it is applied to the result before returning. Defaults to None.
-
-    Returns:
-        The `optional` value if it is not None, otherwise the value created by `factory`.
+    `callback`, when given, is applied to whichever value is returned --
+    including the `factory()` result, not only the unwrapped `optional`.
     """
     result = factory_if_none(optional, factory)
     return callback(result) if callback is not None else result
@@ -116,17 +82,11 @@ def unwrap_or_factories[T](
     optionals: Sequence[T | None],
     factory: Callable[[], T],
     callback: Callable[[T], T] | None = None,
-) -> Sequence[T]:
-    """Unwrap each optional value or replace it using the factory if it is None.
+) -> list[T]:
+    """Unwrap each value in `optionals`, calling `factory` for None.
 
-    Args:
-        optionals: The sequence of optional values to be checked.
-        factory: A callable that creates a value for elements that are None.
-        callback: An optional callable to be applied to the result. If provided,
-            it is applied to the result before returning. Defaults to None.
-
-    Returns:
-        A sequence containing the unwrapped values from `optionals` or values created by `factory`.
+    `callback`, when given, is applied to every result element, factory
+    results included.
     """
     if callback is None:
         return [o if o is not None else factory() for o in optionals]

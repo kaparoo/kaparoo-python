@@ -135,7 +135,7 @@ class FirstFrameMeta(WindowedSequence[bytes, Path]):
     def get_meta(self, index):
         # window's metadata is its first frame's metadata
         index = self._normalize_index(index)
-        return self._source.get_meta(index * self._step)
+        return self.source.get_meta(index * self.step)
 
 # 3-frame windows, hop 1, no intra-window skip
 windows = FirstFrameMeta(frames, size=3)

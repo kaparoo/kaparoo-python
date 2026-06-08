@@ -34,17 +34,12 @@ class MultiPatternFilter(Filter, ABC):
 
     Attributes:
         patterns: The strings compared against the input. Must be non-empty.
-            When `case_sensitive=False`, each entry is `casefold`-ed and the
-            tuple is deduped at construction time; the normalized form is
-            what gets stored and serialized.
-        case_sensitive: If False, matching is performed case-insensitively
-            via Unicode `str.casefold()`. Note that `casefold()` is more
-            aggressive than `str.lower()` (e.g. ``"ß".casefold() == "ss"``,
-            ``"ﬁ".casefold() == "fi"``), so two filenames that the
-            underlying filesystem treats as distinct may still match each
-            other here. This is the "caseless linguistic equivalence"
-            interpretation that Python recommends for case-insensitive
-            string matching. Defaults to True.
+            Deduped at construction; when `case_sensitive=False`, each entry
+            is `casefold`-ed first. The normalized form is stored and
+            serialized.
+        case_sensitive: If False, matching uses Unicode `str.casefold()`.
+            Defaults to True. See the module README's "Case sensitivity"
+            section for the linguistic-equivalence caveat.
 
     Raises:
         ValueError: If `patterns` is empty.

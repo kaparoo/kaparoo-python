@@ -436,10 +436,12 @@ name, or a **directory** matching a top `Directory`'s name *whose subtree
 conforms* (via `validate`); a top `Group` is realized by any one of its
 alternatives / members. The path is always tested as the *top* of `spec`,
 never against an inner node — `conforms(Directory("dataset", [...]))`
-accepts a conforming `dataset/` directory, not the files inside it. (File
-*attribute* conditions — size, mtime, … — are planned and will tighten the
-file case. Checking whether a concrete path or sub-spec is *contained*
-anywhere within a spec is a separate, future capability.)
+accepts a conforming `dataset/` directory, not the files inside it. A
+`condition` on the top node is enforced too: a top `File` / `Directory`
+carrying a `Size`, `ChildCount`, `Content`, … condition realizes the spec
+only when that condition also holds. (Checking whether a concrete path or
+sub-spec is *contained* anywhere within a spec is a separate, future
+capability.)
 
 ## Scaffolding: `scaffold`
 
