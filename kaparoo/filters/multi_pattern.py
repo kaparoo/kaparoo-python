@@ -52,14 +52,14 @@ class MultiPatternFilter(Filter, ABC):
         if not self.patterns:
             msg = f"{type(self).__name__} requires at least one pattern."
             raise ValueError(msg)
-        normalized = (
-            self.patterns
-            if self.case_sensitive
-            else tuple(p.casefold() for p in self.patterns)
-        )
-        deduped = tuple(dict.fromkeys(normalized))
-        if deduped != self.patterns:
-            object.__setattr__(self, "patterns", deduped)
+
+        patterns = self.patterns
+        if not self.case_sensitive:
+            patterns = tuple(p.casefold() for p in patterns)
+
+        # Always store a deduped tuple: `startswith` / `endswith` require a
+        # tuple (not a list), and dedup keeps first-seen order.
+        object.__setattr__(self, "patterns", tuple(dict.fromkeys(patterns)))
 
     def _prepare_target(self, target: str) -> str:
         """Return `target` normalized for `case_sensitive`."""

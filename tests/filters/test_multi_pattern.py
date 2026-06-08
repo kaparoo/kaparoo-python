@@ -69,6 +69,23 @@ def test_multi_pattern_preserves_first_seen_order(cls: type[MultiPatternFilter])
     assert f.patterns == ("z", "a", "m")
 
 
+@pytest.mark.parametrize("cls", _MULTI_PATTERN_CLASSES)
+def test_multi_pattern_coerces_list_to_tuple(cls: type[MultiPatternFilter]):
+    # The annotation says tuple, but a list reaches construction unenforced.
+    # `patterns` must always end up a tuple -- `str.startswith` / `endswith`
+    # reject a list, so a stored list would crash `matches` later.
+    f = cls(["a", "b"])
+    assert isinstance(f.patterns, tuple)
+    assert f.patterns == ("a", "b")
+
+
+def test_startswith_endswith_match_when_built_from_list():
+    # Guards the tuple contract specifically for the filters that pass
+    # `patterns` straight to `str.startswith` / `str.endswith`.
+    assert StartsWithAnyFilter(["test_", "spec_"]).matches("test_foo")
+    assert EndsWithAnyFilter([".png", ".jpg"]).matches("photo.png")
+
+
 # --- EqualsAnyFilter -------------------------------------------------------
 
 
