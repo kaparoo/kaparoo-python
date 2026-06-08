@@ -228,20 +228,7 @@ class Timer(BaseTimer):
         # `t.elapsed` is now the elapsed time, e.g. 12.34.
     """
 
-    def __init__(self, unit: TimeUnit = "s", *, ndigits: int | None = None) -> None:
-        """Initialize the timer.
-
-        Args:
-            unit: The time unit for reported values. One of "s", "ms", "us",
-                "ns". Defaults to "s".
-            ndigits: The number of decimal places to round `elapsed` to.
-                If None, no rounding is applied. Defaults to None.
-
-        Raises:
-            ValueError: If `unit` is not one of the supported values.
-        """
-        super().__init__(unit=unit, ndigits=ndigits)
-        self.elapsed: float = 0.0
+    elapsed: float = 0.0
 
     def _finalize(self) -> None:
         """Store the elapsed time in `elapsed`."""
