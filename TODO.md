@@ -15,15 +15,4 @@ docstrings, the CHANGELOG entry, and `kaparoo/utils/README.md`.
 
 ---
 
-## 🗂️ `kaparoo.filesystem`
-
-### Review cleanups (refactor -- behavior-preserving)
-
-- **`_ensure_directory_target` does 2-3 stats per path in `make_dirs`** --
-  apply the single-`exists`-then-`is_dir` shape (per-path only; caching
-  `is_dir` across the validate->create gap changes behavior for nested
-  paths, per the `make_dir` commit).
-
----
-
-*Last updated: 2026-06-07*
+*Last updated: 2026-06-08*

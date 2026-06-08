@@ -38,6 +38,10 @@ if TYPE_CHECKING:
 # ========================== #
 
 
+# Uses `pathlib` predicates, not a single `os.lstat`: `is_dir` must follow
+# symlinks, so a bare `lstat` still needs a second `stat` for a symlink
+# target -- no syscall saved, and the predicates handle broken symlinks /
+# Windows reparse points without decoding `st_mode`.
 def _ensure_directory_target(path: Path, *, clean: bool) -> bool:
     """Reject a path that cannot serve as a directory target; report whether
     it is an existing directory.
