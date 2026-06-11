@@ -71,10 +71,10 @@ def search_paths(
 ) -> Sequence[Path] | Sequence[str]:
     """Walk `root` and return file and directory paths that match.
 
-    Performs a depth-first traversal. Entries (files and sub-directories)
-    are returned if they pass `part_filter` (on the visited directory's
-    relative path), `name_filter` (on the entry's leaf name), `predicate`
-    (on the entry's full `Path`), and lie within `[min_depth, max_depth]`.
+    Entries (files and sub-directories) are returned if they pass
+    `part_filter` (on the visited directory's relative path), `name_filter`
+    (on the entry's leaf name), `predicate` (on the entry's full `Path`), and
+    lie within `[min_depth, max_depth]`.
 
     Args:
         root: The directory to walk.
@@ -171,11 +171,11 @@ def search_files(
 ) -> Sequence[Path] | Sequence[str]:
     """Walk `root` and return file paths that match.
 
-    Performs a depth-first traversal. Files are returned if they pass
-    `part_filter` (on the visited directory's relative path),
-    `name_filter` (on the file's leaf name), `predicate` (on the file's
-    full `Path`), and lie within `[min_depth, max_depth]`. Sub-directories
-    are walked into but never themselves returned.
+    Files are returned if they pass `part_filter` (on the visited
+    directory's relative path), `name_filter` (on the file's leaf name),
+    `predicate` (on the file's full `Path`), and lie within
+    `[min_depth, max_depth]`. Sub-directories are walked into but never
+    themselves returned.
 
     Args:
         root: The directory to walk.
@@ -272,11 +272,11 @@ def search_dirs(
 ) -> Sequence[Path] | Sequence[str]:
     """Walk `root` and return directory paths that match.
 
-    Performs a depth-first traversal. Sub-directories are returned if
-    they pass `part_filter` (on the visited *parent* directory's relative
-    path), `name_filter` (on the sub-directory's leaf name), `predicate`
-    (on its full `Path`), and lie within `[min_depth, max_depth]`. Files
-    are never returned. `root` itself is not included.
+    Sub-directories are returned if they pass `part_filter` (on the visited
+    *parent* directory's relative path), `name_filter` (on the
+    sub-directory's leaf name), `predicate` (on its full `Path`), and lie
+    within `[min_depth, max_depth]`. Files are never returned. `root` itself
+    is not included.
 
     Args:
         root: The directory to walk.
