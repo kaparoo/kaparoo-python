@@ -23,10 +23,9 @@ class Node(ABC):
     Nodes are immutable value objects: equal when they are the same concrete
     type with equal `_key`s, and hashable on the same basis.
 
-    Nodes serialize to a `"node"`-discriminated dict via `to_dict`,
-    round-trippable through `Node.from_dict`. The name and child nodes a
-    node holds are serialized recursively (names via the filter's
-    `to_dict` / `Filter.from_dict`).
+    Nodes round-trip through `to_dict` / `Node.from_dict` (a
+    `"node"`-discriminated registry), recursing into the name filter and
+    child nodes.
     """
 
     __slots__ = ()

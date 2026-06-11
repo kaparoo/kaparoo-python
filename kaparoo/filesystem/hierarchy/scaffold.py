@@ -89,9 +89,7 @@ class Scaffolder:
     """A single scaffold run: walks a spec, accumulating the paths it makes.
 
     Bundles the `dry_run` flag and the `created` accumulator so the recursive
-    walk does not thread them through every call. `dry_run` suppresses the
-    disk writes only -- every existence / conflict / `required` check still
-    runs, so a dry run is a faithful preview that raises what a real run would.
+    walk does not thread them through every call.
     """
 
     def __init__(self, *, dry_run: bool) -> None:

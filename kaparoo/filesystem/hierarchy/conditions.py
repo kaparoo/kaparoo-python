@@ -75,10 +75,8 @@ class Condition(ABC):
     The `Path`-level counterpart of a `kaparoo.filters.Filter` (which tests a
     name `str`): a frozen value object whose `check` inspects the actual
     filesystem object behind a matched node -- size, child count, emptiness,
-    or a named content hook. Conditions round-trip through `to_dict` /
-    `from_dict` (a `"kind"` registry, like filters and nodes), so a spec that
-    carries them stays serializable; `register_condition` stamps each kind
-    onto `_kind`, which `to_dict` injects.
+    or a named content hook. Round-trips through `to_dict` /
+    `Condition.from_dict`.
 
     A condition is a *validation* concern: `match` still maps paths by name /
     type / depth alone, while `validate` checks the matched path's
