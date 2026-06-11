@@ -310,10 +310,9 @@ class StoredReduction(Reduction[list[tuple[float, float]]], ABC):
     The escape hatch for non-decomposable statistics (median, quantiles) that
     no online fold can express -- `result` reduces the full gathered samples.
     **O(n) memory**, breaking the module's constant-memory contract; reach for
-    it only when no decomposable reduction expresses the statistic. The
-    accumulator is a list appended to in `step` (O(1) per sample), so -- unlike
-    every other reduction -- the state is mutable: a `state()` snapshot shares
-    the list and changes under further `update`s. Subclasses reduce the
+    it only when no decomposable reduction expresses the statistic. Unlike
+    every other reduction the state is a mutable list, so a `state()` snapshot
+    shares it and changes under further `update`s. Subclasses reduce the
     gathered `values` / `weights` (both non-empty) in `_reduce`.
     """
 
@@ -516,8 +515,7 @@ class Aggregator:
 
     @property
     def weight(self) -> float:
-        """Total weight folded in across all `update` calls (and absorbed via
-        `merge`).
+        """Total weight folded in across every `update` (and absorbed via `merge`).
 
         A grand total over every call, independent of which metric keys each
         call carried -- so when updates have heterogeneous key sets it need
