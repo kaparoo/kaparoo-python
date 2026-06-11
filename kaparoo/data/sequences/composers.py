@@ -96,6 +96,12 @@ class TransformedSequence[T_in, M_in, T_out = T_in, M_out = M_in](
     at runtime -- so a forgotten one silently yields an `M_in` value mistyped
     as `M_out`.
 
+    Type Parameters:
+        T_in, M_in: The source's element and metadata types.
+        T_out: The transformed element type. Defaults to `T_in`.
+        M_out: The transformed metadata type. Defaults to `M_in` (the
+            passthrough case); set it and override `get_meta` otherwise.
+
     Example:
         >>> # Item-only transform; metadata passes through unchanged.
         >>> normalized = TransformedSequence(image_folder, normalize)
@@ -228,6 +234,12 @@ class WindowedSequence[T, M_in, M_out = M_in](DataSequence[tuple[T, ...], M_out]
     Subclasses should call `_normalize_index` in their `get_meta` so window
     indices behave as in `get_item`.
 
+    Type Parameters:
+        T: The source's element type; each item is a `tuple[T, ...]`.
+        M_in: The source's per-frame metadata type.
+        M_out: The window's metadata type a subclass produces. Defaults to
+            `M_in`.
+
     Args:
         source: The sequence to window over.
         size: Items per window. Must be positive.
@@ -321,6 +333,12 @@ class ZippedSequence[T1, T2, M1 = None, M2 = None](
     construction raises `ValueError`; with `strict=False` the view truncates to
     the shorter, like the builtin `zip`. For a different combined-metadata
     shape, subclass and override `get_meta`.
+
+    Type Parameters:
+        T1, T2: Element types of the first and second sequence; items are
+            `tuple[T1, T2]`.
+        M1, M2: Their metadata types; metadata is `tuple[M1, M2]`. Each
+            defaults to `None` (a sequence without metadata).
 
     Example:
         >>> pairs = ZippedSequence(images, labels)

@@ -53,6 +53,11 @@ class DataSequence[T, M = None](Sequence[T]):
         raise NotImplementedError
 
     def get_items(self, indices: Sequence[int]) -> Sequence[T]:
+        """Fetch many items at once, in `indices` order.
+
+        Defaults to one `get_item` per index; override to use a backing
+        store's native batch read.
+        """
         return [self.get_item(index) for index in indices]
 
     # --- metadata access ---------------------------------------------------
@@ -62,6 +67,11 @@ class DataSequence[T, M = None](Sequence[T]):
         raise NotImplementedError
 
     def get_metas(self, indices: Sequence[int]) -> Sequence[M]:
+        """Fetch many metadata values at once, in `indices` order.
+
+        Defaults to one `get_meta` per index; override alongside
+        `get_items` when a batch read is cheaper.
+        """
         return [self.get_meta(index) for index in indices]
 
     # --- combined item + metadata ------------------------------------------
