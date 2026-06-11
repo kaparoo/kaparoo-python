@@ -149,10 +149,6 @@ class GlobFilter(PatternFilter):
     Supported wildcards: `*` (any sequence), `?` (single char),
     `[seq]` (any in seq), `[!seq]` (any not in seq). Recursive `**`
     is not supported (that is a `pathlib.Path.rglob` concept).
-
-    The glob is translated and compiled to a `re.Pattern` once at
-    construction (what `fnmatch.fnmatchcase` does per call behind its
-    shared cache), so `matches` skips the per-call lookup.
     """
 
     _compiled: re.Pattern[str] = field(init=False, repr=False, compare=False)

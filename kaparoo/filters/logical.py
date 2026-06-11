@@ -86,11 +86,7 @@ class OrFilter(NaryLogicalFilter):
 @register_filter("not")
 @dataclass(frozen=True)
 class NotFilter(LogicalFilter):
-    """Match strings that do NOT satisfy `child` (logical negation).
-
-    Attributes:
-        child: The single component filter whose result is inverted.
-    """
+    """Match strings that do NOT satisfy `child` (logical negation)."""
 
     child: Filter
 

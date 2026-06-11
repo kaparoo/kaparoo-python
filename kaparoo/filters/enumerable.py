@@ -94,11 +94,9 @@ class OneOf(Expandable):
 
     The `Expandable` counterpart of `EqualsAny`: it matches a name that is
     one of `names`, and expands to each -- `OneOf(["train", "val",
-    "test"])`. `names` is materialized to a tuple at construction and
-    deduplicated (first occurrence wins); matching is case-sensitive, so
-    `OneOf` is unconditionally `Expandable`. Membership is tested against a
-    precomputed `frozenset`, so `matches` is O(1) in the number of names;
-    `expand` keeps the ordered tuple.
+    "test"])`. `names` is deduplicated at construction (first occurrence
+    wins); matching is case-sensitive, so `OneOf` is unconditionally
+    `Expandable`.
 
     Raises:
         ValueError: If `names` is empty.

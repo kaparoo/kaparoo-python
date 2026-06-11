@@ -25,14 +25,10 @@ class Filter(ABC):
         - `LogicalFilter` and its concretes: composite rules that combine
           the results of one or more child filters.
 
-    Subclasses must implement `matches` and `_payload`, and override
-    `from_dict` to construct themselves from a dict (with no further
-    dispatch). Polymorphic deserialization is provided by
-    `Filter.from_dict(data)`, which reads `data["kind"]`, looks up the
-    target class in the registry (populated by `register_filter`), and
-    delegates. `register_filter` stamps each concrete class's discriminator
-    onto `_kind`, which `to_dict` injects automatically -- so a subclass
-    never repeats (or mistypes) its own kind.
+    Subclasses implement `matches`, `_payload`, and `from_dict` (the last
+    constructs from a dict with no further dispatch). Polymorphic
+    deserialization goes through `Filter.from_dict`, which dispatches on
+    `data["kind"]` via the `register_filter` registry.
     """
 
     _kind: ClassVar[str]
@@ -43,10 +39,7 @@ class Filter(ABC):
         raise NotImplementedError
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialize to a `"kind"`-discriminated dict.
-
-        The `"kind"` discriminator is injected from `_kind`; subclasses
-        supply only their own fields via `_payload`. Round-trippable via
+        """Serialize to a `"kind"`-discriminated dict, round-trippable via
         `Filter.from_dict`.
         """
         return {"kind": self._kind, **self._payload()}

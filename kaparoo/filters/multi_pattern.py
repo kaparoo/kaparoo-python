@@ -82,12 +82,7 @@ class MultiPatternFilter(Filter, ABC):
 @register_filter("equals_any")
 @dataclass(frozen=True)
 class EqualsAnyFilter(MultiPatternFilter):
-    """Match strings that equal ANY of `patterns`.
-
-    Membership is tested against a `frozenset` built once at construction,
-    so `matches` is O(1) in the number of patterns rather than a linear
-    tuple scan.
-    """
+    """Match strings that equal ANY of `patterns`."""
 
     _pattern_set: frozenset[str] = field(init=False, repr=False, compare=False)
 
