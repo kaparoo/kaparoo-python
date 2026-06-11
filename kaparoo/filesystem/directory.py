@@ -243,13 +243,20 @@ def make_dirs(
 
 
 def dir_empty_unsafe(path: StrPath) -> bool:
-    """Check if a directory is empty without existence checks."""
+    """Check if a directory is empty, skipping the existence check.
+
+    The caller must guarantee `path` is an existing directory; otherwise the
+    underlying `os.scandir` raises (`FileNotFoundError`, `NotADirectoryError`).
+    """
     with os.scandir(path) as it:
         return not any(it)
 
 
 def dirs_empty_unsafe(paths: StrPaths, *, root: StrPath | None = None) -> bool:
-    """Check if directories are empty without existence checks."""
+    """Check if directories are empty, skipping existence checks.
+
+    Each path carries the same caller obligation as `dir_empty_unsafe`.
+    """
     return all(dir_empty_unsafe(p) for p in _join_root_unchecked(paths, root))
 
 
@@ -292,12 +299,18 @@ def dirs_empty(paths: StrPaths, *, root: StrPath | None = None) -> bool:
 
 
 def dir_not_empty_unsafe(path: StrPath) -> bool:
-    """Check if a directory is not empty without existence checks."""
+    """Check if a directory is not empty, skipping the existence check.
+
+    Same caller obligation as `dir_empty_unsafe`.
+    """
     return not dir_empty_unsafe(path)
 
 
 def dirs_not_empty_unsafe(paths: StrPaths, *, root: StrPath | None = None) -> bool:
-    """Check if directories are not empty without existence checks."""
+    """Check if directories are not empty, skipping existence checks.
+
+    Each path carries the same caller obligation as `dir_empty_unsafe`.
+    """
     return all(dir_not_empty_unsafe(p) for p in _join_root_unchecked(paths, root))
 
 
