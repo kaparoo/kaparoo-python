@@ -10,7 +10,6 @@ CHANGELOG entry once it lands.
 A rigorous pass over modules first drafted quickly (AI-assisted), checking
 correctness, edge cases, and API shape against the rest of the library:
 
-- `kaparoo.utils.timer`
 - `kaparoo.utils.aggregate` (*)
 - `kaparoo.filesystem.hierarchy` (*)
 - `kaparoo.filesystem.staged` (*)
