@@ -218,9 +218,18 @@ class Timer(BaseTimer):
     is stored in `elapsed` once the `with` block exits or the decorated
     function returns.
 
+    Args:
+        unit: The time unit for reported values. One of "s", "ms", "us",
+            "ns". Defaults to "s".
+        ndigits: The number of decimal places to round `elapsed` to. If
+            None, no rounding is applied. Defaults to None.
+
     Attributes:
         elapsed: The measured duration, in the timer's `unit`. Defaults to
             0.0 until the first exit.
+
+    Raises:
+        ValueError: If `unit` is not one of the supported values.
 
     Example:
         with Timer("ms", ndigits=2) as t:
