@@ -72,7 +72,7 @@ with SpanTimer("ms", ndigits=1) as st:
     with st.measure("B"):     # stopwatch: only this block
         step_b()
 
-# Per-span details:
+# Per-span details (`records` is a read-only tuple snapshot):
 for record in st.records:
     print(record["label"], record["duration"])
 
