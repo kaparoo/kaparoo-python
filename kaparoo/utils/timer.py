@@ -256,11 +256,17 @@ class SpanTimer(Timer):
     exclude paused intervals.
 
     Attributes:
+        unit: The reporting unit for measured values (read-only).
+        ndigits: Decimal places measured values are rounded to, or None for
+            no rounding (read-only).
+        scale: Nanosecond-to-`unit` multiplier, derived from `unit`
+            (read-only).
+        elapsed: The total measured duration, from start to exit (read-only).
+            Defaults to 0.0 until the first exit.
         on_same_label: The same-label handling policy (read-only; see
             `__init__`).
         records: The recorded spans, in call order (read-only snapshot).
-        elapsed: The total measured duration, from start to exit (read-only).
-            Defaults to 0.0 until the first exit.
+        summary: Per-label sum of each span's `duration` (read-only).
 
     Example:
         with SpanTimer("ms", ndigits=1) as st:
