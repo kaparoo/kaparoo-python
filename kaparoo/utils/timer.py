@@ -425,19 +425,9 @@ class SpanTimer(Timer):
         nest `measure` blocks: each resets the shared baseline, so an outer
         block would record only the span after its inner block ends.
 
-        Because `contextmanager` results are also `ContextDecorator`s, the
-        returned object doubles as a decorator (every decorated call
-        records one span, provided the timer is running when called):
-
-            st = SpanTimer("ms")
-
-            @st.measure("load")
-            def load() -> None: ...
-
-            with st:
-                load()                    # records a "load" span
-                with st.measure("parse"):
-                    parse()               # records a "parse" span
+        Being a `contextmanager` result, it also doubles as a decorator --
+        each decorated call records one span while the timer is running (see
+        the module README for an example).
 
         Args:
             label: The span's name. Defaults to "Block".
