@@ -190,16 +190,27 @@ def test_timer_as_decorator(fake_clock):
     assert t.elapsed == 100.0
 
 
-def test_base_timer_is_abstract():
-    from kaparoo.utils.timer import BaseTimer
-
-    with pytest.raises(TypeError, match="abstract"):
-        BaseTimer()  # ty: ignore
-
-
 def test_timer_elapsed_default_is_zero():
     # `elapsed` is documented as 0.0 until the first exit.
     assert Timer().elapsed == 0.0
+
+
+def test_timer_exposes_unit_and_ndigits():
+    t = Timer("ms", ndigits=2)
+    assert t.unit == "ms"
+    assert t.ndigits == 2
+    assert Timer().unit == "s"
+    assert Timer().ndigits is None
+
+
+def test_timer_config_and_result_are_read_only():
+    t = Timer()
+    with pytest.raises(AttributeError):
+        t.elapsed = 1.0  # ty: ignore[invalid-assignment]
+    with pytest.raises(AttributeError):
+        t.unit = "ms"  # ty: ignore[invalid-assignment]
+    with pytest.raises(AttributeError):
+        t.ndigits = 3  # ty: ignore[invalid-assignment]
 
 
 # --- SpanTimer ---------------------------------------------------------------
@@ -255,6 +266,20 @@ def test_span_timer_summary_ndigits_rounds_sum(fake_clock):
 def test_span_timer_invalid_on_same_label():
     with pytest.raises(ValueError, match="on_same_label must be one of"):
         SpanTimer(on_same_label="invalid")  # ty: ignore[invalid-argument-type]
+
+
+def test_span_timer_exposes_on_same_label():
+    assert SpanTimer().on_same_label == "merge"
+    assert SpanTimer(on_same_label="reject").on_same_label == "reject"
+
+
+def test_span_timer_records_is_a_read_only_snapshot():
+    st = SpanTimer()
+    assert st.records == ()  # tuple snapshot, not the internal list
+    with pytest.raises(AttributeError):
+        st.records = ()  # ty: ignore[invalid-assignment]
+    with pytest.raises(AttributeError):
+        st.on_same_label = "reject"  # ty: ignore[invalid-assignment]
 
 
 def test_span_timer_merge_keeps_label_as_is(fake_clock):
@@ -333,7 +358,7 @@ def test_span_timer_empty_run(fake_clock):
     fake_clock(0, 100_000_000)
     with SpanTimer("ms") as st:
         pass
-    assert st.records == []
+    assert st.records == ()
     assert st.summary == {}
     assert st.elapsed == 100.0
 
@@ -356,7 +381,7 @@ def test_span_timer_defaults_are_empty():
     # Documented defaults before the first `__enter__`.
     st = SpanTimer()
     assert st.elapsed == 0.0
-    assert st.records == []
+    assert st.records == ()
     assert st.summary == {}
 
 
@@ -401,7 +426,7 @@ def test_span_timer_measure_as_decorator(fake_clock):
 
     with st:
         load()
-    assert st.records == [{"label": "load", "duration": 200.0, "total_time": 300.0}]
+    assert st.records == ({"label": "load", "duration": 200.0, "total_time": 300.0},)
     assert st.elapsed == 400.0
 
 
@@ -426,7 +451,7 @@ def test_span_timer_measure_not_recorded_on_exception(fake_clock):
         with pytest.raises(ValueError, match="boom"):  # noqa: SIM117
             with st.measure("A"):
                 raise ValueError(msg)
-        assert st.records == []  # nothing recorded on a failed block
+        assert st.records == ()  # nothing recorded on a failed block
 
 
 def test_span_timer_measure_while_paused_raises(fake_clock):

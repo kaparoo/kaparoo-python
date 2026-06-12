@@ -3,7 +3,6 @@ from __future__ import annotations
 __all__ = ("SpanRecord", "SpanTimer", "Timer")
 
 import time
-from abc import ABC, abstractmethod
 from collections import defaultdict
 from contextlib import ContextDecorator, contextmanager
 from typing import TYPE_CHECKING, TypedDict
@@ -44,21 +43,33 @@ class SpanRecord(TypedDict):
     total_time: float
 
 
-class BaseTimer(ContextDecorator, ABC):
-    """Abstract base for `Timer` and `SpanTimer`.
+class Timer(ContextDecorator):
+    """A single-shot timer measuring one elapsed duration.
 
-    Provides the shared timing machinery: unit/precision formatting,
-    `pause`/`resume`/`suspend`, and a context-manager protocol that
-    auto-resumes a paused timer on exit. Subclasses implement `_finalize`
-    to record their final result, and may override the `_reset` hook to
-    clear per-`with`-block state. Not part of the public API -- prefer
-    `Timer` or `SpanTimer`.
+    Usable as a context manager or as a decorator. The measured duration is
+    stored in `elapsed` once the `with` block exits or the decorated function
+    returns. Time can be excluded from the measurement with `pause` /
+    `resume` / `suspend`.
 
-    An instance is reusable but **not reentrant**: a single instance must
-    not be nested within itself -- including as a decorator on a recursive
+    An instance is reusable but **not reentrant**: a single instance must not
+    be nested within itself -- including as a decorator on a recursive
     function -- because it holds one set of per-run state. Re-entering a
     still-running timer raises `RuntimeError`; use a separate instance per
     concurrent measurement.
+
+    Attributes:
+        unit: The reporting unit for measured values (read-only).
+        ndigits: Decimal places measured values are rounded to, or None for
+            no rounding (read-only).
+        scale: Nanosecond-to-`unit` multiplier, derived from `unit`
+            (read-only).
+        elapsed: The measured duration, in `unit` (read-only). Defaults to
+            0.0 until the first exit.
+
+    Example:
+        with Timer("ms", ndigits=2) as t:
+            do_work()
+        # `t.elapsed` is now the elapsed time, e.g. 12.34.
     """
 
     def __init__(self, unit: TimeUnit = "s", *, ndigits: int | None = None) -> None:
@@ -77,13 +88,29 @@ class BaseTimer(ContextDecorator, ABC):
             msg = f"unit must be one of {sorted(_SCALES)} (got {unit!r})."
             raise ValueError(msg)
 
-        self.unit = unit
-        self.ndigits = ndigits
+        self._unit = unit
+        self._ndigits = ndigits
+        self._elapsed: float = 0.0
 
         self._start_time: int = 0
         self._started: bool = False
         self._paused: bool = False
         self._pause_start: int = 0
+
+    @property
+    def unit(self) -> TimeUnit:
+        """The reporting unit for measured values."""
+        return self._unit
+
+    @property
+    def ndigits(self) -> int | None:
+        """Decimal places measured values are rounded to (None: no rounding)."""
+        return self._ndigits
+
+    @property
+    def elapsed(self) -> float:
+        """The measured duration, in `unit`. 0.0 until the first exit."""
+        return self._elapsed
 
     @property
     def scale(self) -> float:
@@ -92,11 +119,11 @@ class BaseTimer(ContextDecorator, ABC):
         Kept as a derived value so it can never drift out of sync with
         `unit`.
         """
-        return _SCALES[self.unit]
+        return _SCALES[self._unit]
 
     def _apply_ndigits(self, value: float) -> float:
         """Round `value` to `ndigits` decimal places, or return it unchanged."""
-        return value if self.ndigits is None else round(value, self.ndigits)
+        return value if self._ndigits is None else round(value, self._ndigits)
 
     def _format_time(self, elapsed_ns: int) -> float:
         """Convert a nanosecond delta to the timer's reporting unit."""
@@ -110,10 +137,6 @@ class BaseTimer(ContextDecorator, ABC):
 
     def _reset(self) -> None:
         """Hook: clear per-`with`-block state. Called after `_start_time` is set."""
-
-    @abstractmethod
-    def _finalize(self) -> None:
-        """Compute the final result. Called from `__exit__` after auto-resume."""
 
     def pause(self) -> None:
         """Pause the timer, excluding subsequent time from measurement.
@@ -210,46 +233,17 @@ class BaseTimer(ContextDecorator, ABC):
         finally:
             self._started = False
 
-
-class Timer(BaseTimer):
-    """A single-shot timer measuring one elapsed duration.
-
-    Usable as a context manager or as a decorator. The measured duration
-    is stored in `elapsed` once the `with` block exits or the decorated
-    function returns.
-
-    Args:
-        unit: The time unit for reported values. One of "s", "ms", "us",
-            "ns". Defaults to "s".
-        ndigits: The number of decimal places to round `elapsed` to. If
-            None, no rounding is applied. Defaults to None.
-
-    Attributes:
-        elapsed: The measured duration, in the timer's `unit`. Defaults to
-            0.0 until the first exit.
-
-    Raises:
-        ValueError: If `unit` is not one of the supported values.
-
-    Example:
-        with Timer("ms", ndigits=2) as t:
-            do_work()
-        # `t.elapsed` is now the elapsed time, e.g. 12.34.
-    """
-
-    elapsed: float = 0.0
-
     def _finalize(self) -> None:
         """Store the elapsed time in `elapsed`."""
         elapsed_ns = time.perf_counter_ns() - self._start_time
-        self.elapsed = self._format_time(elapsed_ns)
+        self._elapsed = self._format_time(elapsed_ns)
 
 
-class SpanTimer(BaseTimer):
-    """A timer recording named time spans within one `with` block.
+class SpanTimer(Timer):
+    """A `Timer` that also records named time spans within the `with` block.
 
-    Usable as a context manager or as a decorator. Spans are recorded
-    in two complementary ways:
+    Like `Timer`, it measures the block's total `elapsed`; in addition, spans
+    are recorded in two complementary ways:
 
         - `lap(label)` splits the timeline: each lap's `duration` is the
           time since the previous lap (or the start), so every instant is
@@ -262,9 +256,10 @@ class SpanTimer(BaseTimer):
     exclude paused intervals.
 
     Attributes:
-        on_same_label: The same-label handling policy (see `__init__`).
-        records: The recorded spans, in call order.
-        elapsed: The total measured duration, from start to exit.
+        on_same_label: The same-label handling policy (read-only; see
+            `__init__`).
+        records: The recorded spans, in call order (read-only snapshot).
+        elapsed: The total measured duration, from start to exit (read-only).
             Defaults to 0.0 until the first exit.
 
     Example:
@@ -308,12 +303,20 @@ class SpanTimer(BaseTimer):
             msg += f" (got {on_same_label!r})."
             raise ValueError(msg)
 
-        self.on_same_label = on_same_label
-        self.records: list[SpanRecord] = []
-        self.elapsed: float = 0.0
-
+        self._on_same_label = on_same_label
+        self._records: list[SpanRecord] = []
         self._last_time: int = 0
         self._label_counts: dict[str, int] = {}
+
+    @property
+    def on_same_label(self) -> LabelPolicy:
+        """The same-label handling policy (see `__init__`)."""
+        return self._on_same_label
+
+    @property
+    def records(self) -> tuple[SpanRecord, ...]:
+        """The recorded spans, in call order (a read-only snapshot)."""
+        return tuple(self._records)
 
     @property
     def summary(self) -> dict[str, float]:
@@ -330,7 +333,7 @@ class SpanTimer(BaseTimer):
             timer's `unit`.
         """
         grouped: dict[str, float] = defaultdict(float)
-        for record in self.records:
+        for record in self._records:
             grouped[record["label"]] += record["duration"]
 
         return {label: self._apply_ndigits(total) for label, total in grouped.items()}
@@ -338,7 +341,7 @@ class SpanTimer(BaseTimer):
     def _resume(self) -> int:
         """Resume the timer and advance the lap baseline.
 
-        Extends `BaseTimer._resume` by also adding the pause duration to
+        Extends `Timer._resume` by also adding the pause duration to
         `_last_time` so that the next lap's `duration` excludes the pause
         interval.
         """
@@ -350,8 +353,8 @@ class SpanTimer(BaseTimer):
     def _reset(self) -> None:
         """Clear per-`with`-block state so the timer can be reused safely."""
         self._last_time = self._start_time
-        self.records.clear()
-        self.elapsed = 0.0
+        self._records.clear()
+        self._elapsed = 0.0
         self._label_counts.clear()
 
     def _resolve_label(self, label: str) -> str:
@@ -361,7 +364,7 @@ class SpanTimer(BaseTimer):
         failed "reject" lap does not leave the counter inflated.
         """
         next_count = self._label_counts.get(label, 0) + 1
-        if next_count > 1 and self.on_same_label == "reject":
+        if next_count > 1 and self._on_same_label == "reject":
             msg = f"Label {label!r} is already used."
             raise ValueError(msg)
 
@@ -369,7 +372,7 @@ class SpanTimer(BaseTimer):
 
         return (
             f"{label} ({next_count})"
-            if next_count > 1 and self.on_same_label == "separate"
+            if next_count > 1 and self._on_same_label == "separate"
             else label
         )
 
@@ -407,7 +410,7 @@ class SpanTimer(BaseTimer):
             msg = "Cannot record a lap while paused."
             raise RuntimeError(msg)
 
-        self.records.append(self._make_record(self._resolve_label(label)))
+        self._records.append(self._make_record(self._resolve_label(label)))
 
     @contextmanager
     def measure(self, label: str = "Block") -> Iterator[None]:
@@ -456,8 +459,3 @@ class SpanTimer(BaseTimer):
         self._last_time = time.perf_counter_ns()
         yield
         self.lap(label)
-
-    def _finalize(self) -> None:
-        """Set `elapsed` from start to current time."""
-        elapsed_ns = time.perf_counter_ns() - self._start_time
-        self.elapsed = self._format_time(elapsed_ns)

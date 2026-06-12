@@ -174,6 +174,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   their return as `list[T]` (was `Sequence[T]`), matching what they have
   always returned. A type-hint-only refinement; callers relying on the
   wider `Sequence` type are unaffected.
+- `kaparoo.utils.timer`: merged the internal `BaseTimer` into `Timer`, so
+  `SpanTimer` now subclasses `Timer` (it shares `Timer`'s `elapsed` and
+  machinery, adding spans). The duplicate `_finalize` is gone.
+  `isinstance(span_timer, Timer)` is now `True`, and `BaseTimer` is no
+  longer importable (it was never in `__all__`).
+- `kaparoo.utils.timer`: the exposed timer state is now read-only.
+  `Timer.unit` / `ndigits` / `elapsed` and `SpanTimer.on_same_label` /
+  `records` are properties without setters, matching the read-only-property
+  convention used elsewhere in the library. **Breaking**: `records` now
+  returns a `tuple` snapshot rather than the live `list` (iteration,
+  indexing, and `len` are unchanged; `.append` / `+=` / `isinstance(...,
+  list)` are not), and assigning to any of these attributes now raises
+  `AttributeError`.
 
 ## [0.7.0] - 2026-06-04
 

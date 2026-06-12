@@ -51,8 +51,8 @@ with Timer("ms") as t:
 
 ## SpanTimer
 
-`SpanTimer` is a sibling of `Timer` (both extend `BaseTimer`) that
-records named time *spans*. Each span
+`SpanTimer` extends `Timer` — it measures the same total `elapsed` and
+adds named time *spans*. Each span
 is a `SpanRecord` (a `TypedDict` with `label`, `duration`,
 `total_time`) and is produced in one of two ways:
 
