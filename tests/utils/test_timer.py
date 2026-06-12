@@ -103,7 +103,7 @@ def test_timer_suspend_excludes_block(fake_clock):
 
 def test_timer_suspend_skips_auto_resume_after_manual_resume(fake_clock):
     # enter=0, suspend's pause=100ms, manual resume=300ms (pause_dur=200ms),
-    # finalize=500ms. The `finally` in suspend() must observe `_is_paused`
+    # finalize=500ms. The `finally` in suspend() must observe `_paused`
     # is False and skip the auto-resume -- a second `resume()` would raise.
     fake_clock(0, 100_000_000, 300_000_000, 500_000_000)
     with Timer("ms") as t, t.suspend():

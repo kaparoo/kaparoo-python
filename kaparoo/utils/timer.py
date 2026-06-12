@@ -82,7 +82,7 @@ class BaseTimer(ContextDecorator, ABC):
 
         self._start_time: int = 0
         self._started: bool = False
-        self._is_paused: bool = False
+        self._paused: bool = False
         self._pause_start: int = 0
 
     @property
@@ -126,12 +126,12 @@ class BaseTimer(ContextDecorator, ABC):
                 paused.
         """
         self._ensure_started()
-        if self._is_paused:
+        if self._paused:
             msg = "Timer is already paused."
             raise RuntimeError(msg)
 
         self._pause_start = time.perf_counter_ns()
-        self._is_paused = True
+        self._paused = True
 
     def _resume(self) -> int:
         """Resume the timer and return the just-finished pause, in nanoseconds.
@@ -145,13 +145,13 @@ class BaseTimer(ContextDecorator, ABC):
             RuntimeError: If the timer has not been started, or is not paused.
         """
         self._ensure_started()
-        if not self._is_paused:
+        if not self._paused:
             msg = "Timer is not paused."
             raise RuntimeError(msg)
 
         pause_duration = time.perf_counter_ns() - self._pause_start
         self._start_time += pause_duration
-        self._is_paused = False
+        self._paused = False
 
         return pause_duration
 
@@ -182,7 +182,7 @@ class BaseTimer(ContextDecorator, ABC):
         try:
             yield
         finally:
-            if self._is_paused:
+            if self._paused:
                 self.resume()
 
     def __enter__(self) -> Self:
@@ -192,7 +192,7 @@ class BaseTimer(ContextDecorator, ABC):
 
         self._start_time = time.perf_counter_ns()
         self._started = True
-        self._is_paused = False
+        self._paused = False
         self._reset()
         return self
 
@@ -202,7 +202,7 @@ class BaseTimer(ContextDecorator, ABC):
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
-        if self._is_paused:
+        if self._paused:
             self.resume()
 
         try:
@@ -403,7 +403,7 @@ class SpanTimer(BaseTimer):
                 already been used in this `with` block.
         """
         self._ensure_started()
-        if self._is_paused:
+        if self._paused:
             msg = "Cannot record a lap while paused."
             raise RuntimeError(msg)
 
@@ -449,7 +449,7 @@ class SpanTimer(BaseTimer):
                 already been used in this `with` block.
         """
         self._ensure_started()
-        if self._is_paused:
+        if self._paused:
             msg = "Cannot start a measurement while paused."
             raise RuntimeError(msg)
 
