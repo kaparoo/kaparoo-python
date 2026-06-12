@@ -85,7 +85,7 @@ class Timer(ContextDecorator):
             ValueError: If `unit` is not one of the supported values.
         """
         if unit not in _SCALES:
-            msg = f"unit must be one of {sorted(_SCALES)} (got {unit!r})."
+            msg = f"unit must be one of {list(_SCALES)} (got {unit!r})."
             raise ValueError(msg)
 
         self._unit = unit
