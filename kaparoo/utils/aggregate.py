@@ -1,9 +1,4 @@
-"""Nested, pluggable aggregation of labelled metric streams.
-
-WORK IN PROGRESS -- the public API of this module is experimental and may
-change or be removed before the next release; it is not yet covered by the
-project's SemVer guarantees.
-"""
+"""Nested, pluggable aggregation of labelled metric streams."""
 
 from __future__ import annotations
 

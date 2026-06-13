@@ -139,6 +139,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `kaparoo.utils.aggregate` is no longer experimental: the `Aggregator` /
+  `Reduction` API is now covered by the project's SemVer guarantees. No code
+  change -- the "work in progress" notes are dropped from the module docstring
+  and `kaparoo/utils/README.md`.
 - Moved the filter DSL from `kaparoo.filesystem.search.filters` to the new
   top-level `kaparoo.filters`. The filters are a filesystem-agnostic
   string-matching DSL, now shared beyond `search`. **Breaking**: update

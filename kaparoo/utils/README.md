@@ -122,10 +122,6 @@ with SpanTimer(on_same_label="separate") as st:
 
 ## Aggregation
 
-> **🚧 Work in progress** — this API is experimental and may change or be
-> removed before the next release. It is not yet covered by the project's
-> SemVer guarantees.
-
 `Aggregator` accumulates labelled value streams and reduces each with a
 pluggable `Reduction`, composing across nested loops (the deep-learning
 batch → epoch → run pattern). Reductions are *online* — constant memory
@@ -141,6 +137,20 @@ for batch in loader:
                weight=len(batch))   # weight = batch size -> correct pooled mean
 print(agg.compute())                # {"loss": ..., "acc": ..., "lr": ..., "grad_norm": ...}
 ```
+
+### Values are scalars
+
+`update` takes plain numbers, not arrays or tensors. Reduce a batch metric to
+a Python `float` at the boundary and weight by the batch size:
+
+```python
+agg.update({"loss": loss.detach().item()}, weight=x.size(0))  # PyTorch
+agg.update({"loss": float(batch.mean())}, weight=len(batch))  # NumPy
+```
+
+Arithmetic reductions like `Mean` / `Sum` happen to accumulate NumPy arrays
+element-wise, but `Min` / `Max` / `Median` / `Quantile` raise on them and
+`weight` must stay scalar — so converting up front is the reliable path.
 
 ### Nesting: `merge` vs `update(compute())`
 
@@ -190,8 +200,30 @@ Aggregator(Fold(operator.mul, 1.0))           # running product
 For a reduction with richer state (RMS, a weighted geometric mean, ...),
 subclass `Reduction` (or `UnweightedReduction` when weight is irrelevant) and
 implement `identity` / `step` (or `accumulate`) / `merge` / `result`. The
-`merge` method *is* the nesting behavior, so custom reductions nest as
-exactly as the built-ins.
+`merge` method *is* the nesting behavior, so custom reductions nest exactly as
+the built-ins do — e.g. a weighted geometric mean:
+
+```python
+import math
+
+from kaparoo.utils.aggregate import Reduction
+
+
+class GeoMean(Reduction[tuple[float, float]]):
+    def identity(self) -> tuple[float, float]:
+        return (0.0, 0.0)
+
+    def step(self, s: tuple[float, float], v: float, w: float) -> tuple[float, float]:
+        return (s[0] + w * math.log(v), s[1] + w)
+
+    def merge(
+        self, a: tuple[float, float], b: tuple[float, float]
+    ) -> tuple[float, float]:
+        return (a[0] + b[0], a[1] + b[1])
+
+    def result(self, s: tuple[float, float]) -> float:
+        return math.exp(s[0] / s[1]) if s[1] else float("nan")
+```
 
 ## Optional helpers
 

@@ -10,7 +10,6 @@ CHANGELOG entry once it lands.
 A rigorous pass over modules first drafted quickly (AI-assisted), checking
 correctness, edge cases, and API shape against the rest of the library:
 
-- `kaparoo.utils.aggregate` (*)
 - `kaparoo.filesystem.hierarchy` (*)
 - `kaparoo.filesystem.staged` (*)
 
@@ -31,16 +30,6 @@ A consistency sweep over the prose, independent of the per-module review:
 - **README.md** — improve how the public API is presented (description
   style) and tighten / fix the examples (idiomatic usage, public over
   private members, copy-pasteable).
-
----
-
-## 🧮 `kaparoo.utils.aggregate`
-
-### Remove the `experimental` tag
-
-The reduction family has now settled (`Stored` landed). When ready to commit
-to SemVer stability, remove the `experimental` note from the module / class
-docstrings, the CHANGELOG entry, and `kaparoo/utils/README.md`.
 
 ---
 
