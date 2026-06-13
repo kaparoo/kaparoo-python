@@ -71,13 +71,27 @@ applying it by hand.
   party, then a trailing `if TYPE_CHECKING:` block (grouped the same
   way). Within a group `import X` precedes `from X import Y`; entries are
   alphabetical.
+- Within a function body, separate logical groups with a single blank
+  line and put a blank line before the final `return`; leave a tightly
+  coupled one- or two-line body unbroken (see `utils/timer.py`).
+- In a long module, group related definitions under a boxed comment
+  banner — a centred title between two `#`-bordered rules — as in
+  `filesystem/directory.py` and `utils/aggregate.py`.
 - Docstrings are optional — write them where they clarify intent, not
-  mechanically on every function, class, or method. When written,
-  document *intent and contracts, not mechanism*:
+  mechanically. "Mechanically" targets two habits to avoid: comments (or
+  docstrings) that merely restate the code, and a base class whose
+  docstring explains itself in terms of its specific subclasses. It is
+  *not* a licence to leave a consumed method bare. When written, document
+  *intent and contracts, not mechanism*:
   - Lead with a one-line summary — declarative noun phrase for
     classes ("An ordered, lazily-loaded, read-only sequence ..."),
     imperative verb phrase for functions and methods ("Yield sliding
     windows from `sequence`.").
+  - A concrete public method that callers consume (`Mean.step`,
+    `Var.merge`) must be **self-explainable** from its own docstring and
+    signature — never lean on an inherited parent docstring to carry it.
+    Abstract base methods document only the generic contract and never
+    name a specific subclass.
   - Surface what callers cannot infer from the signature alone:
     invariants, edge cases, what subclasses must override, policy
     trade-offs. Skip restating what the code already shows.
@@ -87,6 +101,14 @@ applying it by hand.
     carries them. Custom sections (`Parameterized subclasses:`,
     `Truth table:`, `Example:`) are welcome when they clarify a real
     pitfall or pattern.
+  - Add an `Args:` / `Returns:` block only for what the summary and
+    signature cannot already convey — a parameter constraint, a
+    non-obvious or edge-case return. When they make the behaviour obvious
+    (a no-argument getter, or a self-evident one-liner), the one-line
+    summary *is* the whole docstring; a `Returns:` that merely restates it
+    is the mechanical habit above. Document an edge case shared across a
+    family (e.g. the empty-stream value) once on the class, not on every
+    method.
   - Reference identifiers in backticks (`get_item`, `size`,
     `Filter.parse`).
 - Standalone runnable scripts carry PEP 723 inline metadata (the
