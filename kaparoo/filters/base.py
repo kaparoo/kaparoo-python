@@ -36,12 +36,10 @@ class Filter(ABC):
     @abstractmethod
     def matches(self, target: str) -> bool:
         """Test whether `target` satisfies this filter."""
-        raise NotImplementedError
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a `"kind"`-discriminated dict, round-trippable via
-        `Filter.from_dict`.
-        """
+        `Filter.from_dict`."""
         return {"kind": self._kind, **self._payload()}
 
     @abstractmethod
@@ -51,7 +49,6 @@ class Filter(ABC):
         Default-valued fields may be omitted for compactness; `from_dict`
         supplies them via `data.get(..., DEFAULT)`.
         """
-        raise NotImplementedError
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Filter:

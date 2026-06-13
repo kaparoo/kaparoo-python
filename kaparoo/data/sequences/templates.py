@@ -52,11 +52,12 @@ class FileListSequence[T, M = Path](DataSequence[T, M]):
         return Path(self._files[index])
 
     def get_item(self, index: int) -> T:
+        """Load the file at `index` via `load_file`."""
         return self.load_file(self.get_file(index))
 
     @abstractmethod
     def get_meta(self, index: int) -> M:
-        raise NotImplementedError
+        """Return the metadata for the file at `index`."""
 
     @abstractmethod
     def load_file(self, path: Path) -> T:

@@ -71,15 +71,19 @@ class SlicedSequence[T, M](DataSequence[T, M]):
         return len(self._indices)
 
     def get_item(self, index: int) -> T:
+        """Fetch the source item at the mapped index `indices[index]`."""
         return self._source.get_item(self._indices[index])
 
     def get_meta(self, index: int) -> M:
+        """Fetch the source metadata at the mapped index `indices[index]`."""
         return self._source.get_meta(self._indices[index])
 
     def get_items(self, indices: Sequence[int]) -> Sequence[T]:
+        """Map each view index through `indices`, then batch-fetch from `source`."""
         return self._source.get_items([self._indices[i] for i in indices])
 
     def get_metas(self, indices: Sequence[int]) -> Sequence[M]:
+        """Map each view index through `indices`, then batch-fetch metadata."""
         return self._source.get_metas([self._indices[i] for i in indices])
 
 
@@ -129,12 +133,15 @@ class TransformedSequence[T_in, M_in, T_out = T_in, M_out = M_in](
         return len(self._source)
 
     def get_item(self, index: int) -> T_out:
+        """Fetch the source item at `index` and apply `transform`."""
         return self._transform(self._source.get_item(index))
 
     def get_items(self, indices: Sequence[int]) -> Sequence[T_out]:
+        """Batch-fetch from `source` and apply `transform` to each item."""
         return [self._transform(item) for item in self._source.get_items(indices)]
 
     def get_meta(self, index: int) -> M_out:
+        """Pass `source`'s metadata through unchanged (valid only when `M_out == M_in`)."""
         # Passthrough -- correct only when M_out == M_in. A subclass with a
         # different M_out MUST override this; the cast cannot catch a missing
         # override, since generics are erased at runtime.
@@ -210,17 +217,21 @@ class ConcatSequence[T, M](DataSequence[T, M]):
         return [gathered[position] for position in range(len(indices))]
 
     def get_item(self, index: int) -> T:
+        """Locate the source for `index` and fetch its local item."""
         source, local = self._locate(index)
         return source.get_item(local)
 
     def get_items(self, indices: Sequence[int]) -> Sequence[T]:
+        """Group `indices` by source and batch-fetch items, kept in request order."""
         return self._gather(indices, lambda source, locals_: source.get_items(locals_))
 
     def get_meta(self, index: int) -> M:
+        """Locate the source for `index` and fetch its local metadata."""
         source, local = self._locate(index)
         return source.get_meta(local)
 
     def get_metas(self, indices: Sequence[int]) -> Sequence[M]:
+        """Group `indices` by source and batch-fetch metadata, kept in request order."""
         return self._gather(indices, lambda source, locals_: source.get_metas(locals_))
 
 
@@ -310,6 +321,7 @@ class WindowedSequence[T, M_in, M_out = M_in](DataSequence[tuple[T, ...], M_out]
         return _resolve_index(index, self._length)
 
     def get_item(self, index: int) -> tuple[T, ...]:
+        """Build the window at `index` as a tuple of `size` strided source items."""
         index = self._normalize_index(index)
         start = index * self._step
         stop = start + self._size * self._skip
@@ -317,7 +329,7 @@ class WindowedSequence[T, M_in, M_out = M_in](DataSequence[tuple[T, ...], M_out]
 
     @abstractmethod
     def get_meta(self, index: int) -> M_out:
-        raise NotImplementedError
+        """Return the metadata for window `index` (the `M_in` -> `M_out` policy)."""
 
 
 class ZippedSequence[T1, T2, M1 = None, M2 = None](
@@ -385,10 +397,12 @@ class ZippedSequence[T1, T2, M1 = None, M2 = None](
         return _resolve_index(index, self._length)
 
     def get_item(self, index: int) -> tuple[T1, T2]:
+        """Fetch the paired `(first[index], second[index])` item."""
         index = self._normalize_index(index)
         return self._first.get_item(index), self._second.get_item(index)
 
     def get_items(self, indices: Sequence[int]) -> Sequence[tuple[T1, T2]]:
+        """Normalize indices, then batch-fetch and pair items from both sources."""
         # Normalize, then bulk-delegate so each source's `get_items`
         # optimization is used.
         normalized = [self._normalize_index(i) for i in indices]
@@ -401,10 +415,12 @@ class ZippedSequence[T1, T2, M1 = None, M2 = None](
         )
 
     def get_meta(self, index: int) -> tuple[M1, M2]:
+        """Fetch the paired `(first, second)` metadata at `index`."""
         index = self._normalize_index(index)
         return self._first.get_meta(index), self._second.get_meta(index)
 
     def get_metas(self, indices: Sequence[int]) -> Sequence[tuple[M1, M2]]:
+        """Normalize indices, then batch-fetch and pair metadata from both sources."""
         normalized = [self._normalize_index(i) for i in indices]
         return list(
             zip(

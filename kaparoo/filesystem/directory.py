@@ -43,8 +43,7 @@ if TYPE_CHECKING:
 # target -- no syscall saved, and the predicates handle broken symlinks /
 # Windows reparse points without decoding `st_mode`.
 def _ensure_directory_target(path: Path, *, clean: bool) -> bool:
-    """Reject a path that cannot serve as a directory target; report whether
-    it is an existing directory.
+    """Validate `path` as a directory target and report whether it already exists.
 
     Raises `NotADirectoryError` when `path` exists but is not a directory,
     or when `clean` is requested on a symlink -- cleaning must operate on a

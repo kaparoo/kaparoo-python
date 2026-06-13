@@ -22,6 +22,11 @@ if TYPE_CHECKING:
     from kaparoo.filesystem.types import StrPath, StrPaths
 
 
+# ========================== #
+#         Stringify          #
+# ========================== #
+
+
 def _stringify_path(
     path: StrPath,
     after: StrPath | None,
@@ -58,9 +63,6 @@ def stringify_path(
         before: The trailing path to trim from `path`. If provided, returns
             only the part of `path` before `before`. Defaults to None.
 
-    Returns:
-        The string representation of the `path`.
-
     Raises:
         ValueError: If `path` does not start with `after`,
             or does not end with `before`.
@@ -83,9 +85,6 @@ def stringify_paths(
         before: The trailing path to trim from each path. If provided, returns
             only the part of each path before `before`. Defaults to None.
 
-    Returns:
-        The sequence of string representations of the `paths`.
-
     Raises:
         ValueError: If any of `paths` does not start with `after`,
             or does not end with `before`.
@@ -93,6 +92,11 @@ def stringify_paths(
     tail = Path(before).parts if before is not None else ()
     is_windows = platform.system() == "Windows"
     return [_stringify_path(path, after, tail, is_windows=is_windows) for path in paths]
+
+
+# ========================== #
+#            Wrap            #
+# ========================== #
 
 
 @overload
@@ -214,6 +218,11 @@ def wrap_paths(
     """
     paths = [wrap_path(path, prepend=prepend, append=append) for path in paths]
     return stringify_paths(paths) if stringify else paths
+
+
+# ========================== #
+#          Reserve           #
+# ========================== #
 
 
 @overload
@@ -358,6 +367,11 @@ def reserve_paths(
         reserve_path(p, exist_ok=exist_ok, make_parents=make_parents) for p in paths
     ]
     return stringify_paths(paths) if stringify else paths
+
+
+# ========================== #
+#         Extension          #
+# ========================== #
 
 
 def ensure_file_extension(

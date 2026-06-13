@@ -38,9 +38,6 @@ def unwrap_or_default[T](
         callback: If given, applied to the chosen value before returning --
             including a substituted `default`, not only an unwrapped
             `optional`.
-
-    Returns:
-        The unwrapped value (or `default`), with `callback` applied if given.
     """
     result = replace_if_none(optional, default)
     return callback(result) if callback is not None else result
@@ -58,9 +55,6 @@ def unwrap_or_defaults[T](
         default: The fallback used for every None element.
         callback: If given, applied to each result element -- substituted
             defaults included.
-
-    Returns:
-        A new list of unwrapped values, with `callback` applied if given.
     """
     if callback is None:
         return [default if o is None else o for o in optionals]
@@ -90,9 +84,6 @@ def unwrap_or_factory[T](
         callback: If given, applied to the chosen value before returning --
             including the `factory()` result, not only an unwrapped
             `optional`.
-
-    Returns:
-        The unwrapped value (or `factory()`), with `callback` applied if given.
     """
     result = factory_if_none(optional, factory)
     return callback(result) if callback is not None else result
@@ -110,9 +101,6 @@ def unwrap_or_factories[T](
         factory: Called to produce the fallback for every None element.
         callback: If given, applied to each result element -- factory
             results included.
-
-    Returns:
-        A new list of unwrapped values, with `callback` applied if given.
     """
     if callback is None:
         return [o if o is not None else factory() for o in optionals]

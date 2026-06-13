@@ -22,6 +22,11 @@ if TYPE_CHECKING:
     from kaparoo.filesystem.types import StrPath
 
 
+# ========================== #
+#          Helpers           #
+# ========================== #
+
+
 def _discard(file: IO[str] | IO[bytes], temp_path: Path) -> None:
     """Close `file` and remove the staged temp file (the abort path).
 
@@ -77,6 +82,11 @@ def _fsync_parent(path: Path) -> None:
         os.close(fd)
 
 
+# ========================== #
+#        Staged base         #
+# ========================== #
+
+
 class StagedTarget(ABC):
     """Abstract base for `StagedFile` and `StagedDirectory`.
 
@@ -109,7 +119,6 @@ class StagedTarget(ABC):
     @abstractmethod
     def commit(self) -> Path:
         """Commit the staged content to the destination and return its path."""
-        raise NotImplementedError
 
     def abort(self) -> None:
         """Discard the staged content without writing to the destination.
@@ -163,6 +172,11 @@ class StagedTarget(ABC):
             self.abort()
         elif self._finalizer.alive:
             self.commit()
+
+
+# ========================== #
+#        Staged file         #
+# ========================== #
 
 
 class StagedFile[AnyStrT: (str, bytes)](StagedTarget):
@@ -360,6 +374,11 @@ class StagedFile[AnyStrT: (str, bytes)](StagedTarget):
                 self._temp_path.unlink()
         _fsync_parent(self._path)
         return self._finish_commit()
+
+
+# ========================== #
+#      Staged directory      #
+# ========================== #
 
 
 class StagedDirectory(StagedTarget):

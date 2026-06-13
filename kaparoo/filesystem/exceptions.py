@@ -7,9 +7,8 @@ class DirectoryNotFoundError(FileNotFoundError):
     """Raised when a directory does not exist.
 
     Note:
-        Since this exception inherits from `FileNotFoundError`,
-        it should be handled before handling `FileNotFoundError`
-        in the exception handling block.
+        Since this inherits from `FileNotFoundError`, catch it before
+        `FileNotFoundError` in any combined `except` block.
     """
 
 

@@ -32,7 +32,7 @@ class DataSequence[T, M = None](Sequence[T]):
 
     @abstractmethod
     def __len__(self) -> int:
-        raise NotImplementedError
+        """Return the number of items in the sequence."""
 
     # --- item access -------------------------------------------------------
 
@@ -50,7 +50,7 @@ class DataSequence[T, M = None](Sequence[T]):
 
     @abstractmethod
     def get_item(self, index: int) -> T:
-        raise NotImplementedError
+        """Fetch and return the item at `index`."""
 
     def get_items(self, indices: Sequence[int]) -> Sequence[T]:
         """Fetch many items at once, in `indices` order.
@@ -64,7 +64,7 @@ class DataSequence[T, M = None](Sequence[T]):
 
     @abstractmethod
     def get_meta(self, index: int) -> M:
-        raise NotImplementedError
+        """Return the metadata for the item at `index` (`None` when `M` is `None`)."""
 
     def get_metas(self, indices: Sequence[int]) -> Sequence[M]:
         """Fetch many metadata values at once, in `indices` order.
@@ -77,7 +77,9 @@ class DataSequence[T, M = None](Sequence[T]):
     # --- combined item + metadata ------------------------------------------
 
     def get_pair(self, index: int) -> tuple[T, M]:
+        """Return the `(item, metadata)` pair at `index`."""
         return self.get_item(index), self.get_meta(index)
 
     def get_pairs(self, indices: Sequence[int]) -> Sequence[tuple[T, M]]:
+        """Fetch many `(item, metadata)` pairs at once, in `indices` order."""
         return [self.get_pair(index) for index in indices]

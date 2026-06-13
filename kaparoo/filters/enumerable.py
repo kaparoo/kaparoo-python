@@ -57,7 +57,6 @@ class Expandable(Filter, ABC):
     @abstractmethod
     def expand(self) -> Iterator[str]:
         """Yield the concrete names this pattern stands for."""
-        raise NotImplementedError
 
 
 @register_filter("literal")
@@ -175,6 +174,8 @@ class Template(Frozen, Expandable):
         return self._axes
 
     def matches(self, target: str) -> bool:
+        # Cache the expanded name set on first match. This is a frozen value
+        # object, so stash it via `object.__setattr__` rather than a field.
         names = getattr(self, "_matchable", None)
         if names is None:
             names = frozenset(self.expand())
