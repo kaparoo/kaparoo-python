@@ -190,6 +190,18 @@ def test_store_all_value_equality():
     assert Quantile(0.9) != Quantile(0.5)
 
 
+def test_stored_fresh_lambdas_block_merge():
+    # Documented footgun: a fresh lambda per instance compares unequal, so two
+    # such Stored reductions cannot merge -- use a module-level callable to rely
+    # on merge.
+    a = Aggregator(Stored(lambda v, w: max(v)))
+    a.update({"x": 1.0})
+    b = Aggregator(Stored(lambda v, w: max(v)))
+    b.update({"x": 2.0})
+    with pytest.raises(ValueError, match="reductions differ"):
+        a.merge(b)
+
+
 def test_stored_state_is_mutable_in_place():
     # documented exception to the immutable-state contract: `step` appends
     med = Median()
@@ -279,6 +291,15 @@ def test_std_is_sqrt_of_var():
 def test_std_empty_is_nan():
     std = Std()
     assert math.isnan(std.result(std.identity()))
+
+
+def test_std_clamps_negative_variance_from_rounding():
+    # Float rounding can drive M2 slightly below zero; without the clamp the
+    # square root would return a *complex* number rather than 0.0.
+    std = Std()
+    result = std.result((4.0, 5.0, -1e-15))  # (total_weight, mean, M2 < 0)
+    assert isinstance(result, float)
+    assert result == 0.0
 
 
 def test_var_std_nest_via_aggregator():
