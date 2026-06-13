@@ -131,6 +131,7 @@ Common prefixes in this project:
 | Prefix | Use for                                       |
 | ------ | --------------------------------------------- |
 | ✨     | New feature                                   |
+| 💥     | Breaking change to the public API             |
 | ♻️     | Refactor (no user-visible behavior change)    |
 | 🔥     | Remove dead / vestigial code                  |
 | 🐛     | Bug fix                                       |
@@ -146,6 +147,7 @@ Common prefixes in this project:
 | 🚚     | Move / rename files                           |
 | ⬆️     | Bump a dependency or tool version             |
 | 🔧     | Config (`pyproject.toml`, `ruff`, `ty`, ...)  |
+| 👷     | CI workflow (`ci.yml`, `publish.yml`)         |
 | 🔖     | Release a version (commit + matching tag)     |
 
 Keep commits single-purpose; don't rewrite published history; don't
