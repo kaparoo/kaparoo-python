@@ -164,9 +164,9 @@ class TestRegistryAndDispatch:
         with pytest.raises(ValueError, match="unknown condition kind"):
             Condition.from_dict({"kind": "nope"})
 
-    def test_from_dict_null_kind_is_unknown_not_missing(self) -> None:
-        # An explicit null kind is reported as unknown, not as a missing key.
-        with pytest.raises(ValueError, match="unknown condition kind: None"):
+    def test_from_dict_null_kind_treated_as_missing(self) -> None:
+        # A null discriminator is treated the same as an absent one.
+        with pytest.raises(ValueError, match="missing 'kind'"):
             Condition.from_dict({"kind": None})
 
     def test_from_dict_non_mapping_raises_type_error(self) -> None:

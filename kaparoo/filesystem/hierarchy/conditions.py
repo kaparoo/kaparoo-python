@@ -120,11 +120,10 @@ class Condition(ABC):
             msg = f"expected a condition dict, got {type(data).__name__}"
             raise TypeError(msg)
 
-        if "kind" not in data:
+        if (kind := data.get("kind")) is None:
             msg = "condition dict missing 'kind' discriminator."
             raise ValueError(msg)
 
-        kind = data["kind"]
         if (target := _CONDITION_REGISTRY.get(kind)) is None:
             msg = f"unknown condition kind: {kind!r}"
             raise ValueError(msg)

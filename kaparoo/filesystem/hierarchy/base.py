@@ -68,11 +68,10 @@ class Node(ABC):
             msg = f"expected a node dict, got {type(data).__name__}"
             raise TypeError(msg)
 
-        if "node" not in data:
+        if (node := data.get("node")) is None:
             msg = "node dict missing 'node' discriminator."
             raise ValueError(msg)
 
-        node = data["node"]
         if (target := _NODE_REGISTRY.get(node)) is None:
             msg = f"unknown node kind: {node!r}"
             raise ValueError(msg)

@@ -74,11 +74,10 @@ class Filter(ABC):
             msg = f"expected a filter dict, got {type(data).__name__}"
             raise TypeError(msg)
 
-        if "kind" not in data:
+        if (kind := data.get("kind")) is None:
             msg = "filter dict missing 'kind' discriminator."
             raise ValueError(msg)
 
-        kind = data["kind"]
         if (target := _FILTER_REGISTRY.get(kind)) is None:
             msg = f"unknown filter kind: {kind!r}"
             raise ValueError(msg)

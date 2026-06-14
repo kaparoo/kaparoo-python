@@ -148,9 +148,9 @@ class TestFromDictErrors:
         with pytest.raises(ValueError, match="unknown node kind"):
             Node.from_dict({"node": "bogus"})
 
-    def test_null_node_discriminator_is_unknown_not_missing(self) -> None:
-        # An explicit null discriminator is reported as unknown, not missing.
-        with pytest.raises(ValueError, match="unknown node kind: None"):
+    def test_null_node_discriminator_treated_as_missing(self) -> None:
+        # A null discriminator is treated the same as an absent one.
+        with pytest.raises(ValueError, match="missing 'node'"):
             Node.from_dict({"node": None})
 
     def test_non_mapping_raises_type_error(self) -> None:

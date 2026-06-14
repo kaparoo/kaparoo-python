@@ -71,9 +71,9 @@ def test_from_dict_unknown_kind_raises():
         Filter.from_dict({"kind": "nonexistent", "pattern": "foo"})
 
 
-def test_from_dict_null_kind_is_unknown_not_missing():
-    # An explicit null kind is reported as unknown, not as a missing key.
-    with pytest.raises(ValueError, match="unknown filter kind: None"):
+def test_from_dict_null_kind_treated_as_missing():
+    # A null discriminator is treated the same as an absent one.
+    with pytest.raises(ValueError, match="missing 'kind'"):
         Filter.from_dict({"kind": None, "pattern": "foo"})
 
 
