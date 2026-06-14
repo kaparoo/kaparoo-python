@@ -78,6 +78,18 @@ def test_ensure_in_range_no_bounds_is_a_noop():
     assert ensure_in_range(123.0, name="x") == 123.0
 
 
+def test_ensure_in_range_inclusive_bool_applies_to_both_sides():
+    # A single bool sets both sides. True (the default) keeps the edges.
+    assert ensure_in_range(0, lower=0, upper=10, inclusive=True, name="n") == 0
+    assert ensure_in_range(10, lower=0, upper=10, inclusive=True, name="n") == 10
+    # False makes both bounds exclusive.
+    assert ensure_in_range(5, lower=0, upper=10, inclusive=False, name="n") == 5
+    with pytest.raises(ValueError, match=r"n must be in \(0, 10\) \(got 0\)"):
+        ensure_in_range(0, lower=0, upper=10, inclusive=False, name="n")
+    with pytest.raises(ValueError, match=r"n must be in \(0, 10\) \(got 10\)"):
+        ensure_in_range(10, lower=0, upper=10, inclusive=False, name="n")
+
+
 def test_ensure_in_range_step_on_grid_passes():
     assert ensure_in_range(4, lower=0, upper=10, step=2, name="n") == 4
     # 0.3 on a 0.1 grid: a modulo check would fail, round + isclose passes.

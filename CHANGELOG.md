@@ -14,7 +14,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `kaparoo.utils`. `ensure_literal(value, allowed, *, name)` checks discrete
   membership (pass a `range` for an integer grid); `ensure_in_range(value, *,
   lower, upper, step, inclusive, name)` checks `int` / `float` bounds, with
-  either side optional (half-open) and per-side inclusivity, plus an optional
+  either side optional (half-open) and inclusivity as a shared `bool` or a
+  per-side tuple, plus an optional
   `step` grid spacing (`base + k*step`, float-robust via `math.isclose`).
 
 - `kaparoo.filters` gains an enumerable filter family: `Literal`, `OneOf`,

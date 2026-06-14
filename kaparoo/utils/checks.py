@@ -37,7 +37,7 @@ def ensure_in_range[T: (int, float)](
     lower: float | None = None,
     upper: float | None = None,
     step: float | None = None,
-    inclusive: tuple[bool, bool] = (True, True),
+    inclusive: bool | tuple[bool, bool] = True,
     name: str,
 ) -> T:
     """Return `value` if it lies within the `lower` / `upper` bounds, else raise.
@@ -55,8 +55,8 @@ def ensure_in_range[T: (int, float)](
         upper: Upper bound, or `None` for no upper bound.
         step: Grid spacing `value` must align to, anchored at `lower` (or `0`),
             or `None` to allow any value. Must be positive.
-        inclusive: Whether the `(lower, upper)` bounds are inclusive. Defaults
-            to inclusive on both sides.
+        inclusive: Whether the bounds are inclusive. A single `bool` applies to
+            both sides; a `(lower, upper)` tuple sets each. Defaults to `True`.
         name: The value's name, used in the error message.
 
     Raises:
@@ -67,7 +67,9 @@ def ensure_in_range[T: (int, float)](
         msg = f"step must be positive (got {step})"
         raise ValueError(msg)
 
-    lower_inclusive, upper_inclusive = inclusive
+    lower_inclusive, upper_inclusive = (
+        (inclusive, inclusive) if isinstance(inclusive, bool) else inclusive
+    )
 
     too_low = lower is not None and (
         value < lower if lower_inclusive else value <= lower
