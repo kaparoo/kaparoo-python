@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from collections.abc import Collection
 
 
-def ensure_literal[T](value: T, allowed: Collection[T], *, name: str) -> T:
+def ensure_literal[T](value: T, allowed: Collection[T], *, name: str = "value") -> T:
     """Return `value` if it is in `allowed`, else raise `ValueError`.
 
     For a discrete integer grid, pass a `range` (e.g. `range(0, 10, 2)`):
@@ -38,7 +38,7 @@ def ensure_in_range[T: (int, float)](
     upper: float | None = None,
     step: float | None = None,
     inclusive: bool | tuple[bool, bool] = True,
-    name: str,
+    name: str = "value",
 ) -> T:
     """Return `value` if it lies within the `lower` / `upper` bounds, else raise.
 
@@ -57,7 +57,7 @@ def ensure_in_range[T: (int, float)](
             or `None` to allow any value. Must be positive.
         inclusive: Whether the bounds are inclusive. A single `bool` applies to
             both sides; a `(lower, upper)` tuple sets each. Defaults to `True`.
-        name: The value's name, used in the error message.
+        name: The value's name for the error message. Defaults to `"value"`.
 
     Raises:
         ValueError: If `step` is not positive, or `value` falls outside the

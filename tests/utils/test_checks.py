@@ -27,6 +27,11 @@ def test_ensure_literal_message_is_sorted_when_orderable():
         ensure_literal("z", {"b", "a"}, name="x")
 
 
+def test_ensure_literal_default_name_in_message():
+    with pytest.raises(ValueError, match=r"value must be one of"):
+        ensure_literal("x", ("a", "b"))
+
+
 def test_ensure_literal_falls_back_when_unorderable():
     # `sorted` raises TypeError on mixed types; the message still lists them.
     with pytest.raises(ValueError, match="must be one of"):
@@ -44,6 +49,11 @@ def test_ensure_in_range_within_inclusive_bounds():
 
 def test_ensure_in_range_accepts_int_value():
     assert ensure_in_range(5, lower=1, upper=10, name="n") == 5
+
+
+def test_ensure_in_range_default_name_in_message():
+    with pytest.raises(ValueError, match=r"value must be in \[0, 1\] \(got 2\)"):
+        ensure_in_range(2, lower=0, upper=1)
 
 
 def test_ensure_in_range_below_lower_raises():
