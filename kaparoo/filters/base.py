@@ -3,13 +3,13 @@ from __future__ import annotations
 __all__ = ("Filter",)
 
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
 from kaparoo.filters.utils import _FILTER_REGISTRY
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
     from typing import Any
 
     from kaparoo.filters.types import FilterDict
@@ -60,6 +60,7 @@ class Filter(ABC):
         fields without dispatch.
 
         Raises:
+            TypeError: If `data` is not a mapping.
             ValueError: If `data` lacks `"kind"`, or the kind is not
                 registered.
             NotImplementedError: If called on a subclass that did not
@@ -69,10 +70,15 @@ class Filter(ABC):
             msg = f"{cls.__name__}.from_dict() must be overridden by subclasses."
             raise NotImplementedError(msg)
 
-        if (kind := data.get("kind")) is None:
+        if not isinstance(data, Mapping):
+            msg = f"expected a filter dict, got {type(data).__name__}"
+            raise TypeError(msg)
+
+        if "kind" not in data:
             msg = "filter dict missing 'kind' discriminator."
             raise ValueError(msg)
 
+        kind = data["kind"]
         if (target := _FILTER_REGISTRY.get(kind)) is None:
             msg = f"unknown filter kind: {kind!r}"
             raise ValueError(msg)
@@ -88,6 +94,7 @@ class Filter(ABC):
         optional input should guard `None` themselves.
 
         Raises:
+            TypeError: If `value` is neither a `Filter` nor a mapping.
             ValueError: If `value` is a dict but lacks `"kind"` or the
                 kind is not registered.
         """

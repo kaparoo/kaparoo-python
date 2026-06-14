@@ -204,7 +204,9 @@ When `False`, matching uses Unicode `str.casefold()`, which is more
 aggressive than `str.lower()` (e.g. `"ß".casefold() == "ss"`,
 `"ﬁ".casefold() == "fi"`) -- the "caseless linguistic equivalence"
 Python recommends. Two names a filesystem treats as distinct may still
-match each other under `case_sensitive=False`.
+match each other under `case_sensitive=False`. `Regex` and `Glob` instead
+match case-insensitively via `re.IGNORECASE` (the target is left as-is, so a
+single-character `?` stays single-character).
 
 ## See also
 

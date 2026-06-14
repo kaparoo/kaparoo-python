@@ -71,6 +71,18 @@ def test_from_dict_unknown_kind_raises():
         Filter.from_dict({"kind": "nonexistent", "pattern": "foo"})
 
 
+def test_from_dict_null_kind_is_unknown_not_missing():
+    # An explicit null kind is reported as unknown, not as a missing key.
+    with pytest.raises(ValueError, match="unknown filter kind: None"):
+        Filter.from_dict({"kind": None, "pattern": "foo"})
+
+
+def test_from_dict_non_mapping_raises_type_error():
+    for bad in (None, 42, "x", ["a"]):
+        with pytest.raises(TypeError, match="expected a filter dict"):
+            Filter.from_dict(bad)  # ty: ignore[invalid-argument-type]
+
+
 def test_subclass_from_dict_not_overridden_raises():
     # A Filter subclass that doesn't override from_dict inherits the
     # base dispatcher, which only dispatches when `cls is Filter`.
@@ -147,3 +159,9 @@ def test_parse_invalid_dict_raises():
 def test_parse_unknown_kind_raises():
     with pytest.raises(ValueError, match="unknown filter kind"):
         Filter.parse({"kind": "nope"})
+
+
+def test_parse_non_mapping_raises_type_error():
+    for bad in (None, 42, "x", ["a"]):
+        with pytest.raises(TypeError, match="expected a filter dict"):
+            Filter.parse(bad)  # ty: ignore[invalid-argument-type]

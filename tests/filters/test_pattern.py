@@ -195,8 +195,11 @@ def test_glob_case_insensitive():
     assert f.matches("foo.PY")
 
 
-def test_glob_pattern_pre_normalized_when_case_insensitive():
-    assert GlobFilter("*.PY", case_sensitive=False).pattern == "*.py"
+def test_glob_case_insensitive_keeps_pattern_and_match_length():
+    # Glob CI uses re.IGNORECASE (like Regex), so the pattern is not casefolded
+    # and `?` stays one character even when the target's fold would expand.
+    assert GlobFilter("*.PY", case_sensitive=False).pattern == "*.PY"
+    assert GlobFilter("?", case_sensitive=False).matches("ß")
 
 
 # --- serialization (per-kind round-trip) -----------------------------------

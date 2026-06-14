@@ -149,18 +149,23 @@ class GlobFilter(PatternFilter):
     Supported wildcards: `*` (any sequence), `?` (single char),
     `[seq]` (any in seq), `[!seq]` (any not in seq). Recursive `**`
     is not supported (that is a `pathlib.Path.rglob` concept).
+    `case_sensitive=False` is wired via `re.IGNORECASE`.
     """
 
     _compiled: re.Pattern[str] = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
-        super().__post_init__()  # casefold `pattern` when not case_sensitive
+        # Intentionally skip `PatternFilter.__post_init__`: like `RegexFilter`,
+        # glob case-insensitivity uses `re.IGNORECASE`, not casefolding --
+        # casefold is not length-preserving and would desync `?` / `[seq]` on a
+        # character whose fold expands (e.g. "ß" -> "ss").
+        flags = 0 if self.case_sensitive else re.IGNORECASE
         object.__setattr__(
-            self, "_compiled", re.compile(fnmatch.translate(self.pattern))
+            self, "_compiled", re.compile(fnmatch.translate(self.pattern), flags)
         )
 
     def matches(self, target: str) -> bool:
-        return self._compiled.match(self._prepare_target(target)) is not None
+        return self._compiled.match(target) is not None
 
 
 # Short aliases. Prefer these in inline composition; prefer the

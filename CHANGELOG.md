@@ -202,6 +202,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `kaparoo.filters.GlobFilter` (`Glob`) case-insensitive matching now uses
+  `re.IGNORECASE` instead of casefolding the pattern and target, matching
+  `RegexFilter`. Casefold is not length-preserving, so `?` / `[seq]` no longer
+  desync on a character whose fold expands (e.g.
+  `Glob("?", case_sensitive=False)` now matches `"ß"`). The stored / serialized
+  `pattern` of a case-insensitive glob is no longer casefolded.
+- `kaparoo.filters.Filter.parse` / `Filter.from_dict` raise a clear `TypeError`
+  on a non-mapping argument (previously a confusing `AttributeError`), and a
+  `{"kind": null}` dict reports an unknown kind rather than a missing one.
 - `Aggregator.merge` adopted a metric present only in the other tracker by
   sharing its state object; for a store-all reduction (`Median` / `Quantile`
   / `Stored`) a later `update` on the absorbing tracker then mutated the
