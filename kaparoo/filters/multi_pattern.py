@@ -82,7 +82,7 @@ class MultiPatternFilter(Filter, ABC):
 @register_filter("equals_any")
 @dataclass(frozen=True)
 class EqualsAnyFilter(MultiPatternFilter):
-    """Match strings that equal ANY of `patterns`."""
+    """A filter matching strings that equal ANY of `patterns`."""
 
     _pattern_set: frozenset[str] = field(init=False, repr=False, compare=False)
 
@@ -97,7 +97,7 @@ class EqualsAnyFilter(MultiPatternFilter):
 @register_filter("starts_with_any")
 @dataclass(frozen=True)
 class StartsWithAnyFilter(MultiPatternFilter):
-    """Match strings that start with ANY of `patterns`."""
+    """A filter matching strings that start with ANY of `patterns`."""
 
     def matches(self, target: str) -> bool:
         return self._prepare_target(target).startswith(self.patterns)
@@ -106,7 +106,7 @@ class StartsWithAnyFilter(MultiPatternFilter):
 @register_filter("ends_with_any")
 @dataclass(frozen=True)
 class EndsWithAnyFilter(MultiPatternFilter):
-    """Match strings that end with ANY of `patterns`."""
+    """A filter matching strings that end with ANY of `patterns`."""
 
     def matches(self, target: str) -> bool:
         return self._prepare_target(target).endswith(self.patterns)
@@ -115,7 +115,7 @@ class EndsWithAnyFilter(MultiPatternFilter):
 @register_filter("contains_any")
 @dataclass(frozen=True)
 class ContainsAnyFilter(MultiPatternFilter):
-    """Match strings that contain ANY of `patterns` as a substring."""
+    """A filter matching strings that contain ANY of `patterns` as a substring."""
 
     def matches(self, target: str) -> bool:
         t = self._prepare_target(target)

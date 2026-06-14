@@ -76,7 +76,7 @@ class PatternFilter(Filter, ABC):
 @register_filter("equals")
 @dataclass(frozen=True)
 class EqualsFilter(PatternFilter):
-    """Match strings that equal `pattern` exactly."""
+    """A filter matching strings that equal `pattern` exactly."""
 
     def matches(self, target: str) -> bool:
         return self._prepare_target(target) == self.pattern
@@ -85,7 +85,7 @@ class EqualsFilter(PatternFilter):
 @register_filter("starts_with")
 @dataclass(frozen=True)
 class StartsWithFilter(PatternFilter):
-    """Match strings that start with `pattern`."""
+    """A filter matching strings that start with `pattern`."""
 
     def matches(self, target: str) -> bool:
         return self._prepare_target(target).startswith(self.pattern)
@@ -94,7 +94,7 @@ class StartsWithFilter(PatternFilter):
 @register_filter("ends_with")
 @dataclass(frozen=True)
 class EndsWithFilter(PatternFilter):
-    """Match strings that end with `pattern`."""
+    """A filter matching strings that end with `pattern`."""
 
     def matches(self, target: str) -> bool:
         return self._prepare_target(target).endswith(self.pattern)
@@ -103,7 +103,7 @@ class EndsWithFilter(PatternFilter):
 @register_filter("contains")
 @dataclass(frozen=True)
 class ContainsFilter(PatternFilter):
-    """Match strings that contain `pattern` as a substring."""
+    """A filter matching strings that contain `pattern` as a substring."""
 
     def matches(self, target: str) -> bool:
         return self.pattern in self._prepare_target(target)
@@ -112,7 +112,7 @@ class ContainsFilter(PatternFilter):
 @register_filter("regex")
 @dataclass(frozen=True)
 class RegexFilter(PatternFilter):
-    """Match strings against a regular expression (full-string match).
+    """A filter matching strings against a regular expression (full-string match).
 
     Uses `re.fullmatch` semantics: the entire string must match the
     pattern. For partial matches, anchor explicitly with `.*` in the
@@ -144,7 +144,7 @@ class RegexFilter(PatternFilter):
 @register_filter("glob")
 @dataclass(frozen=True)
 class GlobFilter(PatternFilter):
-    """Match strings against a POSIX glob pattern via `fnmatch`.
+    """A filter matching strings against a POSIX glob pattern via `fnmatch`.
 
     Supported wildcards: `*` (any sequence), `?` (single char),
     `[seq]` (any in seq), `[!seq]` (any not in seq). Recursive `**`
