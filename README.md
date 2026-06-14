@@ -65,8 +65,8 @@ extension hook for custom filter kinds. Used by
 `Timer` / `SpanTimer` context-manager-and-decorator timers (with
 `lap`-split and `measure`-block timings); `Aggregator` for nested,
 pluggable metric aggregation (the batch → epoch → run pattern);
-plus a small family of helpers for working with
-`Optional[T]` values (`replace_if_none`, `unwrap_or_default`, ...).
+`ensure_one_of` / `ensure_in_range` validation guards; plus helpers
+for `Optional[T]` values (`replace_if_none`, `unwrap_or_default`, ...).
 
 ### [`kaparoo.data`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/data)
 
