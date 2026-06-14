@@ -76,3 +76,34 @@ def test_ensure_in_range_half_bounded_uses_open_infinity_bracket():
 
 def test_ensure_in_range_no_bounds_is_a_noop():
     assert ensure_in_range(123.0, name="x") == 123.0
+
+
+def test_ensure_in_range_step_on_grid_passes():
+    assert ensure_in_range(4, min_=0, max_=10, step=2, name="n") == 4
+    # 0.3 on a 0.1 grid: a modulo check would fail, round + isclose passes.
+    assert ensure_in_range(0.3, min_=0.0, max_=1.0, step=0.1, name="q") == 0.3
+    assert ensure_in_range(0.7, min_=0.0, max_=1.0, step=0.1, name="q") == 0.7
+
+
+def test_ensure_in_range_step_off_grid_raises():
+    with pytest.raises(ValueError, match=r"n must lie on the grid 0 \+ k\*2 \(got 3\)"):
+        ensure_in_range(3, min_=0, max_=10, step=2, name="n")
+
+
+def test_ensure_in_range_step_anchored_at_min():
+    assert ensure_in_range(3, min_=1, step=2, name="n") == 3  # grid 1, 3, 5, ...
+    with pytest.raises(ValueError, match=r"grid 1 \+ k\*2"):
+        ensure_in_range(4, min_=1, step=2, name="n")
+
+
+def test_ensure_in_range_step_anchored_at_zero_without_min():
+    assert ensure_in_range(6, step=3, name="n") == 6
+    with pytest.raises(ValueError, match=r"grid 0 \+ k\*3"):
+        ensure_in_range(7, step=3, name="n")
+
+
+def test_ensure_in_range_step_must_be_positive():
+    with pytest.raises(ValueError, match="step must be positive"):
+        ensure_in_range(1.0, step=0, name="x")
+    with pytest.raises(ValueError, match="step must be positive"):
+        ensure_in_range(1.0, step=-1, name="x")

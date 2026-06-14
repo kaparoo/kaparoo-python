@@ -4,6 +4,7 @@ from __future__ import annotations
 
 __all__ = ("ensure_in_range", "ensure_literal")
 
+import math
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -35,27 +36,37 @@ def ensure_in_range[T: (int, float)](
     *,
     min_: float | None = None,
     max_: float | None = None,
+    step: float | None = None,
     inclusive: tuple[bool, bool] = (True, True),
     name: str,
 ) -> T:
     """Return `value` if it lies within the `min_` / `max_` bounds, else raise.
 
     Either bound may be `None` for no limit on that side (a half-open range);
-    `inclusive` selects `<=` (`True`) or `<` (`False`) per side. Works for `int`
-    and `float` alike. For a discrete integer grid, use `ensure_literal` with a
-    `range` instead.
+    `inclusive` selects `<=` (`True`) or `<` (`False`) per side. With `step`,
+    `value` must also fall on the grid `base + k * step` (integer `k`), where
+    `base` is `min_` (or `0` when `min_` is `None`); that check goes through
+    `math.isclose`, so it tolerates float rounding (e.g. `0.3` on a `0.1`
+    grid). Works for `int` and `float` alike.
 
     Args:
         value: The number to check.
         min_: Lower bound, or `None` for no lower bound.
         max_: Upper bound, or `None` for no upper bound.
+        step: Grid spacing `value` must align to, anchored at `min_` (or `0`),
+            or `None` to allow any value. Must be positive.
         inclusive: Whether the `(min_, max_)` bounds are inclusive. Defaults to
             inclusive on both sides.
         name: The value's name, used in the error message.
 
     Raises:
-        ValueError: If `value` falls outside the bounds.
+        ValueError: If `step` is not positive, or `value` falls outside the
+            bounds or off the `step` grid.
     """
+    if step is not None and step <= 0:
+        msg = f"step must be positive (got {step})"
+        raise ValueError(msg)
+
     min_inclusive, max_inclusive = inclusive
 
     below = min_ is not None and (value < min_ if min_inclusive else value <= min_)
@@ -68,5 +79,11 @@ def ensure_in_range[T: (int, float)](
         high = "inf" if max_ is None else max_
         msg = f"{name} must be in {left}{low}, {high}{right} (got {value!r})"
         raise ValueError(msg)
+
+    if step is not None:
+        base = min_ if min_ is not None else 0
+        if not math.isclose(base + round((value - base) / step) * step, value):
+            msg = f"{name} must lie on the grid {base} + k*{step} (got {value!r})"
+            raise ValueError(msg)
 
     return value
