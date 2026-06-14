@@ -34,14 +34,6 @@ A consistency sweep over the prose, independent of the per-module review:
 
 ## 🗂️ `kaparoo.filesystem.hierarchy` — refactors (behavior-preserving)
 
-### Extract a `Variadic` base for `And` / `Or` (`conditions.py`)
-
-`And` and `Or` differ only in the `all` / `any` reducer and an error string;
-their `conditions` field, `__post_init__`, `_payload`, and `from_dict` are
-byte-identical. Hoist the shared parts to a `Variadic(Condition)` base
-(mirroring `Bound`), with each subclass supplying only the reducer -- the
-same pattern the metadata-condition family already uses.
-
 ### Build the `exclude` predicate once in `validate` (`validate.py`)
 
 `validate` re-normalizes its `exclude=` argument repeatedly: every
@@ -86,4 +78,4 @@ the next breaking batch).
 
 ---
 
-*Last updated: 2026-06-14*
+*Last updated: 2026-06-15*

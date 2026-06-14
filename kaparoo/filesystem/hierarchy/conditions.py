@@ -260,10 +260,13 @@ class Content(Condition):
         return cls(name=data["name"])
 
 
-@register_condition("all")
 @dataclass(frozen=True)
-class And(Condition):
-    """Satisfied when ALL of `conditions` are (conjunction).
+class Variadic(Condition, ABC):
+    """A condition over a non-empty tuple of `conditions`.
+
+    The shared base of `And` / `Or`; subclasses supply only the `check`
+    quantifier (`all` / `any`). Field, validation, and serialization are
+    shared.
 
     Raises:
         ValueError: If `conditions` is empty.
@@ -273,45 +276,33 @@ class And(Condition):
 
     def __post_init__(self) -> None:
         if not self.conditions:
-            msg = "And requires at least one condition."
+            msg = f"{type(self).__name__} requires at least one condition."
             raise ValueError(msg)
+
+    def _payload(self) -> dict[str, Any]:
+        return {"conditions": [condition.to_dict() for condition in self.conditions]}
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        return cls(tuple(Condition.from_dict(c) for c in data["conditions"]))
+
+
+@register_condition("all")
+@dataclass(frozen=True)
+class And(Variadic):
+    """Satisfied when ALL of `conditions` are (conjunction)."""
 
     def check(self, path: Path, ctx: CheckContext = _NO_CHECKS) -> bool:
         return all(condition.check(path, ctx) for condition in self.conditions)
 
-    def _payload(self) -> dict[str, Any]:
-        return {"conditions": [condition.to_dict() for condition in self.conditions]}
-
-    @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> Self:
-        return cls(tuple(Condition.from_dict(c) for c in data["conditions"]))
-
 
 @register_condition("any")
 @dataclass(frozen=True)
-class Or(Condition):
-    """Satisfied when AT LEAST ONE of `conditions` is (disjunction).
-
-    Raises:
-        ValueError: If `conditions` is empty.
-    """
-
-    conditions: tuple[Condition, ...]
-
-    def __post_init__(self) -> None:
-        if not self.conditions:
-            msg = "Or requires at least one condition."
-            raise ValueError(msg)
+class Or(Variadic):
+    """Satisfied when AT LEAST ONE of `conditions` is (disjunction)."""
 
     def check(self, path: Path, ctx: CheckContext = _NO_CHECKS) -> bool:
         return any(condition.check(path, ctx) for condition in self.conditions)
-
-    def _payload(self) -> dict[str, Any]:
-        return {"conditions": [condition.to_dict() for condition in self.conditions]}
-
-    @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> Self:
-        return cls(tuple(Condition.from_dict(c) for c in data["conditions"]))
 
 
 @register_condition("not")
