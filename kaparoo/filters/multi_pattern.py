@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from typing import Any, Self
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class MultiPatternFilter(Filter, ABC):
     """Abstract base for matching rules with multiple patterns (any-of).
 
@@ -78,9 +78,13 @@ class MultiPatternFilter(Filter, ABC):
             case_sensitive=data.get("case_sensitive", True),
         )
 
+    def __repr__(self) -> str:
+        cs = "" if self.case_sensitive else ", case_sensitive=False"
+        return f"{type(self).__name__}({self.patterns!r}{cs})"
+
 
 @register_filter("equals_any")
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class EqualsAnyFilter(MultiPatternFilter):
     """A filter matching strings that equal ANY of `patterns`."""
 
@@ -95,7 +99,7 @@ class EqualsAnyFilter(MultiPatternFilter):
 
 
 @register_filter("starts_with_any")
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class StartsWithAnyFilter(MultiPatternFilter):
     """A filter matching strings that start with ANY of `patterns`."""
 
@@ -104,7 +108,7 @@ class StartsWithAnyFilter(MultiPatternFilter):
 
 
 @register_filter("ends_with_any")
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class EndsWithAnyFilter(MultiPatternFilter):
     """A filter matching strings that end with ANY of `patterns`."""
 
@@ -113,7 +117,7 @@ class EndsWithAnyFilter(MultiPatternFilter):
 
 
 @register_filter("contains_any")
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class ContainsAnyFilter(MultiPatternFilter):
     """A filter matching strings that contain ANY of `patterns` as a substring."""
 

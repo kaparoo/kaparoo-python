@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from typing import Any, Self
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class LogicalFilter(Filter, ABC):
     """Abstract base for composite filters built from other filters.
 
@@ -37,7 +37,7 @@ class LogicalFilter(Filter, ABC):
     """
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class NaryLogicalFilter(LogicalFilter, ABC):
     """Base for logical filters over a non-empty tuple of `children`.
 
@@ -64,9 +64,13 @@ class NaryLogicalFilter(LogicalFilter, ABC):
             children=tuple(Filter.from_dict(child) for child in data["children"]),
         )
 
+    def __repr__(self) -> str:
+        children = ", ".join(repr(child) for child in self.children)
+        return f"{type(self).__name__}({children})"
+
 
 @register_filter("and")
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class AndFilter(NaryLogicalFilter):
     """A filter matching strings that satisfy ALL of `children` (logical conjunction)."""
 
@@ -75,7 +79,7 @@ class AndFilter(NaryLogicalFilter):
 
 
 @register_filter("or")
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class OrFilter(NaryLogicalFilter):
     """A filter matching strings that satisfy AT LEAST ONE of `children` (disjunction)."""
 
@@ -84,7 +88,7 @@ class OrFilter(NaryLogicalFilter):
 
 
 @register_filter("not")
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class NotFilter(LogicalFilter):
     """A filter matching strings that do NOT satisfy `child` (logical negation)."""
 
@@ -99,6 +103,9 @@ class NotFilter(LogicalFilter):
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         return cls(child=Filter.from_dict(data["child"]))
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}({self.child!r})"
 
 
 # Short aliases. Prefer these in inline composition; prefer the

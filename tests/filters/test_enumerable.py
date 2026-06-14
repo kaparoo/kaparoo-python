@@ -30,6 +30,9 @@ class TestLiteral:
         assert literal.to_dict() == {"kind": "literal", "name": "data.bin"}
         assert Filter.from_dict(literal.to_dict()) == literal
 
+    def test_repr_is_concise(self) -> None:
+        assert repr(Literal("train")) == "Literal('train')"
+
 
 class TestTemplate:
     def test_is_an_expandable_filter(self) -> None:
@@ -127,6 +130,9 @@ class TestOneOf:
         assert OneOf(["a", "b"]) == OneOf(["a", "b", "a"])
         assert OneOf(["a", "b"]) != OneOf(["a", "c"])
 
+    def test_repr_is_concise(self) -> None:
+        assert repr(OneOf(["train", "val"])) == "OneOf(('train', 'val'))"
+
 
 class TestValueSemantics:
     def test_equal_when_same_type_and_fields(self) -> None:
@@ -201,7 +207,7 @@ class TestWithout:
 
     def test_repr(self) -> None:
         assert repr(Without(OneOf(["a", "b"]), "a")) == (
-            "Without(OneOf(names=('a', 'b')), Literal(name='a'))"
+            "Without(OneOf(('a', 'b')), Literal('a'))"
         )
 
 

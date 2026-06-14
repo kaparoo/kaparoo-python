@@ -28,7 +28,7 @@ class TestFile:
         assert File("a") != "a"
 
     def test_repr(self) -> None:
-        assert repr(File("a.txt")) == "File(Literal(name='a.txt'))"
+        assert repr(File("a.txt")) == "File(Literal('a.txt'))"
 
 
 class TestDirectory:
@@ -82,7 +82,7 @@ class TestDirectory:
 
     def test_repr(self) -> None:
         assert repr(Directory("d", [File("a")])) == (
-            "Directory(Literal(name='d'), (File(Literal(name='a')),))"
+            "Directory(Literal('d'), (File(Literal('a')),))"
         )
 
 
@@ -136,12 +136,12 @@ class TestDepth:
         assert hash(File("a", depth=2)) == hash(File("a", depth=2))
 
     def test_repr_renders_depth_in_compact_form(self) -> None:
-        assert repr(File("a")) == "File(Literal(name='a'))"
-        assert repr(File("a", depth=3)) == "File(Literal(name='a'), depth=3)"
-        assert repr(File("a", depth=None)) == "File(Literal(name='a'), depth=None)"
-        assert repr(File("a", depth=(2, 4))) == "File(Literal(name='a'), depth=(2, 4))"
+        assert repr(File("a")) == "File(Literal('a'))"
+        assert repr(File("a", depth=3)) == "File(Literal('a'), depth=3)"
+        assert repr(File("a", depth=None)) == "File(Literal('a'), depth=None)"
+        assert repr(File("a", depth=(2, 4))) == "File(Literal('a'), depth=(2, 4))"
         assert repr(File("a", depth=(2, None))) == (
-            "File(Literal(name='a'), depth=(2, None))"
+            "File(Literal('a'), depth=(2, None))"
         )
 
 
@@ -161,10 +161,10 @@ class TestRequired:
 
     def test_repr_shows_required(self) -> None:
         assert (
-            repr(File("a", required=True)) == "File(Literal(name='a'), required=True)"
+            repr(File("a", required=True)) == "File(Literal('a'), required=True)"
         )
         assert repr(File("a", depth=2, required=True)) == (
-            "File(Literal(name='a'), depth=2, required=True)"
+            "File(Literal('a'), depth=2, required=True)"
         )
 
 
@@ -185,7 +185,7 @@ class TestCondition:
 
     def test_repr_shows_condition(self) -> None:
         assert repr(File("a", condition=Size(min=1))) == (
-            "File(Literal(name='a'), condition=Size(min=1, max=None))"
+            "File(Literal('a'), condition=Size(min=1, max=None))"
         )
 
 

@@ -199,6 +199,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   indexing, and `len` are unchanged; `.append` / `+=` / `isinstance(...,
   list)` are not), and assigning to any of these attributes now raises
   `AttributeError`.
+- `kaparoo.filters` filters now render a concise, constructor-style `repr`
+  instead of the default dataclass field dump -- `EqualsFilter('README')`
+  rather than `EqualsFilter(pattern='README', case_sensitive=True)`. The
+  primary value (`pattern` / `patterns` / `child` / `children` / `name` /
+  `names`) is shown unlabeled, and `case_sensitive` appears only when
+  `False` (its non-default). This also shortens anything that embeds a
+  filter `repr`, such as `kaparoo.filesystem.hierarchy` node reprs
+  (`File(Literal('a'))`). `repr` is informational only; equality, hashing,
+  and serialization are unchanged.
 
 ### Fixed
 

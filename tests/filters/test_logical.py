@@ -170,3 +170,12 @@ def test_logical_aliases_are_canonical_classes():
     assert And is AndFilter
     assert Or is OrFilter
     assert Not is NotFilter
+
+
+def test_repr_is_concise():
+    nested = AndFilter((GlobFilter("*.py"), NotFilter(EqualsFilter("__init__.py"))))
+    assert (
+        repr(nested)
+        == "AndFilter(GlobFilter('*.py'), NotFilter(EqualsFilter('__init__.py')))"
+    )
+    assert repr(NotFilter(EqualsFilter("x"))) == "NotFilter(EqualsFilter('x'))"

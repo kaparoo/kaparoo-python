@@ -85,6 +85,9 @@ class Literal(Expandable):
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         return cls(name=data["name"])
 
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}({self.name!r})"
+
 
 @register_filter("one_of")
 @dataclass(frozen=True)
@@ -124,6 +127,9 @@ class OneOf(Expandable):
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         return cls(names=data["names"])
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}({self.names!r})"
 
 
 @register_filter("template")

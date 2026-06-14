@@ -273,3 +273,12 @@ def test_pattern_aliases_are_canonical_classes():
     assert Contains is ContainsFilter
     assert Regex is RegexFilter
     assert Glob is GlobFilter
+
+
+def test_repr_is_concise():
+    assert repr(EqualsFilter("README")) == "EqualsFilter('README')"
+    assert (
+        repr(EqualsFilter("readme", case_sensitive=False))
+        == "EqualsFilter('readme', case_sensitive=False)"
+    )
+    assert repr(GlobFilter("*.png")) == "GlobFilter('*.png')"

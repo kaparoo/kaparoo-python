@@ -90,17 +90,17 @@ class TestExclusive:
 
     def test_repr(self) -> None:
         assert repr(Exclusive(File("a"), File("b"))) == (
-            "Exclusive(File(Literal(name='a')), File(Literal(name='b')))"
+            "Exclusive(File(Literal('a')), File(Literal('b')))"
         )
         assert repr(Exclusive(File("a"), File("b"), required=True)) == (
-            "Exclusive(File(Literal(name='a')), File(Literal(name='b')), required=True)"
+            "Exclusive(File(Literal('a')), File(Literal('b')), required=True)"
         )
         assert repr(Exclusive([File("a"), File("b")], File("c"))) == (
-            "Exclusive((File(Literal(name='a')), File(Literal(name='b'))), "
-            "File(Literal(name='c')))"
+            "Exclusive((File(Literal('a')), File(Literal('b'))), "
+            "File(Literal('c')))"
         )
         assert repr(Exclusive(File("a"), File("b"), on_conflict="priority")) == (
-            "Exclusive(File(Literal(name='a')), File(Literal(name='b')), "
+            "Exclusive(File(Literal('a')), File(Literal('b')), "
             "on_conflict='priority')"
         )
 
@@ -158,10 +158,10 @@ class TestTogether:
 
     def test_repr(self) -> None:
         assert repr(Together(File("a"), File("b"))) == (
-            "Together(File(Literal(name='a')), File(Literal(name='b')))"
+            "Together(File(Literal('a')), File(Literal('b')))"
         )
         assert repr(Together(File("a"), File("b"), required=True)) == (
-            "Together(File(Literal(name='a')), File(Literal(name='b')), required=True)"
+            "Together(File(Literal('a')), File(Literal('b')), required=True)"
         )
 
 

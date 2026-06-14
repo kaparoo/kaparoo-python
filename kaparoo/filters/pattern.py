@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from typing import Any, Self
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class PatternFilter(Filter, ABC):
     """Abstract base for string-pattern matching rules.
 
@@ -72,9 +72,13 @@ class PatternFilter(Filter, ABC):
             case_sensitive=data.get("case_sensitive", True),
         )
 
+    def __repr__(self) -> str:
+        cs = "" if self.case_sensitive else ", case_sensitive=False"
+        return f"{type(self).__name__}({self.pattern!r}{cs})"
+
 
 @register_filter("equals")
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class EqualsFilter(PatternFilter):
     """A filter matching strings that equal `pattern` exactly."""
 
@@ -83,7 +87,7 @@ class EqualsFilter(PatternFilter):
 
 
 @register_filter("starts_with")
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class StartsWithFilter(PatternFilter):
     """A filter matching strings that start with `pattern`."""
 
@@ -92,7 +96,7 @@ class StartsWithFilter(PatternFilter):
 
 
 @register_filter("ends_with")
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class EndsWithFilter(PatternFilter):
     """A filter matching strings that end with `pattern`."""
 
@@ -101,7 +105,7 @@ class EndsWithFilter(PatternFilter):
 
 
 @register_filter("contains")
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class ContainsFilter(PatternFilter):
     """A filter matching strings that contain `pattern` as a substring."""
 
@@ -110,7 +114,7 @@ class ContainsFilter(PatternFilter):
 
 
 @register_filter("regex")
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class RegexFilter(PatternFilter):
     """A filter matching strings against a regular expression (full-string match).
 
@@ -142,7 +146,7 @@ class RegexFilter(PatternFilter):
 
 
 @register_filter("glob")
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class GlobFilter(PatternFilter):
     """A filter matching strings against a POSIX glob pattern via `fnmatch`.
 

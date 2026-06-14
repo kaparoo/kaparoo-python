@@ -211,3 +211,11 @@ def test_nested_multi_pattern_with_logical_filter_works():
     assert f1 == f2
     # Sanity: trivial filter usable with a single PatternFilter via equality
     assert EqualsFilter("a") != f1
+
+
+def test_repr_is_concise():
+    assert repr(EqualsAnyFilter(("a", "b"))) == "EqualsAnyFilter(('a', 'b'))"
+    assert (
+        repr(EqualsAnyFilter(("a",), case_sensitive=False))
+        == "EqualsAnyFilter(('a',), case_sensitive=False)"
+    )
