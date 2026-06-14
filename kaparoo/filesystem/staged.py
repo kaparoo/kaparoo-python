@@ -93,9 +93,11 @@ class StagedTarget(ABC):
     Holds the shared commit/abort lifecycle and context-manager protocol: a
     clean `with`-block exit commits, an exception aborts, `abort` is
     idempotent and a no-op once committed, and the staging is cleaned up by a
-    `weakref` finalizer if the instance is dropped without committing.
-    Subclasses set `_committed` / `_finalizer` in `__init__` and implement
-    `commit`. Excluded from `__all__` -- use `StagedFile` or `StagedDirectory`.
+    `weakref` finalizer if the instance is dropped without committing. Not
+    thread-safe: do not write, commit, or abort one instance from multiple
+    threads at once. Subclasses set `_committed` / `_finalizer` in `__init__`
+    and implement `commit`. Excluded from `__all__` -- use `StagedFile` or
+    `StagedDirectory`.
     """
 
     __slots__ = ("__weakref__", "_committed", "_finalizer", "_overwrite", "_path")
@@ -327,7 +329,9 @@ class StagedFile[AnyStrT: (str, bytes)](StagedTarget):
 
         Returns the destination path. Idempotent: a second call (or a
         context-manager exit after an explicit commit) returns `path`
-        without redoing the work.
+        without redoing the work. A commit that raises is terminal -- the
+        writer is spent (its file is closed); call `abort()` rather than
+        retrying.
 
         Raises:
             ValueError: If the writer was already aborted, or if `file` was
@@ -417,7 +421,9 @@ class StagedDirectory(StagedTarget):
     are not individually fsynced -- their contents may still be buffered when
     `commit` returns. If they must survive a crash immediately after commit,
     fsync them yourself (for example, write each via `StagedFile` inside
-    `workdir`). Atomicity for concurrent readers always holds regardless.
+    `workdir`). For the create path, atomicity for concurrent readers always
+    holds; the overwrite replace has the brief window noted above where the
+    destination is momentarily absent.
 
     The committed directory gets the usual umask-based permissions. Pass
     `make_parents=True` to create the destination's parent if it is missing.
