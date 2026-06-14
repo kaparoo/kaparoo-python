@@ -160,9 +160,7 @@ class TestRequired:
         assert hash(File("a", required=True)) == hash(File("a", required=True))
 
     def test_repr_shows_required(self) -> None:
-        assert (
-            repr(File("a", required=True)) == "File(Literal('a'), required=True)"
-        )
+        assert repr(File("a", required=True)) == "File(Literal('a'), required=True)"
         assert repr(File("a", depth=2, required=True)) == (
             "File(Literal('a'), depth=2, required=True)"
         )

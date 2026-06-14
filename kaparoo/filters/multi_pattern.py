@@ -80,7 +80,7 @@ class MultiPatternFilter(Filter, ABC):
 
     def __repr__(self) -> str:
         cs = "" if self.case_sensitive else ", case_sensitive=False"
-        return f"{type(self).__name__}({self.patterns!r}{cs})"
+        return f"{self._repr_name()}({self.patterns!r}{cs})"
 
 
 @register_filter("equals_any")

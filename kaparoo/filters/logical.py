@@ -66,7 +66,7 @@ class NaryLogicalFilter(LogicalFilter, ABC):
 
     def __repr__(self) -> str:
         children = ", ".join(repr(child) for child in self.children)
-        return f"{type(self).__name__}({children})"
+        return f"{self._repr_name()}({children})"
 
 
 @register_filter("and")
@@ -105,7 +105,7 @@ class NotFilter(LogicalFilter):
         return cls(child=Filter.from_dict(data["child"]))
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}({self.child!r})"
+        return f"{self._repr_name()}({self.child!r})"
 
 
 # Short aliases. Prefer these in inline composition; prefer the

@@ -23,7 +23,7 @@ f.matches("__init__.py")    # False
 Concrete classes end in `Filter`; the short TitleCase forms (`Equals`,
 `And`, ...) are aliases. All filters are immutable, hashable value objects
 (`==` / `hash`) — most are frozen `dataclass`es; the varargs ones
-(`Template`, `Without`) are frozen by hand.
+(`TemplateFilter`, `WithoutFilter`) are frozen by hand.
 
 ### Pattern filters ([`pattern.py`](./pattern.py))
 
@@ -87,12 +87,12 @@ implement the `Expandable` capability. Open-ended filters (`Glob`,
 `Regex`, ...) match but cannot enumerate, so they are deliberately not
 `Expandable`.
 
-| Class | Matches | `expand()` yields |
+| Class / alias | Matches | `expand()` yields |
 | --- | --- | --- |
-| `Literal` | the exact name (case-sensitive) | the one name |
-| `OneOf` | a name in an explicit set | each name in the set |
-| `Template` | a name in the enumerated product | `template.format(*combo)` over the axes |
-| `Without` | `base` but not the excluded names | `base`'s names minus the excluded ones |
+| `LiteralFilter` / `Literal` | the exact name (case-sensitive) | the one name |
+| `OneOfFilter` / `OneOf` | a name in an explicit set | each name in the set |
+| `TemplateFilter` / `Template` | a name in the enumerated product | `template.format(*combo)` over the axes |
+| `WithoutFilter` / `Without` | `base` but not the excluded names | `base`'s names minus the excluded ones |
 
 ```python
 from kaparoo.filters import Expandable, Glob, Literal, OneOf, Template

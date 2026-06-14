@@ -74,7 +74,7 @@ class PatternFilter(Filter, ABC):
 
     def __repr__(self) -> str:
         cs = "" if self.case_sensitive else ", case_sensitive=False"
-        return f"{type(self).__name__}({self.pattern!r}{cs})"
+        return f"{self._repr_name()}({self.pattern!r}{cs})"
 
 
 @register_filter("equals")

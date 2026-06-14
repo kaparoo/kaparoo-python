@@ -3,9 +3,13 @@ from __future__ import annotations
 __all__ = (
     "Expandable",
     "Literal",
+    "LiteralFilter",
     "OneOf",
+    "OneOfFilter",
     "Template",
+    "TemplateFilter",
     "Without",
+    "WithoutFilter",
 )
 
 from abc import ABC, abstractmethod
@@ -61,7 +65,7 @@ class Expandable(Filter, ABC):
 
 @register_filter("literal")
 @dataclass(frozen=True)
-class Literal(Expandable):
+class LiteralFilter(Expandable):
     """A filter matching exactly one `name`, and expanding to it.
 
     Matching is case-sensitive, so -- unlike `Equals`, which can be
@@ -86,12 +90,12 @@ class Literal(Expandable):
         return cls(name=data["name"])
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}({self.name!r})"
+        return f"{self._repr_name()}({self.name!r})"
 
 
 @register_filter("one_of")
 @dataclass(frozen=True)
-class OneOf(Expandable):
+class OneOfFilter(Expandable):
     """A filter matching and enumerating an explicit set of `names`.
 
     The `Expandable` counterpart of `EqualsAny`: it matches a name that is
@@ -129,11 +133,11 @@ class OneOf(Expandable):
         return cls(names=data["names"])
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}({self.names!r})"
+        return f"{self._repr_name()}({self.names!r})"
 
 
 @register_filter("template")
-class Template(Frozen, Expandable):
+class TemplateFilter(Frozen, Expandable):
     """A filter enumerating `template.format(*combo)` over value `axes`.
 
     A single axis condenses a run of regularly-named siblings --
@@ -203,25 +207,25 @@ class Template(Frozen, Expandable):
         return cls(data["template"], *data["axes"])
 
     def __eq__(self, other: object) -> bool:
-        if isinstance(other, Template):
+        if isinstance(other, TemplateFilter):
             return (self._template, self._axes) == (other._template, other._axes)
         return NotImplemented
 
     def __hash__(self) -> int:
-        return hash((Template, self._template, self._axes))
+        return hash((TemplateFilter, self._template, self._axes))
 
     def __repr__(self) -> str:
         axes = "".join(f", {axis!r}" for axis in self._axes)
-        return f"Template({self._template!r}{axes})"
+        return f"{self._repr_name()}({self._template!r}{axes})"
 
 
 def _as_filter(value: str | Filter) -> Filter:
     """Coerce a bare name into a `Literal`; pass a filter through."""
-    return Literal(value) if isinstance(value, str) else value
+    return LiteralFilter(value) if isinstance(value, str) else value
 
 
 @register_filter("without")
-class Without(Frozen, Expandable):
+class WithoutFilter(Frozen, Expandable):
     """`base` minus every name matching any of `excluded`.
 
     The `Expandable` form of `And(base, Not(...))`: it both *matches* and
@@ -287,13 +291,21 @@ class Without(Frozen, Expandable):
         return cls(base, *[Filter.from_dict(e) for e in data["excluded"]])
 
     def __eq__(self, other: object) -> bool:
-        if isinstance(other, Without):
+        if isinstance(other, WithoutFilter):
             return (self._base, self._excluded) == (other._base, other._excluded)
         return NotImplemented
 
     def __hash__(self) -> int:
-        return hash((Without, self._base, self._excluded))
+        return hash((WithoutFilter, self._base, self._excluded))
 
     def __repr__(self) -> str:
         excluded = ", ".join(repr(e) for e in self._excluded)
-        return f"Without({self._base!r}, {excluded})"
+        return f"{self._repr_name()}({self._base!r}, {excluded})"
+
+
+# Short aliases. Prefer these in inline composition; prefer the
+# canonical `*Filter` names in type annotations and `isinstance` checks.
+Literal = LiteralFilter
+OneOf = OneOfFilter
+Template = TemplateFilter
+Without = WithoutFilter

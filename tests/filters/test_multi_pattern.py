@@ -213,9 +213,9 @@ def test_nested_multi_pattern_with_logical_filter_works():
     assert EqualsFilter("a") != f1
 
 
-def test_repr_is_concise():
-    assert repr(EqualsAnyFilter(("a", "b"))) == "EqualsAnyFilter(('a', 'b'))"
+def test_repr_uses_concise_alias_name():
+    assert repr(EqualsAnyFilter(("a", "b"))) == "EqualsAny(('a', 'b'))"
     assert (
         repr(EqualsAnyFilter(("a",), case_sensitive=False))
-        == "EqualsAnyFilter(('a',), case_sensitive=False)"
+        == "EqualsAny(('a',), case_sensitive=False)"
     )

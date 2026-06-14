@@ -172,10 +172,7 @@ def test_logical_aliases_are_canonical_classes():
     assert Not is NotFilter
 
 
-def test_repr_is_concise():
+def test_repr_uses_concise_alias_name():
     nested = AndFilter((GlobFilter("*.py"), NotFilter(EqualsFilter("__init__.py"))))
-    assert (
-        repr(nested)
-        == "AndFilter(GlobFilter('*.py'), NotFilter(EqualsFilter('__init__.py')))"
-    )
-    assert repr(NotFilter(EqualsFilter("x"))) == "NotFilter(EqualsFilter('x'))"
+    assert repr(nested) == "And(Glob('*.py'), Not(Equals('__init__.py')))"
+    assert repr(NotFilter(EqualsFilter("x"))) == "Not(Equals('x'))"

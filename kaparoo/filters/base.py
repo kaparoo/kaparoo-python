@@ -99,3 +99,13 @@ class Filter(ABC):
                 kind is not registered.
         """
         return value if isinstance(value, Filter) else cls.from_dict(value)
+
+    def _repr_name(self) -> str:
+        """The short, alias-style name `repr` renders this filter under.
+
+        Strips the canonical `Filter` suffix so an instance shows as its
+        inline alias (`EqualsFilter` -> `Equals`, `LiteralFilter` ->
+        `Literal`). A user filter whose class name lacks the suffix is
+        rendered unchanged.
+        """
+        return type(self).__name__.removesuffix("Filter")

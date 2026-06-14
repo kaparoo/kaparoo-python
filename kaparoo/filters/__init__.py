@@ -20,11 +20,13 @@ __all__ = (
     "Glob",
     "GlobFilter",
     "Literal",
+    "LiteralFilter",
     "LogicalFilter",
     "MultiPatternFilter",
     "Not",
     "NotFilter",
     "OneOf",
+    "OneOfFilter",
     "Or",
     "OrFilter",
     "PatternFilter",
@@ -35,12 +37,24 @@ __all__ = (
     "StartsWithAnyFilter",
     "StartsWithFilter",
     "Template",
+    "TemplateFilter",
     "Without",
+    "WithoutFilter",
     "register_filter",
 )
 
 from kaparoo.filters.base import Filter
-from kaparoo.filters.enumerable import Expandable, Literal, OneOf, Template, Without
+from kaparoo.filters.enumerable import (
+    Expandable,
+    Literal,
+    LiteralFilter,
+    OneOf,
+    OneOfFilter,
+    Template,
+    TemplateFilter,
+    Without,
+    WithoutFilter,
+)
 from kaparoo.filters.logical import (
     And,
     AndFilter,

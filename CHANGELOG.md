@@ -18,10 +18,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   per-side tuple, and an optional `step` grid spacing (`base + k*step`,
   float-robust via `math.isclose`).
 
-- `kaparoo.filters` gains an enumerable filter family: `Literal`, `OneOf`,
-  `Template`, and `Without` implement an `Expandable` capability
-  (`expand()`) that *lists* the finite set of names a filter matches, on
-  top of the usual `matches` (`Expandable` is now a `Filter` subtype).
+- `kaparoo.filters` gains an enumerable filter family: `LiteralFilter`,
+  `OneOfFilter`, `TemplateFilter`, and `WithoutFilter` (with short aliases
+  `Literal` / `OneOf` / `Template` / `Without`, matching the rest of the
+  package) implement an `Expandable` capability (`expand()`) that *lists*
+  the finite set of names a filter matches, on top of the usual `matches`
+  (`Expandable` is now a `Filter` subtype).
   `Literal` / `OneOf` are the case-sensitive, always-enumerable
   counterparts of `Equals` / `EqualsAny`; `Template` enumerates
   `template.format(*combo)` over the cartesian product of one or more
@@ -200,14 +202,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   list)` are not), and assigning to any of these attributes now raises
   `AttributeError`.
 - `kaparoo.filters` filters now render a concise, constructor-style `repr`
-  instead of the default dataclass field dump -- `EqualsFilter('README')`
-  rather than `EqualsFilter(pattern='README', case_sensitive=True)`. The
-  primary value (`pattern` / `patterns` / `child` / `children` / `name` /
-  `names`) is shown unlabeled, and `case_sensitive` appears only when
-  `False` (its non-default). This also shortens anything that embeds a
-  filter `repr`, such as `kaparoo.filesystem.hierarchy` node reprs
-  (`File(Literal('a'))`). `repr` is informational only; equality, hashing,
-  and serialization are unchanged.
+  under their short alias name instead of the default dataclass field dump
+  -- `Equals('README')` rather than
+  `EqualsFilter(pattern='README', case_sensitive=True)`. The displayed name
+  drops the canonical `Filter` suffix (`EqualsFilter` -> `Equals`,
+  `LiteralFilter` -> `Literal`), the primary value (`pattern` / `patterns`
+  / `child` / `children` / `name` / `names`) is shown unlabeled, and
+  `case_sensitive` appears only when `False` (its non-default). This also
+  shortens anything that embeds a filter `repr`, such as
+  `kaparoo.filesystem.hierarchy` node reprs (`File(Literal('a'))`). `repr`
+  is informational only; equality, hashing, and serialization are
+  unchanged.
 
 ### Fixed
 

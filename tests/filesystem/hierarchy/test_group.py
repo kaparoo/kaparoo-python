@@ -96,12 +96,10 @@ class TestExclusive:
             "Exclusive(File(Literal('a')), File(Literal('b')), required=True)"
         )
         assert repr(Exclusive([File("a"), File("b")], File("c"))) == (
-            "Exclusive((File(Literal('a')), File(Literal('b'))), "
-            "File(Literal('c')))"
+            "Exclusive((File(Literal('a')), File(Literal('b'))), File(Literal('c')))"
         )
         assert repr(Exclusive(File("a"), File("b"), on_conflict="priority")) == (
-            "Exclusive(File(Literal('a')), File(Literal('b')), "
-            "on_conflict='priority')"
+            "Exclusive(File(Literal('a')), File(Literal('b')), on_conflict='priority')"
         )
 
 
