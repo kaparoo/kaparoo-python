@@ -5,7 +5,7 @@ from dataclasses import FrozenInstanceError
 import pytest
 
 from kaparoo.filesystem.hierarchy import Directory, File
-from kaparoo.filesystem.hierarchy.conditions import Size
+from kaparoo.filesystem.hierarchy.conditions import And, ChildCount, Empty, Size
 from kaparoo.filters import Glob, Literal, OneOf, Template
 
 
@@ -174,9 +174,10 @@ class TestCondition:
         assert Directory("d").condition is None
 
     def test_exposes_the_condition(self) -> None:
-        size = Size(min=1)
-        assert File("a", condition=size).condition is size
-        assert Directory("d", condition=size).condition is size
+        # `Empty` applies to both kinds, so it can sit on either entry.
+        cond = Empty()
+        assert File("a", condition=cond).condition is cond
+        assert Directory("d", condition=cond).condition is cond
 
     def test_is_part_of_identity(self) -> None:
         assert File("a", condition=Size(min=1)) == File("a", condition=Size(min=1))
@@ -187,6 +188,23 @@ class TestCondition:
         assert repr(File("a", condition=Size(min=1))) == (
             "File(Literal('a'), condition=Size(min=1, max=None))"
         )
+
+    def test_rejects_file_only_condition_on_directory(self) -> None:
+        with pytest.raises(ValueError, match="does not apply"):
+            Directory("d", condition=Size(min=1))
+
+    def test_rejects_dir_only_condition_on_file(self) -> None:
+        with pytest.raises(ValueError, match="does not apply"):
+            File("a", condition=ChildCount(min=1))
+
+    def test_rejects_composite_with_a_mismatched_leaf(self) -> None:
+        # `And(Size, ...)` is file-only (intersection), so a Directory rejects it.
+        with pytest.raises(ValueError, match="does not apply"):
+            Directory("d", condition=And((Size(min=1), Empty())))
+
+    def test_accepts_a_kind_matching_condition(self) -> None:
+        assert File("a", condition=Size(min=1)).condition is not None
+        assert Directory("d", condition=ChildCount(min=1)).condition is not None
 
 
 class TestNameSeparator:

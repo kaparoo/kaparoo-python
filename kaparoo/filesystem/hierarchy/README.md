@@ -115,13 +115,14 @@ matched path's filesystem attributes — a serializable `Condition` from
 ```python
 from kaparoo.filesystem.hierarchy import Directory, File
 from kaparoo.filesystem.hierarchy.conditions import (
-    And, ChildCount, Content, NonEmpty, Size,
+    And, ChildCount, Content, NonEmpty, Size, TreeSize,
 )
 
 File("model.bin", condition=Size(min=1))                # at least one byte
 File("cache.tmp", condition=Size(max=0))                # an empty file
 Directory("data", condition=NonEmpty())                 # a non-empty directory
 Directory("shards", condition=ChildCount(min=8))        # 8+ entries
+Directory("dataset", condition=TreeSize(max=10**9))     # under 1 GB of content
 File("a", condition=And((Size(min=1), Size(max=1000))))  # And / Or / Not compose
 ```
 
@@ -129,8 +130,16 @@ Conditions are a **validation** concern: `match` still maps paths by name /
 type / depth alone, while `validate` checks each matched path's `condition`
 and lists the failures in `report.failed` (`report.ok` requires it empty);
 `conforms` likewise requires the top node's `condition` to hold. The
-metadata conditions (`Size`, `ChildCount`, `Empty` / `NonEmpty`) are
-declarative and round-trip through `to_dict` / `from_dict`.
+metadata conditions (`Size`, `ChildCount`, `TreeSize`, `Empty` /
+`NonEmpty`) are declarative and round-trip through `to_dict` / `from_dict`.
+
+Each condition declares which entry kinds it can check: `Size` is
+**file-only** (a single file's bytes), `ChildCount` and `TreeSize` are
+**directory-only** (entry count; recursive content-size sum, which walks
+the whole subtree), and `Empty` / `NonEmpty` / `Content` apply to **both**.
+A composite (`And` / `Or` / `Not`) applies wherever all of its children do.
+Attaching a kind-mismatched condition — a `ChildCount` on a `File`, a
+`Size` on a `Directory` — raises `ValueError` at construction.
 
 For arbitrary file **content** checks — which a callable cannot serialize —
 `Content("name")` stores only a serializable reference; the callable is

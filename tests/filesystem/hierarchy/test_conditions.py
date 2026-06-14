@@ -16,6 +16,7 @@ from kaparoo.filesystem.hierarchy.conditions import (
     Not,
     Or,
     Size,
+    TreeSize,
     register_condition,
 )
 
@@ -68,6 +69,59 @@ class TestChildCount:
         cc = ChildCount(min=8)
         assert cc.to_dict() == {"kind": "child_count", "min": 8}
         assert Condition.from_dict(cc.to_dict()) == cc
+
+
+class TestTreeSize:
+    def test_sums_file_sizes_recursively(self, tmp_path: Path) -> None:
+        make_file(tmp_path / "a", size=5)
+        sub = tmp_path / "sub"
+        sub.mkdir()
+        make_file(sub / "b", size=3)
+        assert TreeSize(min=8, max=8).check(tmp_path)
+        assert TreeSize(max=7).check(tmp_path) is False
+
+    def test_empty_directory_totals_zero(self, tmp_path: Path) -> None:
+        d = tmp_path / "d"
+        d.mkdir()
+        assert TreeSize(max=0).check(d)
+
+    def test_round_trips(self) -> None:
+        ts = TreeSize(max=1000)
+        assert ts.to_dict() == {"kind": "tree_size", "max": 1000}
+        assert Condition.from_dict(ts.to_dict()) == ts
+
+
+class TestApplicability:
+    def test_size_is_file_only(self) -> None:
+        assert Size(min=1).applies_to("file")
+        assert Size(min=1).applies_to("dir") is False
+
+    def test_child_count_and_tree_size_are_dir_only(self) -> None:
+        for cond in (ChildCount(min=1), TreeSize(min=1)):
+            assert cond.applies_to("file") is False
+            assert cond.applies_to("dir")
+
+    def test_kind_agnostic_conditions_apply_to_both(self) -> None:
+        for cond in (Empty(), NonEmpty(), Content("x")):
+            assert cond.applies_to("file")
+            assert cond.applies_to("dir")
+
+    def test_composite_is_the_intersection_of_children(self) -> None:
+        both = And((Empty(), Content("x")))
+        assert both.applies_to("file")
+        assert both.applies_to("dir")
+
+        file_only = And((Size(min=1), Empty()))
+        assert file_only.applies_to("file")
+        assert file_only.applies_to("dir") is False
+
+        neither = Or((Size(min=1), ChildCount(min=1)))  # file ∩ dir
+        assert neither.applies_to("file") is False
+        assert neither.applies_to("dir") is False
+
+    def test_not_delegates_to_its_child(self) -> None:
+        assert Not(ChildCount(min=1)).applies_to("file") is False
+        assert Not(ChildCount(min=1)).applies_to("dir")
 
 
 class TestEmptiness:

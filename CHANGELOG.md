@@ -131,9 +131,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   counterpart of `kaparoo.filters`). `File` / `Directory` take a keyword-only
   `condition`; `validate` checks it on each matched path and lists the
   failures in `report.failed` (and `report.ok` requires it empty), while
-  `match` stays purely structural. Conditions: `Size` and `ChildCount`
-  (inclusive `min` / `max`), polymorphic `Empty` / `NonEmpty`, `Content` (a
-  named content hook), and `And` / `Or` / `Not`. Arbitrary content checks —
+  `match` stays purely structural. Conditions: `Size` (a file's bytes),
+  `ChildCount` (a directory's entries), and `TreeSize` (a directory's
+  recursive content size) -- all inclusive `min` / `max`; polymorphic
+  `Empty` / `NonEmpty`; `Content` (a named content hook); and `And` / `Or`
+  / `Not`. Each declares the entry kind(s) it can check (`Size` file-only,
+  `ChildCount` / `TreeSize` directory-only, the rest both; a composite is
+  the intersection of its children), so a kind-mismatched `condition`
+  raises at construction. Arbitrary content checks —
   unserializable as callables — are referenced by `Content("name")` (only
   the name is stored) and supplied to `validate` / `conforms` as
   `checks={name: callable}`; an absent name is governed by

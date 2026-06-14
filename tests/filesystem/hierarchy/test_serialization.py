@@ -11,7 +11,7 @@ from kaparoo.filesystem.hierarchy import (
     Node,
     Together,
 )
-from kaparoo.filesystem.hierarchy.conditions import And, Content, Size
+from kaparoo.filesystem.hierarchy.conditions import And, Content, Size, TreeSize
 from kaparoo.filters import Glob, Template
 
 
@@ -24,7 +24,7 @@ class TestConditionSerialization:
         node = Directory(
             "data",
             [File("model.bin", condition=And((Size(min=1), Content("ok"))))],
-            condition=Size(max=0),  # vacuous on a dir, but exercises round-trip
+            condition=TreeSize(max=1000),  # directory-applicable; exercises round-trip
         )
         assert roundtrip(node) == node
 

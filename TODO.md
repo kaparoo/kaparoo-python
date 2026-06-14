@@ -50,14 +50,6 @@ signature intact.
 
 These need a design call (and possibly a guard), not just a refactor:
 
-### Wrong-kind conditions (`conditions.py`)
-
-A `Size` on a matched *directory* reads the directory entry's size rather
-than failing, and a `ChildCount` on a matched *file* raises
-`NotADirectoryError` mid-`validate`. Decide whether a condition mismatched
-to its node's kind should be a construction-time error, a guarded validation
-failure, or documented as the caller's responsibility.
-
 ### `scaffold` is not atomic on conflict (`scaffold.py`)
 
 A wrong-kind path raises mid-run, leaving already-created paths on disk (no

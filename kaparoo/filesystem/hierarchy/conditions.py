@@ -11,6 +11,7 @@ __all__ = (
     "Not",
     "Or",
     "Size",
+    "TreeSize",
     "register_condition",
 )
 
@@ -23,6 +24,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
     from typing import Any, Literal, Self
+
+    type EntryKind = Literal["file", "dir"]
 
 
 _CONDITION_REGISTRY: dict[str, type[Condition]] = {}
@@ -90,6 +93,15 @@ class Condition(ABC):
     def check(self, path: Path, ctx: CheckContext = _NO_CHECKS) -> bool:
         """Whether `path` satisfies this condition (`ctx` carries `Content`)."""
         raise NotImplementedError
+
+    def applies_to(self, kind: EntryKind) -> bool:  # noqa: ARG002
+        """Whether this condition can validly `check` an entry of `kind`.
+
+        Defaults to both kinds; a kind-specific subclass narrows it and a
+        composite is the intersection of its children. An `Entry` rejects a
+        condition that does not apply to its kind at construction.
+        """
+        return True
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a `"kind"`-discriminated dict (round-trips)."""
@@ -182,6 +194,9 @@ class Bound(Condition, ABC):
 class Size(Bound):
     """An inclusive bound, in bytes, on a file's size (`min` / `max`)."""
 
+    def applies_to(self, kind: EntryKind) -> bool:
+        return kind == "file"
+
     def _measure(self, path: Path) -> int:
         return path.stat().st_size
 
@@ -191,8 +206,28 @@ class Size(Bound):
 class ChildCount(Bound):
     """An inclusive bound on a directory's number of entries (`min` / `max`)."""
 
+    def applies_to(self, kind: EntryKind) -> bool:
+        return kind == "dir"
+
     def _measure(self, path: Path) -> int:
         return sum(1 for _ in path.iterdir())
+
+
+@register_condition("tree_size")
+@dataclass(frozen=True)
+class TreeSize(Bound):
+    """An inclusive bound, in bytes, on a directory's total content size.
+
+    The recursive sum of the regular-file sizes under the directory, so --
+    unlike `Size`, which reads a single file -- it walks the whole subtree
+    and is `Directory`-only. Symlinked directories are not descended.
+    """
+
+    def applies_to(self, kind: EntryKind) -> bool:
+        return kind == "dir"
+
+    def _measure(self, path: Path) -> int:
+        return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
 
 
 @register_condition("empty")
@@ -288,6 +323,9 @@ class Variadic(Condition, ABC):
             msg = f"{type(self).__name__} requires at least one condition."
             raise ValueError(msg)
 
+    def applies_to(self, kind: EntryKind) -> bool:
+        return all(condition.applies_to(kind) for condition in self.conditions)
+
     def _payload(self) -> dict[str, Any]:
         return {"conditions": [condition.to_dict() for condition in self.conditions]}
 
@@ -320,6 +358,9 @@ class Not(Condition):
     """Satisfied when `condition` is not (negation)."""
 
     condition: Condition
+
+    def applies_to(self, kind: EntryKind) -> bool:
+        return self.condition.applies_to(kind)
 
     def check(self, path: Path, ctx: CheckContext = _NO_CHECKS) -> bool:
         return not self.condition.check(path, ctx)

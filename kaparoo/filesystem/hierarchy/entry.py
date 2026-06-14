@@ -12,7 +12,9 @@ from kaparoo.filters import Filter, Literal, OneOf
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
-    from typing import Any, Self
+    from typing import Any, ClassVar, Self
+
+    from kaparoo.filesystem.hierarchy.conditions import EntryKind
 
 
 def _reject_separator(name: str) -> None:
@@ -136,16 +138,20 @@ class Entry(Node, ABC):
             `required` ones, so a spec asserts nothing exists until asked.
         condition: An optional `Condition` on the matched path's filesystem
             attributes (size, child count, content hook, ...), checked by
-            `validate` (not by `match`, which stays structural). Defaults to
-            `None`.
+            `validate` (not by `match`, which stays structural). Must apply
+            to this entry's kind -- a kind-mismatched condition (a
+            `ChildCount` on a `File`, a `Size` on a `Directory`, ...) raises
+            at construction. Defaults to `None`.
 
     Raises:
         ValueError: If a sugar name contains a path separator, a depth
-            bound is below 1, or `max` is below `min`.
+            bound is below 1, `max` is below `min`, or `condition` does not
+            apply to this entry's kind.
     """
 
     __slots__ = ("_condition", "_depth", "_name", "_required")
 
+    _entry_kind: ClassVar[EntryKind]
     _name: Filter
     _depth: tuple[int, int | None]
     _required: bool
@@ -159,6 +165,12 @@ class Entry(Node, ABC):
         required: bool = False,
         condition: Condition | None = None,
     ) -> None:
+        if condition is not None and not condition.applies_to(self._entry_kind):
+            msg = (
+                f"{type(condition).__name__} condition does not apply to a "
+                f"{type(self).__name__}"
+            )
+            raise ValueError(msg)
         object.__setattr__(self, "_name", _as_filter(name))
         object.__setattr__(self, "_depth", _normalize_depth(depth))
         object.__setattr__(self, "_required", required)
@@ -229,6 +241,8 @@ class File(Entry):
 
     __slots__ = ()
 
+    _entry_kind = "file"
+
     def _fields(self) -> tuple[object, ...]:
         return (self._name,)
 
@@ -258,6 +272,7 @@ class Directory(Entry):
 
     __slots__ = ("_children",)
 
+    _entry_kind = "dir"
     _children: tuple[Node, ...]
 
     def __init__(
