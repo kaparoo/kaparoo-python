@@ -24,7 +24,7 @@ if TYPE_CHECKING:
         LogicalChildrenFilterDict,
         PatternFilterDict,
     )
-    from tests.fixtures.filesystem import TmpFilesystem
+    from tests.fixtures.filesystem import TmpFilesystem, TmpTree
 
 
 _SEARCH_FNS = (search_paths, search_files, search_dirs)
@@ -287,14 +287,21 @@ def test_search_ordered_stable_across_calls(search_fn, tmp_filesystem: TmpFilesy
     assert first == second
 
 
-def test_search_min_depth_skips_shallow_but_descends_deeper(tmp_path: Path):
-    # Three levels: top.txt + a/ at depth 1, a/b/ at depth 2, a/b/c.txt at 3.
-    (tmp_path / "a" / "b").mkdir(parents=True)
-    (tmp_path / "a" / "b" / "c.txt").write_text("x")
-    (tmp_path / "top.txt").write_text("x")
+def test_search_min_depth_skips_shallow_but_descends_deeper(tmp_tree: TmpTree):
+    t = tmp_tree
     # min_depth=2 omits the depth-1 entries from the results, yet still
-    # descends through them to reach depth-2 and depth-3 paths.
-    assert set(search_paths(tmp_path, min_depth=2)) == {
-        tmp_path / "a" / "b",
-        tmp_path / "a" / "b" / "c.txt",
-    }
+    # descends through depth-1 `docs/` to reach the depth-2 and depth-3 paths.
+    assert set(search_paths(t.root, min_depth=2)) == {t.readme, t.nested, t.deep}
+
+
+def test_search_max_depth_prunes_deepest_level(tmp_tree: TmpTree):
+    t = tmp_tree
+    # max_depth=2 keeps depth 1-2 but prunes the depth-3 file.
+    result = set(search_paths(t.root, max_depth=2))
+    assert t.deep not in result
+    assert {t.readme, t.nested}.issubset(result)
+
+
+def test_search_dirs_finds_empty_directory(tmp_tree: TmpTree):
+    # An empty directory is still a directory and must be returned.
+    assert tmp_tree.empty in set(search_dirs(tmp_tree.root))
