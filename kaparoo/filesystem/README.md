@@ -233,8 +233,9 @@ remain in a sibling `<name>.old` directory for recovery.
 `commit` makes the directory's appearance durable (it fsyncs the parent
 entry), but the files you write into `workdir` are *not* individually
 fsynced; if their contents must survive a crash right after commit, fsync
-them yourself (e.g. write each via `StagedFile`). Concurrent readers always
-see the complete directory regardless.
+them yourself (e.g. write each via `StagedFile`). For the create path,
+concurrent readers always see the complete directory regardless; the
+overwrite replace has the brief absent window noted above.
 
 ## Platform notes
 
