@@ -363,7 +363,8 @@ def _weighted_quantile(
     is the lower median, not the mean of the two middle values.
 
     Args:
-        values: The sample values; assumed non-empty.
+        values: The sample values; assumed non-empty and non-NaN (a NaN makes
+            the sort order, and hence the result, undefined).
         weights: The matching positive weights, one per value.
         q: The target cumulative-weight fraction, in `[0, 1]`.
     """
@@ -384,6 +385,11 @@ class StoredReduction(Reduction[list[tuple[float, float]]], ABC):
     Unlike every other reduction the state is a mutable list, so an
     `Aggregator.state()` snapshot shares it and keeps changing under further
     updates. Subclasses reduce the gathered samples in `_reduce`.
+
+    `merge` copies both operands, so it is O(n) in the combined sample count;
+    merging many partials into one incrementally (`run.merge(ep)` each epoch)
+    is therefore quadratic in the total -- another reason to prefer a
+    decomposable reduction when one exists.
     """
 
     def identity(self) -> list[tuple[float, float]]:
@@ -497,6 +503,9 @@ class Aggregator:
     named in `overrides`. Reductions are online, so memory stays constant in
     the number of samples (except store-all reductions; see `StoredReduction`).
 
+    Not thread-safe: guard concurrent `update` / `merge` externally, or give
+    each thread its own tracker and `merge` them once joined.
+
     Attributes:
         weight: Total weight folded in across every `update` and `merge`
             (read-only).
@@ -524,7 +533,10 @@ class Aggregator:
         self._default: Reduction[Any] = Mean() if reduction is None else reduction
         self._overrides: dict[str, Reduction[Any]] = dict(overrides or {})
 
-        self._metrics: dict[str, tuple[Reduction[Any], Any]] = {}
+        # Reduction and accumulator live in parallel dicts (rather than paired
+        # in one) so the per-sample hot path rewrites only the state entry.
+        self._reductions: dict[str, Reduction[Any]] = {}
+        self._states: dict[str, Any] = {}
         self._weight: float = 0.0
 
     def update(self, values: Mapping[str, float], *, weight: float = 1.0) -> None:
@@ -542,28 +554,33 @@ class Aggregator:
             msg = f"weight must be positive (got {weight})"
             raise ValueError(msg)
 
-        metrics = self._metrics
+        reductions, states = self._reductions, self._states
         for key, value in values.items():
-            entry = metrics.get(key)
-            if entry is None:
+            reduction = reductions.get(key)
+            if reduction is None:
                 reduction = self._overrides.get(key, self._default)
-                state = reduction.identity()
-            else:
-                reduction, state = entry
-            metrics[key] = (reduction, reduction.step(state, value, weight))
+                reductions[key] = reduction
+                states[key] = reduction.identity()
+            states[key] = reduction.step(states[key], value, weight)
 
         self._weight += weight
 
     def compute(self) -> dict[str, float]:
-        """Project every accumulated metric to its final scalar."""
+        """Project every accumulated metric to its final scalar.
+
+        Recomputed on each call (no caching); a store-all reduction re-reduces
+        its whole sample, so call it once and reuse the result rather than in a
+        tight loop.
+        """
         return {
-            key: reduction.result(state)
-            for key, (reduction, state) in self._metrics.items()
+            key: reduction.result(self._states[key])
+            for key, reduction in self._reductions.items()
         }
 
     def reset(self) -> None:
         """Clear all accumulated state, keeping the reduction configuration."""
-        self._metrics.clear()
+        self._reductions.clear()
+        self._states.clear()
         self._weight = 0.0
 
     def state(self) -> dict[str, tuple[Reduction[Any], Any]]:
@@ -575,7 +592,10 @@ class Aggregator:
         accumulates a mutable list, whose snapshotted state changes under
         further updates -- deep-copy it if you need a stable one.
         """
-        return dict(self._metrics)
+        return {
+            key: (reduction, self._states[key])
+            for key, reduction in self._reductions.items()
+        }
 
     def merge(self, other: Aggregator) -> None:
         """Fold another `Aggregator`'s state into this one, in place.
@@ -591,22 +611,26 @@ class Aggregator:
         Raises:
             ValueError: If a shared metric's reductions differ.
         """
-        for key, (reduction, other_state) in other._metrics.items():
-            entry = self._metrics.get(key)
-            if entry is None:
-                self._metrics[key] = (reduction, other_state)
+        if other is self:
+            return
+
+        for key, reduction in other._reductions.items():
+            other_state = other._states[key]
+            own_reduction = self._reductions.get(key)
+            if own_reduction is None:
+                # Adopt through the monoid identity so we copy `other`'s state
+                # instead of aliasing it: a store-all list would otherwise be
+                # shared, and a later `update` would mutate `other` too.
+                self._reductions[key] = reduction
+                self._states[key] = reduction.merge(reduction.identity(), other_state)
                 continue
-            own_reduction, own_state = entry
             if own_reduction != reduction:
                 msg = (
                     f"cannot merge metric {key!r}: reductions differ "
                     f"({own_reduction} vs {reduction})"
                 )
                 raise ValueError(msg)
-            self._metrics[key] = (
-                own_reduction,
-                own_reduction.merge(own_state, other_state),
-            )
+            self._states[key] = own_reduction.merge(self._states[key], other_state)
 
         self._weight += other.weight
 

@@ -419,6 +419,31 @@ def test_merge_incompatible_reductions_raise():
         a.merge(b)
 
 
+def test_merge_adopt_then_update_does_not_corrupt_source():
+    # A store-all metric adopted via merge must be copied, not aliased: a later
+    # update on the absorbing tracker must not mutate the source's samples.
+    child = Aggregator(Median())
+    child.update({"m": 1.0})
+    child.update({"m": 3.0})
+
+    parent = Aggregator(Median())
+    parent.merge(child)
+    parent.update({"m": 100.0})
+    parent.update({"m": 200.0})
+
+    assert child.compute()["m"] == 1.0  # source unchanged
+    assert parent.compute()["m"] == 3.0  # lower median of (1, 3, 100, 200)
+
+
+def test_self_merge_is_a_noop():
+    # Merging a tracker into itself must not double-count its state or weight.
+    agg = Aggregator(Sum())
+    agg.update({"x": 5.0}, weight=2)
+    agg.merge(agg)
+    assert agg.compute()["x"] == 5.0
+    assert agg.weight == 2.0
+
+
 # --- Nested-loop scenarios --------------------------------------------------
 
 
