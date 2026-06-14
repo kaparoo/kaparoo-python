@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ()
+__all__ = ("register_node",)
 
 from typing import TYPE_CHECKING
 

@@ -322,6 +322,48 @@ assert Node.from_dict(json.loads(blob)) == tree
 A round-trip preserves value equality, not object identity: a reused
 subtree comes back as distinct-but-equal nodes (JSON has no aliasing).
 
+## Custom nodes
+
+`register_node("<kind>")` plugs a `Node` subclass into the
+`"node"`-discriminated `Node.from_dict` dispatcher, the same way
+`register_filter` extends the filter DSL.
+
+**Subclass `Entry` or `Group`, never `Node` directly.** `match` and
+`validate` rely on the closed `Entry | Group` world: any node that is not
+a `Group` is treated as an `Entry`. A third `Node` subtree makes those
+casts unsound, so a custom kind must extend one of the two known subtrees
+and satisfy its contract — an `Entry` supplies `_fields`, `to_dict`, and
+`from_dict`; a `Group` supplies `entries`, `to_dict`, and `from_dict`.
+
+```python
+from collections.abc import Mapping
+from typing import Any, Self
+
+from kaparoo.filesystem.hierarchy import Entry, register_node
+from kaparoo.filters import Filter
+
+@register_node("symlink")
+class Symlink(Entry):
+    """A named symbolic-link entry."""
+
+    __slots__ = ()
+
+    def _fields(self) -> tuple[object, ...]:
+        return (self._name,)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"node": "symlink", "name": self._name.to_dict()}
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        return cls(Filter.from_dict(data["name"]))
+```
+
+This minimal entry serializes only its `name`; to also carry `depth` /
+`required` / `condition`, merge `self._common_payload()` into `to_dict`
+and read them back in `from_dict`. Most specs need only the built-in
+nodes — custom kinds are an advanced extension point.
+
 ## Matching: `match`
 
 `match(tree, root)` maps each path under `root` to the spec node(s) it
