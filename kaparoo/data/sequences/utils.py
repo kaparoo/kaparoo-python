@@ -44,10 +44,7 @@ def generate_batches[T](
             is not `0 <= start <= stop <= len(sequence)`.
     """
     if size <= 0 or step <= 0 or skip <= 0:
-        msg = (
-            f"size, step, skip must be positive "
-            f"(got size={size}, step={step}, skip={skip})"
-        )
+        msg = f"size, step, skip must be positive (got {size=}, {step=}, {skip=})"
         raise ValueError(msg)
 
     length = len(sequence)
