@@ -1,14 +1,6 @@
 from __future__ import annotations
 
-__all__ = (
-    "And",
-    "AndFilter",
-    "LogicalFilter",
-    "Not",
-    "NotFilter",
-    "Or",
-    "OrFilter",
-)
+__all__ = ("And", "AndFilter", "LogicalFilter", "Not", "NotFilter", "Or", "OrFilter")
 
 from abc import ABC
 from dataclasses import dataclass

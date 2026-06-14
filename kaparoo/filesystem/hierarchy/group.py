@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-__all__ = (
-    "Exclusive",
-    "Group",
-    "Together",
-)
+__all__ = ("Exclusive", "Group", "Together")
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, cast

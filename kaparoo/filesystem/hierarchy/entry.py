@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-__all__ = (
-    "Directory",
-    "Entry",
-    "File",
-)
+__all__ = ("Directory", "Entry", "File")
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING

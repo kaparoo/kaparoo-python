@@ -52,10 +52,7 @@ from kaparoo.filesystem.directory import (
     make_dir,
     make_dirs,
 )
-from kaparoo.filesystem.exceptions import (
-    DirectoryNotFoundError,
-    NotAFileError,
-)
+from kaparoo.filesystem.exceptions import DirectoryNotFoundError, NotAFileError
 from kaparoo.filesystem.existence import (
     dir_exists,
     dirs_exist,
