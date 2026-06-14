@@ -82,7 +82,11 @@ def ensure_in_range[T: (int, float)](
 
     if step is not None:
         base = min_ if min_ is not None else 0
-        if not math.isclose(base + round((value - base) / step) * step, value):
+        nearest = base + round((value - base) / step) * step
+        # `isclose` defaults to `abs_tol=0.0`, which rejects any grid line that
+        # lands on zero; scale the absolute tolerance to `step` so a near-zero
+        # grid point still matches.
+        if not math.isclose(nearest, value, abs_tol=abs(step) * 1e-9):
             msg = f"{name} must lie on the grid {base} + k*{step} (got {value!r})"
             raise ValueError(msg)
 

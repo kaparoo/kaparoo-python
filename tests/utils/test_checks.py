@@ -102,6 +102,12 @@ def test_ensure_in_range_step_anchored_at_zero_without_min():
         ensure_in_range(7, step=3, name="n")
 
 
+def test_ensure_in_range_step_grid_point_at_zero():
+    # A grid line landing on zero must still match -- `math.isclose`'s default
+    # `abs_tol=0.0` would reject it, so the absolute tolerance scales to `step`.
+    assert ensure_in_range(0.0, min_=-0.3, step=0.1, name="x") == 0.0
+
+
 def test_ensure_in_range_step_must_be_positive():
     with pytest.raises(ValueError, match="step must be positive"):
         ensure_in_range(1.0, step=0, name="x")
