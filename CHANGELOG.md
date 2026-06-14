@@ -144,6 +144,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `checks={name: callable}`; an absent name is governed by
   `on_missing="error" | "skip"`. The metadata conditions round-trip through
   `to_dict` / `from_dict`.
+- `kaparoo.filesystem` gains byte-size unit constants -- decimal `KB` / `MB`
+  / `GB` / `TB` (powers of 1000) and binary `KIB` / `MIB` / `GIB` / `TIB`
+  (powers of 1024). They are plain `int` multipliers for readable file-size
+  values, e.g. `Size(max=5 * MB)` or `TreeSize(max=2 * GIB)`.
 - `kaparoo.utils.aggregate` gains store-all reductions
   for non-decomposable statistics: `Stored(reduce)` keeps every
   `(value, weight)` pair and applies `reduce` to the full sample on `result`

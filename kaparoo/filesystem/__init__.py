@@ -1,4 +1,12 @@
 __all__ = (
+    "GB",
+    "GIB",
+    "KB",
+    "KIB",
+    "MB",
+    "MIB",
+    "TB",
+    "TIB",
     "DirectoryNotFoundError",
     "NotAFileError",
     "StagedDirectory",
@@ -76,6 +84,7 @@ from kaparoo.filesystem.search import (
     search_paths,
 )
 from kaparoo.filesystem.staged import StagedDirectory, StagedFile
+from kaparoo.filesystem.units import GB, GIB, KB, KIB, MB, MIB, TB, TIB
 from kaparoo.filesystem.utils import (
     ensure_file_extension,
     reserve_path,

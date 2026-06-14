@@ -113,6 +113,7 @@ matched path's filesystem attributes — a serializable `Condition` from
 [`conditions.py`](./conditions.py):
 
 ```python
+from kaparoo.filesystem import GB, MB
 from kaparoo.filesystem.hierarchy import Directory, File
 from kaparoo.filesystem.hierarchy.conditions import (
     And, ChildCount, Content, NonEmpty, Size, TreeSize,
@@ -120,11 +121,17 @@ from kaparoo.filesystem.hierarchy.conditions import (
 
 File("model.bin", condition=Size(min=1))                # at least one byte
 File("cache.tmp", condition=Size(max=0))                # an empty file
+File("clip.mp4", condition=Size(max=50 * MB))           # at most 50 MB
 Directory("data", condition=NonEmpty())                 # a non-empty directory
 Directory("shards", condition=ChildCount(min=8))        # 8+ entries
-Directory("dataset", condition=TreeSize(max=10**9))     # under 1 GB of content
+Directory("dataset", condition=TreeSize(max=1 * GB))    # under 1 GB of content
 File("a", condition=And((Size(min=1), Size(max=1000))))  # And / Or / Not compose
 ```
+
+Sizes are byte counts; the `kaparoo.filesystem` units — decimal `KB` / `MB`
+/ `GB` / `TB` (powers of 1000) and binary `KIB` / `MIB` / `GIB` / `TIB`
+(powers of 1024) — are plain `int` multipliers for readability, e.g.
+`TreeSize(max=2 * GIB)`.
 
 Conditions are a **validation** concern: `match` still maps paths by name /
 type / depth alone, while `validate` checks each matched path's `condition`
