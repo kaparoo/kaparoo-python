@@ -15,11 +15,12 @@ __all__ = (
 )
 
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable
     from pathlib import Path
     from typing import Any, Literal, Self
 
@@ -106,6 +107,7 @@ class Condition(ABC):
         On the base, dispatches by `data["kind"]` to the registered class.
 
         Raises:
+            TypeError: If `data` is not a mapping.
             ValueError: If `data` lacks `"kind"`, or the kind is unknown.
             NotImplementedError: If called on a subclass that did not
                 override `from_dict`.
@@ -113,12 +115,20 @@ class Condition(ABC):
         if cls is not Condition:
             msg = f"{cls.__name__}.from_dict() must be overridden by subclasses."
             raise NotImplementedError(msg)
-        if (kind := data.get("kind")) is None:
+
+        if not isinstance(data, Mapping):
+            msg = f"expected a condition dict, got {type(data).__name__}"
+            raise TypeError(msg)
+
+        if "kind" not in data:
             msg = "condition dict missing 'kind' discriminator."
             raise ValueError(msg)
+
+        kind = data["kind"]
         if (target := _CONDITION_REGISTRY.get(kind)) is None:
             msg = f"unknown condition kind: {kind!r}"
             raise ValueError(msg)
+
         return target.from_dict(data)
 
 

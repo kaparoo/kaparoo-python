@@ -164,6 +164,16 @@ class TestRegistryAndDispatch:
         with pytest.raises(ValueError, match="unknown condition kind"):
             Condition.from_dict({"kind": "nope"})
 
+    def test_from_dict_null_kind_is_unknown_not_missing(self) -> None:
+        # An explicit null kind is reported as unknown, not as a missing key.
+        with pytest.raises(ValueError, match="unknown condition kind: None"):
+            Condition.from_dict({"kind": None})
+
+    def test_from_dict_non_mapping_raises_type_error(self) -> None:
+        for bad in (None, 42, "x", ["a"]):
+            with pytest.raises(TypeError, match="expected a condition dict"):
+                Condition.from_dict(bad)  # ty: ignore[invalid-argument-type]
+
     def test_register_duplicate_kind_raises(self) -> None:
         with pytest.raises(ValueError, match="already registered"):
 

@@ -148,6 +148,16 @@ class TestFromDictErrors:
         with pytest.raises(ValueError, match="unknown node kind"):
             Node.from_dict({"node": "bogus"})
 
+    def test_null_node_discriminator_is_unknown_not_missing(self) -> None:
+        # An explicit null discriminator is reported as unknown, not missing.
+        with pytest.raises(ValueError, match="unknown node kind: None"):
+            Node.from_dict({"node": None})
+
+    def test_non_mapping_raises_type_error(self) -> None:
+        for bad in (None, 42, "x", ["a"]):
+            with pytest.raises(TypeError, match="expected a node dict"):
+                Node.from_dict(bad)  # ty: ignore[invalid-argument-type]
+
     @pytest.mark.parametrize("base", (Entry, Group))
     def test_abstract_base_from_dict_not_implemented(self, base: type[Node]) -> None:
         with pytest.raises(NotImplementedError, match="must be overridden"):

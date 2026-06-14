@@ -3,12 +3,12 @@ from __future__ import annotations
 __all__ = ("Node",)
 
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 from kaparoo.filesystem.hierarchy.utils import _NODE_REGISTRY
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
     from typing import Any
 
 
@@ -53,6 +53,7 @@ class Node(ABC):
         override this to construct themselves from `data`'s fields.
 
         Raises:
+            TypeError: If `data` is not a mapping.
             ValueError: If `data` lacks `"node"`, or the kind is not
                 registered.
             NotImplementedError: If called on a subclass that did not
@@ -62,10 +63,15 @@ class Node(ABC):
             msg = f"{cls.__name__}.from_dict() must be overridden by subclasses."
             raise NotImplementedError(msg)
 
-        if (node := data.get("node")) is None:
+        if not isinstance(data, Mapping):
+            msg = f"expected a node dict, got {type(data).__name__}"
+            raise TypeError(msg)
+
+        if "node" not in data:
             msg = "node dict missing 'node' discriminator."
             raise ValueError(msg)
 
+        node = data["node"]
         if (target := _NODE_REGISTRY.get(node)) is None:
             msg = f"unknown node kind: {node!r}"
             raise ValueError(msg)
