@@ -10,6 +10,7 @@ Small, focused helpers — not enough material for their own packages.
   `Stored`, `Median`, `Quantile`; bases `Reduction` / `UnweightedReduction` /
   `OptionalFold`)
 - [`optional`](./optional.py) — helpers for `T | None` values
+- [`checks`](./checks.py) — `ensure_one_of`, `ensure_in_range`
 
 ## Timer
 
@@ -254,6 +255,34 @@ from kaparoo.utils.optional import unwrap_or_defaults
 
 unwrap_or_defaults([None, "x", None], "y")        # ["y", "x", "y"]
 unwrap_or_defaults([None, "x"], "y", str.upper)   # ["Y", "X"]
+```
+
+## Checks
+
+Validation guards that return the value (so they compose into an assignment)
+or raise a `ValueError` with a consistent message. `name` labels the value in
+that message and defaults to `"value"`.
+
+`ensure_one_of` checks discrete membership; pass a `range` for an integer grid.
+
+```python
+from kaparoo.utils.checks import ensure_one_of
+
+unit = ensure_one_of(unit, ("s", "ms", "us", "ns"), name="unit")
+ensure_one_of(index, range(0, 10, 2), name="index")  # one of 0, 2, 4, 6, 8
+```
+
+`ensure_in_range` checks `int` / `float` bounds. Either side may be omitted
+for a half-open range; `inclusive` is a single `bool` (both sides) or a
+`(lower, upper)` pair; an optional `step` confines the value to a
+`base + k*step` grid (anchored at `lower`, else `0`).
+
+```python
+from kaparoo.utils.checks import ensure_in_range
+
+ensure_in_range(q, lower=0.0, upper=1.0, name="q")             # closed [0.0, 1.0]
+ensure_in_range(w, lower=0.0, inclusive=(False, True), name="w")  # (0.0, inf): w > 0
+ensure_in_range(n, lower=0, upper=10, step=2, name="n")        # 0, 2, ..., 10
 ```
 
 ## See also
