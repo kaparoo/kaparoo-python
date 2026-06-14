@@ -11,7 +11,6 @@ A rigorous pass over modules first drafted quickly (AI-assisted), checking
 correctness, edge cases, and API shape against the rest of the library:
 
 - `kaparoo.filesystem.hierarchy` (*)
-- `kaparoo.filesystem.staged` (*)
 
 (*) highest priority — the largest or most intricate surface.
 
@@ -87,4 +86,4 @@ the next breaking batch).
 
 ---
 
-*Last updated: 2026-06-08*
+*Last updated: 2026-06-14*
