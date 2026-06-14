@@ -2,40 +2,40 @@ from __future__ import annotations
 
 import pytest
 
-from kaparoo.utils.checks import ensure_in_range, ensure_literal
+from kaparoo.utils.checks import ensure_in_range, ensure_one_of
 
-# --- ensure_literal ---------------------------------------------------------
-
-
-def test_ensure_literal_returns_value_when_allowed():
-    assert ensure_literal("ms", ("s", "ms", "us"), name="unit") == "ms"
+# --- ensure_one_of ---------------------------------------------------------
 
 
-def test_ensure_literal_raises_when_not_allowed():
+def test_ensure_one_of_returns_value_when_present():
+    assert ensure_one_of("ms", ("s", "ms", "us"), name="unit") == "ms"
+
+
+def test_ensure_one_of_raises_when_absent():
     with pytest.raises(ValueError, match=r"unit must be one of .* \(got 'x'\)"):
-        ensure_literal("x", ("s", "ms"), name="unit")
+        ensure_one_of("x", ("s", "ms"), name="unit")
 
 
-def test_ensure_literal_accepts_range_for_integer_grid():
-    assert ensure_literal(4, range(0, 10, 2), name="index") == 4
+def test_ensure_one_of_accepts_range_for_integer_grid():
+    assert ensure_one_of(4, range(0, 10, 2), name="index") == 4
     with pytest.raises(ValueError, match="index must be one of"):
-        ensure_literal(3, range(0, 10, 2), name="index")
+        ensure_one_of(3, range(0, 10, 2), name="index")
 
 
-def test_ensure_literal_message_is_sorted_when_orderable():
+def test_ensure_one_of_message_is_sorted_when_orderable():
     with pytest.raises(ValueError, match=r"\['a', 'b'\]"):
-        ensure_literal("z", {"b", "a"}, name="x")
+        ensure_one_of("z", {"b", "a"}, name="x")
 
 
-def test_ensure_literal_default_name_in_message():
+def test_ensure_one_of_default_name_in_message():
     with pytest.raises(ValueError, match=r"value must be one of"):
-        ensure_literal("x", ("a", "b"))
+        ensure_one_of("x", ("a", "b"))
 
 
-def test_ensure_literal_falls_back_when_unorderable():
+def test_ensure_one_of_falls_back_when_unorderable():
     # `sorted` raises TypeError on mixed types; the message still lists them.
     with pytest.raises(ValueError, match="must be one of"):
-        ensure_literal(object(), {1, "a"}, name="x")
+        ensure_one_of(object(), {1, "a"}, name="x")
 
 
 # --- ensure_in_range --------------------------------------------------------

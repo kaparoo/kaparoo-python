@@ -2,29 +2,31 @@
 
 from __future__ import annotations
 
-__all__ = ("ensure_in_range", "ensure_literal")
+__all__ = ("ensure_in_range", "ensure_one_of")
 
 import math
 from typing import TYPE_CHECKING
+
+from kaparoo.utils.optional import replace_if_none
 
 if TYPE_CHECKING:
     from collections.abc import Collection
 
 
-def ensure_literal[T](value: T, allowed: Collection[T], *, name: str = "value") -> T:
-    """Return `value` if it is in `allowed`, else raise `ValueError`.
+def ensure_one_of[T](value: T, options: Collection[T], *, name: str = "value") -> T:
+    """Return `value` if it is one of `options`, else raise `ValueError`.
 
     For a discrete integer grid, pass a `range` (e.g. `range(0, 10, 2)`):
     membership is exact and O(1). For a continuous bound, use `ensure_in_range`.
 
     Raises:
-        ValueError: If `value` is not a member of `allowed`.
+        ValueError: If `value` is not one of `options`.
     """
-    if value not in allowed:
+    if value not in options:
         try:
-            shown = sorted(allowed)
-        except TypeError:  # `allowed` mixes unorderable types
-            shown = list(allowed)
+            shown = sorted(options)
+        except TypeError:  # `options` mixes unorderable types
+            shown = list(options)
         msg = f"{name} must be one of {shown} (got {value!r})"
         raise ValueError(msg)
 
@@ -67,27 +69,25 @@ def ensure_in_range[T: (int, float)](
         msg = f"step must be positive (got {step})"
         raise ValueError(msg)
 
-    lower_inclusive, upper_inclusive = (
-        (inclusive, inclusive) if isinstance(inclusive, bool) else inclusive
-    )
+    if isinstance(inclusive, bool):
+        inclusive = (inclusive, inclusive)
 
-    too_low = lower is not None and (
-        value < lower if lower_inclusive else value <= lower
-    )
-    too_high = upper is not None and (
-        value > upper if upper_inclusive else value >= upper
-    )
+    lower_inclusive, upper_inclusive = inclusive
+
+    lower = replace_if_none(lower, float("-inf"))
+    upper = replace_if_none(upper, float("inf"))
+
+    too_low = value < lower if lower_inclusive else value <= lower
+    too_high = value > upper if upper_inclusive else value >= upper
 
     if too_low or too_high:
-        left = "[" if lower_inclusive and lower is not None else "("
-        right = "]" if upper_inclusive and upper is not None else ")"
-        low = "-inf" if lower is None else lower
-        high = "inf" if upper is None else upper
-        msg = f"{name} must be in {left}{low}, {high}{right} (got {value!r})"
+        left = "[" if lower_inclusive and lower != float("-inf") else "("
+        right = "]" if upper_inclusive and upper != float("inf") else ")"
+        msg = f"{name} must be in {left}{lower}, {upper}{right} (got {value!r})"
         raise ValueError(msg)
 
     if step is not None:
-        base = lower if lower is not None else 0
+        base = lower if lower != float("-inf") else 0
         nearest = base + round((value - base) / step) * step
         # `isclose` defaults to `abs_tol=0.0`, which rejects any grid line that
         # lands on zero; scale the absolute tolerance to `step` so a near-zero

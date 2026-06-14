@@ -18,7 +18,7 @@ __all__ = (
     "UnweightedReduction",
     "Var",
     "ensure_in_range",
-    "ensure_literal",
+    "ensure_one_of",
     "factory_if_none",
     "replace_if_none",
     "unwrap_or_default",
@@ -44,7 +44,7 @@ from kaparoo.utils.aggregate import (
     UnweightedReduction,
     Var,
 )
-from kaparoo.utils.checks import ensure_in_range, ensure_literal
+from kaparoo.utils.checks import ensure_in_range, ensure_one_of
 from kaparoo.utils.optional import (
     factory_if_none,
     replace_if_none,
