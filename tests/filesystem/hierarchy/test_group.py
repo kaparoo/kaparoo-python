@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import FrozenInstanceError
+
 import pytest
 
 from kaparoo.filesystem.hierarchy import (
@@ -176,3 +178,11 @@ class TestGroup:
             assert isinstance(group, Group)
             assert group.required is True
             assert group.entries == (File("a"), File("b"))
+
+    def test_groups_are_frozen(self) -> None:
+        for group in (
+            Exclusive(File("a"), File("b")),
+            Together(File("a"), File("b")),
+        ):
+            with pytest.raises(FrozenInstanceError):
+                group._required = True  # noqa: SLF001

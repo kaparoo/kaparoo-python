@@ -43,6 +43,9 @@ def _as_filter(name: str | list[str] | Filter) -> Filter:
     if isinstance(name, str):
         _reject_separator(name)
         return Literal(name)
+    if not name:
+        msg = "name list must be non-empty"
+        raise ValueError(msg)
     for part in name:
         _reject_separator(part)
     return OneOf(name)
@@ -147,6 +150,11 @@ class Entry(Node, ABC):
 
     __slots__ = ("_condition", "_depth", "_name", "_required")
 
+    _name: Filter
+    _depth: tuple[int, int | None]
+    _required: bool
+    _condition: Condition | None
+
     def __init__(
         self,
         name: str | list[str] | Filter,
@@ -155,10 +163,10 @@ class Entry(Node, ABC):
         required: bool = False,
         condition: Condition | None = None,
     ) -> None:
-        self._name = _as_filter(name)
-        self._depth = _normalize_depth(depth)
-        self._required = required
-        self._condition = condition
+        object.__setattr__(self, "_name", _as_filter(name))
+        object.__setattr__(self, "_depth", _normalize_depth(depth))
+        object.__setattr__(self, "_required", required)
+        object.__setattr__(self, "_condition", condition)
 
     @property
     def name(self) -> Filter:
@@ -193,8 +201,13 @@ class Entry(Node, ABC):
     def _key(self) -> tuple[object, ...]:
         return (*self._fields(), self._depth, self._required, self._condition)
 
-    def _payload(self) -> dict[str, Any]:
-        """The non-default `depth` / `required` / `condition` `to_dict` parts."""
+    def _common_payload(self) -> dict[str, Any]:
+        """The non-default `depth` / `required` / `condition` `to_dict` parts.
+
+        The entry-level fields shared by every `Entry`; a concrete `to_dict`
+        merges these after its own `name` (and `children`). Distinct from a
+        `Filter` / `Condition` `_payload`, which is the *whole* field set.
+        """
         payload: dict[str, Any] = {}
         if self._depth != (1, 1):
             payload["depth"] = list(self._depth)
@@ -224,7 +237,7 @@ class File(Entry):
         return (self._name,)
 
     def to_dict(self) -> dict[str, Any]:
-        return {"node": "file", "name": self._name.to_dict(), **self._payload()}
+        return {"node": "file", "name": self._name.to_dict(), **self._common_payload()}
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
@@ -249,6 +262,8 @@ class Directory(Entry):
 
     __slots__ = ("_children",)
 
+    _children: tuple[Node, ...]
+
     def __init__(
         self,
         name: str | list[str] | Filter,
@@ -259,7 +274,7 @@ class Directory(Entry):
         condition: Condition | None = None,
     ) -> None:
         super().__init__(name, depth=depth, required=required, condition=condition)
-        self._children = tuple(children)
+        object.__setattr__(self, "_children", tuple(children))
 
     @property
     def children(self) -> tuple[Node, ...]:
@@ -273,7 +288,7 @@ class Directory(Entry):
         result: dict[str, Any] = {"node": "directory", "name": self._name.to_dict()}
         if self._children:
             result["children"] = [child.to_dict() for child in self._children]
-        result.update(self._payload())
+        result.update(self._common_payload())
         return result
 
     @classmethod

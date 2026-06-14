@@ -4,6 +4,7 @@ __all__ = ("Node",)
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
+from dataclasses import FrozenInstanceError
 from typing import TYPE_CHECKING
 
 from kaparoo.filesystem.hierarchy.utils import _NODE_REGISTRY
@@ -85,3 +86,14 @@ class Node(ABC):
 
     def __hash__(self) -> int:
         return hash((type(self), self._key()))
+
+    def __setattr__(self, name: str, value: object) -> None:
+        # Nodes are immutable value objects; subclass `__init__`s assign their
+        # fields through `object.__setattr__`. Block assignment afterwards,
+        # mirroring the frozen dataclasses used elsewhere in the library.
+        msg = f"cannot assign to field {name!r}"
+        raise FrozenInstanceError(msg)
+
+    def __delattr__(self, name: str) -> None:
+        msg = f"cannot delete field {name!r}"
+        raise FrozenInstanceError(msg)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import FrozenInstanceError
+
 import pytest
 
 from kaparoo.filesystem.hierarchy import Directory, File
@@ -201,3 +203,23 @@ class TestNameSeparator:
         # An explicit filter is the caller's responsibility, not sugar.
         name = Glob("a/*")
         assert File(name).name is name
+
+    def test_empty_list_name_raises(self) -> None:
+        with pytest.raises(ValueError, match="name list must be non-empty"):
+            File([])
+
+
+class TestFrozen:
+    """Nodes are immutable value objects; assignment / deletion must raise."""
+
+    def test_assignment_is_rejected(self) -> None:
+        with pytest.raises(FrozenInstanceError):
+            File("a")._name = Literal("b")  # noqa: SLF001
+
+    def test_deletion_is_rejected(self) -> None:
+        with pytest.raises(FrozenInstanceError):
+            del File("a")._name  # noqa: SLF001
+
+    def test_directory_children_are_frozen(self) -> None:
+        with pytest.raises(FrozenInstanceError):
+            Directory("d", [File("a")])._children = ()  # noqa: SLF001

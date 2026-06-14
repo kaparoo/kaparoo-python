@@ -41,8 +41,10 @@ class Group(Node, ABC):
 
     __slots__ = ("_required",)
 
+    _required: bool
+
     def __init__(self, *, required: bool = False) -> None:
-        self._required = required
+        object.__setattr__(self, "_required", required)
 
     @property
     def required(self) -> bool:
@@ -114,6 +116,9 @@ class Exclusive(Group):
 
     __slots__ = ("_alternatives", "_on_conflict")
 
+    _alternatives: tuple[tuple[Node, ...], ...]
+    _on_conflict: Literal["error", "priority"]
+
     def __init__(
         self,
         *alternatives: Node | Iterable[Node],
@@ -133,8 +138,8 @@ class Exclusive(Group):
                 f"got {on_conflict!r}"
             )
             raise ValueError(msg)
-        self._alternatives = normalized
-        self._on_conflict: Literal["error", "priority"] = on_conflict
+        object.__setattr__(self, "_alternatives", normalized)
+        object.__setattr__(self, "_on_conflict", on_conflict)
         super().__init__(required=required)
 
     @property
@@ -210,11 +215,13 @@ class Together(Group):
 
     __slots__ = ("_members",)
 
+    _members: tuple[Node, ...]
+
     def __init__(self, *members: Node, required: bool = False) -> None:
         if len(members) < 2:
             msg = "Together requires at least two members."
             raise ValueError(msg)
-        self._members = members
+        object.__setattr__(self, "_members", members)
         super().__init__(required=required)
 
     @property
