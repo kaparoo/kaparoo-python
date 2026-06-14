@@ -34,29 +34,29 @@ def ensure_literal[T](value: T, allowed: Collection[T], *, name: str) -> T:
 def ensure_in_range[T: (int, float)](
     value: T,
     *,
-    min_: float | None = None,
-    max_: float | None = None,
+    lower: float | None = None,
+    upper: float | None = None,
     step: float | None = None,
     inclusive: tuple[bool, bool] = (True, True),
     name: str,
 ) -> T:
-    """Return `value` if it lies within the `min_` / `max_` bounds, else raise.
+    """Return `value` if it lies within the `lower` / `upper` bounds, else raise.
 
     Either bound may be `None` for no limit on that side (a half-open range);
     `inclusive` selects `<=` (`True`) or `<` (`False`) per side. With `step`,
     `value` must also fall on the grid `base + k * step` (integer `k`), where
-    `base` is `min_` (or `0` when `min_` is `None`); that check goes through
+    `base` is `lower` (or `0` when `lower` is `None`); that check goes through
     `math.isclose`, so it tolerates float rounding (e.g. `0.3` on a `0.1`
     grid). Works for `int` and `float` alike.
 
     Args:
         value: The number to check.
-        min_: Lower bound, or `None` for no lower bound.
-        max_: Upper bound, or `None` for no upper bound.
-        step: Grid spacing `value` must align to, anchored at `min_` (or `0`),
+        lower: Lower bound, or `None` for no lower bound.
+        upper: Upper bound, or `None` for no upper bound.
+        step: Grid spacing `value` must align to, anchored at `lower` (or `0`),
             or `None` to allow any value. Must be positive.
-        inclusive: Whether the `(min_, max_)` bounds are inclusive. Defaults to
-            inclusive on both sides.
+        inclusive: Whether the `(lower, upper)` bounds are inclusive. Defaults
+            to inclusive on both sides.
         name: The value's name, used in the error message.
 
     Raises:
@@ -67,21 +67,25 @@ def ensure_in_range[T: (int, float)](
         msg = f"step must be positive (got {step})"
         raise ValueError(msg)
 
-    min_inclusive, max_inclusive = inclusive
+    lower_inclusive, upper_inclusive = inclusive
 
-    below = min_ is not None and (value < min_ if min_inclusive else value <= min_)
-    above = max_ is not None and (value > max_ if max_inclusive else value >= max_)
+    too_low = lower is not None and (
+        value < lower if lower_inclusive else value <= lower
+    )
+    too_high = upper is not None and (
+        value > upper if upper_inclusive else value >= upper
+    )
 
-    if below or above:
-        left = "[" if min_inclusive and min_ is not None else "("
-        right = "]" if max_inclusive and max_ is not None else ")"
-        low = "-inf" if min_ is None else min_
-        high = "inf" if max_ is None else max_
+    if too_low or too_high:
+        left = "[" if lower_inclusive and lower is not None else "("
+        right = "]" if upper_inclusive and upper is not None else ")"
+        low = "-inf" if lower is None else lower
+        high = "inf" if upper is None else upper
         msg = f"{name} must be in {left}{low}, {high}{right} (got {value!r})"
         raise ValueError(msg)
 
     if step is not None:
-        base = min_ if min_ is not None else 0
+        base = lower if lower is not None else 0
         nearest = base + round((value - base) / step) * step
         # `isclose` defaults to `abs_tol=0.0`, which rejects any grid line that
         # lands on zero; scale the absolute tolerance to `step` so a near-zero

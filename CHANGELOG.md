@@ -13,7 +13,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `kaparoo.utils.checks`: small validation guards, re-exported from
   `kaparoo.utils`. `ensure_literal(value, allowed, *, name)` checks discrete
   membership (pass a `range` for an integer grid); `ensure_in_range(value, *,
-  min_, max_, step, inclusive, name)` checks `int` / `float` bounds, with
+  lower, upper, step, inclusive, name)` checks `int` / `float` bounds, with
   either side optional (half-open) and per-side inclusivity, plus an optional
   `step` grid spacing (`base + k*step`, float-robust via `math.isclose`).
 
