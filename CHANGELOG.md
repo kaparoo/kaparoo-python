@@ -32,7 +32,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   *excluded)` is the enumerable form of `And(base, Not(...))`, expanding
   `base` minus anything the excluded filters match. They register as
   ordinary filter kinds (`"literal"` / `"one_of"` / `"template"` /
-  `"without"`).
+  `"without"`) and each gets a matching TypedDict in
+  `kaparoo.filters.types` (`LiteralFilterDict`, `OneOfFilterDict`,
+  `TemplateFilterDict`, `WithoutFilterDict`) for statically-checked dict
+  authoring.
 - `kaparoo.filesystem.hierarchy`: a new subpackage describing a filesystem
   tree declaratively. `File` / `Directory` nodes compose into a tree whose
   node names are `kaparoo.filters` filters — the full DSL (`Glob`,

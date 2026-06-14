@@ -9,8 +9,12 @@ from kaparoo.filters import (
     EqualsFilter,
     Filter,
     GlobFilter,
+    LiteralFilter,
     NotFilter,
+    OneOfFilter,
     OrFilter,
+    TemplateFilter,
+    WithoutFilter,
     register_filter,
 )
 from kaparoo.filters.types import FilterDict
@@ -20,10 +24,14 @@ if TYPE_CHECKING:
     from typing import Any, Self
 
     from kaparoo.filters.types import (
+        LiteralFilterDict,
         LogicalChildFilterDict,
         LogicalChildrenFilterDict,
         MultiPatternFilterDict,
+        OneOfFilterDict,
         PatternFilterDict,
+        TemplateFilterDict,
+        WithoutFilterDict,
     )
 
 
@@ -83,6 +91,36 @@ def test_or_via_logical_children_filter_dict():
         "children": [{"kind": "equals", "pattern": "a"}],
     }
     assert Filter.parse(spec) == OrFilter((EqualsFilter("a"),))
+
+
+def test_literal_filter_dict_round_trips():
+    spec: LiteralFilterDict = {"kind": "literal", "name": "data.bin"}
+    assert Filter.parse(spec) == LiteralFilter("data.bin")
+
+
+def test_one_of_filter_dict_round_trips():
+    spec: OneOfFilterDict = {"kind": "one_of", "names": ["train", "val"]}
+    assert Filter.parse(spec) == OneOfFilter(["train", "val"])
+
+
+def test_template_filter_dict_round_trips():
+    spec: TemplateFilterDict = {
+        "kind": "template",
+        "template": "shard_{:03d}",
+        "axes": [[0, 1, 2]],
+    }
+    assert Filter.parse(spec) == TemplateFilter("shard_{:03d}", [0, 1, 2])
+
+
+def test_without_filter_dict_round_trips():
+    # `base` and each `excluded` entry are nested FilterDicts (the shape is
+    # recursive through the base `FilterDict`).
+    spec: WithoutFilterDict = {
+        "kind": "without",
+        "base": {"kind": "one_of", "names": ["a", "b"]},
+        "excluded": [{"kind": "literal", "name": "b"}],
+    }
+    assert Filter.parse(spec) == WithoutFilter(OneOfFilter(["a", "b"]), "b")
 
 
 # --- Custom subclass of FilterDict for user-defined filters ----------------

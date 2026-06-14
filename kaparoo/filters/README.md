@@ -163,7 +163,8 @@ search_files(
 TypedDicts for static checking live in [`types.py`](./types.py):
 `FilterDict` (base; `kind`-only), `PatternFilterDict`,
 `MultiPatternFilterDict`, `LogicalChildFilterDict`,
-`LogicalChildrenFilterDict`.
+`LogicalChildrenFilterDict`, and the enumerable `LiteralFilterDict`,
+`OneOfFilterDict`, `TemplateFilterDict`, `WithoutFilterDict`.
 
 ## Custom filters
 
