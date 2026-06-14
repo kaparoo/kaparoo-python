@@ -14,7 +14,7 @@ __all__ = (
 
 from abc import ABC, abstractmethod
 from dataclasses import FrozenInstanceError, dataclass, field
-from itertools import product
+from itertools import pairwise, product
 from typing import TYPE_CHECKING, cast
 
 from kaparoo.filters.base import Filter
@@ -136,6 +136,23 @@ class OneOfFilter(Expandable):
         return f"{self._repr_name()}({self.names!r})"
 
 
+def _axis_repr(axis: tuple[object, ...]) -> str:
+    """Render a materialized axis, compacting an integer arithmetic
+    progression (three or more terms) to the equivalent `range(...)`.
+
+    `range` is a valid axis input, so the compact form re-creates the same
+    axis. Anything else -- too short, irregular, or non-integer -- is shown
+    as its plain tuple.
+    """
+    if len(axis) >= 3 and all(type(v) is int for v in axis):
+        values = cast("tuple[int, ...]", axis)
+        start, step = values[0], values[1] - values[0]
+        if step != 0 and all(b - a == step for a, b in pairwise(values)):
+            return repr(range(start, values[-1] + step, step))
+
+    return repr(axis)
+
+
 @register_filter("template")
 class TemplateFilter(Frozen, Expandable):
     """A filter enumerating `template.format(*combo)` over value `axes`.
@@ -215,7 +232,7 @@ class TemplateFilter(Frozen, Expandable):
         return hash((TemplateFilter, self._template, self._axes))
 
     def __repr__(self) -> str:
-        axes = "".join(f", {axis!r}" for axis in self._axes)
+        axes = "".join(f", {_axis_repr(axis)}" for axis in self._axes)
         return f"{self._repr_name()}({self._template!r}{axes})"
 
 

@@ -210,9 +210,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   / `child` / `children` / `name` / `names`) is shown unlabeled, and
   `case_sensitive` appears only when `False` (its non-default). This also
   shortens anything that embeds a filter `repr`, such as
-  `kaparoo.filesystem.hierarchy` node reprs (`File(Literal('a'))`). `repr`
-  is informational only; equality, hashing, and serialization are
-  unchanged.
+  `kaparoo.filesystem.hierarchy` node reprs (`File(Literal('a'))`). A
+  `Template` axis that is an integer arithmetic progression is shown as the
+  equivalent `range(...)` (`Template('v{}', range(0, 10))`), since `range`
+  is a valid axis input. `repr` is informational only; equality, hashing,
+  and serialization are unchanged.
 
 ### Fixed
 

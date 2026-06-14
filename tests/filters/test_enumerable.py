@@ -90,6 +90,34 @@ class TestTemplate:
         assert repr(Template("v{}", [1, 2])) == "Template('v{}', (1, 2))"
         assert repr(Template("{}_{}", ["a"], [1])) == "Template('{}_{}', ('a',), (1,))"
 
+    def test_repr_compacts_integer_arithmetic_axis_to_range(self) -> None:
+        # An integer arithmetic progression (>= 3 terms) shows as range(...);
+        # `range` is a valid axis input, so the compact form round-trips.
+        assert repr(Template("v{}", range(10))) == "Template('v{}', range(0, 10))"
+        assert repr(Template("v{}", range(1, 11))) == "Template('v{}', range(1, 11))"
+        assert repr(Template("v{}", range(0, 10, 2))) == (
+            "Template('v{}', range(0, 10, 2))"
+        )
+        assert repr(Template("v{}", [5, 4, 3, 2, 1])) == (
+            "Template('v{}', range(5, 0, -1))"
+        )
+        assert eval(repr(Template("img_{:04d}", range(1000)))) == Template(  # noqa: S307
+            "img_{:04d}", range(1000)
+        )
+
+    def test_repr_keeps_non_progression_axes_as_tuples(self) -> None:
+        # Falls back to the plain tuple when an axis is too short, irregular,
+        # constant (step 0), or non-integer.
+        assert repr(Template("v{}", [0, 1])) == "Template('v{}', (0, 1))"
+        assert repr(Template("v{}", [0, 1, 2, 5])) == "Template('v{}', (0, 1, 2, 5))"
+        assert repr(Template("v{}", [5, 5, 5])) == "Template('v{}', (5, 5, 5))"
+        assert repr(Template("v{}", [1.0, 2.0, 3.0])) == (
+            "Template('v{}', (1.0, 2.0, 3.0))"
+        )
+        assert repr(Template("{}_{}", ["a", "b"], range(3))) == (
+            "Template('{}_{}', ('a', 'b'), range(0, 3))"
+        )
+
     def test_template_property_hash_and_inequality(self) -> None:
         template = Template("v{}", [1, 2])
         assert template.template == "v{}"
