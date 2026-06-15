@@ -124,6 +124,7 @@ File("cache.tmp", condition=Size(max=0))                # an empty file
 File("clip.mp4", condition=Size(max=50 * MB))           # at most 50 MB
 Directory("data", condition=NonEmpty())                 # a non-empty directory
 Directory("shards", condition=ChildCount(min=8))        # 8+ entries
+Directory("imgs", condition=ChildCount(min=1, of="files"))  # 1+ files (dirs ignored)
 Directory("dataset", condition=TreeSize(max=1 * GB))    # under 1 GB of content
 File("a", condition=And((Size(min=1), Size(max=1000))))  # And / Or / Not compose
 ```
@@ -144,6 +145,8 @@ Each condition declares which entry kinds it can check: `Size` is
 **file-only** (a single file's bytes), `ChildCount` and `TreeSize` are
 **directory-only** (entry count; recursive content-size sum, which walks
 the whole subtree), and `Empty` / `NonEmpty` / `Content` apply to **both**.
+`ChildCount` counts all entries by default; pass `of="files"` or
+`of="dirs"` to count only one kind (those filters follow symlinks).
 A composite (`And` / `Or` / `Not`) applies wherever all of its children do.
 Attaching a kind-mismatched condition — a `ChildCount` on a `File`, a
 `Size` on a `Directory` — raises `ValueError` at construction.

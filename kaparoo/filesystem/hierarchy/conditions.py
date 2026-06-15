@@ -204,13 +204,42 @@ class Size(Bound):
 @register_condition("child_count")
 @dataclass(frozen=True)
 class ChildCount(Bound):
-    """An inclusive bound on a directory's number of entries (`min` / `max`)."""
+    """An inclusive bound on how many entries a directory holds (`min` / `max`).
+
+    `of` selects what to count: `"all"` entries (the default), `"files"`
+    only, or `"dirs"` only. The `"files"` / `"dirs"` filters follow symlinks
+    (a symlink to a file counts under `"files"`), matching `TreeSize`; an
+    entry that is neither a regular file nor a directory -- a broken symlink,
+    a socket -- is counted only under `"all"`.
+    """
+
+    of: Literal["all", "files", "dirs"] = field(default="all", kw_only=True)
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if self.of not in ("all", "files", "dirs"):
+            msg = f"ChildCount `of` must be 'all', 'files', or 'dirs', got {self.of!r}."
+            raise ValueError(msg)
 
     def applies_to(self, kind: EntryKind) -> bool:
         return kind == "dir"
 
     def _measure(self, path: Path) -> int:
+        if self.of == "files":
+            return sum(1 for p in path.iterdir() if p.is_file())
+        if self.of == "dirs":
+            return sum(1 for p in path.iterdir() if p.is_dir())
         return sum(1 for _ in path.iterdir())
+
+    def _payload(self) -> dict[str, Any]:
+        payload = super()._payload()
+        if self.of != "all":
+            payload["of"] = self.of
+        return payload
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        return cls(min=data.get("min"), max=data.get("max"), of=data.get("of", "all"))
 
 
 @register_condition("tree_size")
