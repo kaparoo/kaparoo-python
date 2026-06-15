@@ -92,7 +92,7 @@ class Condition(ABC):
     _kind: ClassVar[str]
 
     @abstractmethod
-    def check(self, path: Path, ctx: CheckContext = _NO_CHECKS) -> bool:
+    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:
         """Whether `path` satisfies this condition (`ctx` carries `Content`)."""
         raise NotImplementedError
 
@@ -172,7 +172,7 @@ class Bound(Condition, ABC):
         """The integer being bounded (e.g. byte count, child count)."""
         raise NotImplementedError
 
-    def check(self, path: Path, ctx: CheckContext = _NO_CHECKS) -> bool:  # noqa: ARG002
+    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:  # noqa: ARG002
         """Whether `_measure(path)` lies within the inclusive `[min, max]` bound."""
         value = self._measure(path)
         return (self.min is None or value >= self.min) and (
@@ -273,7 +273,7 @@ class TreeSize(Bound):
 class Empty(Condition):
     """A file with no bytes, or a directory with no entries."""
 
-    def check(self, path: Path, ctx: CheckContext = _NO_CHECKS) -> bool:  # noqa: ARG002
+    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:  # noqa: ARG002
         """Whether `path` holds no bytes (file) or no entries (directory)."""
         if path.is_dir():
             return not any(path.iterdir())
@@ -292,7 +292,7 @@ class Empty(Condition):
 class NonEmpty(Condition):
     """A file with at least one byte, or a directory with at least one entry."""
 
-    def check(self, path: Path, ctx: CheckContext = _NO_CHECKS) -> bool:  # noqa: ARG002
+    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:  # noqa: ARG002
         """Whether `path` holds at least one byte (file) or one entry (directory)."""
         if path.is_dir():
             return any(path.iterdir())
@@ -327,8 +327,10 @@ class Content(Condition):
 
     name: str
 
-    def check(self, path: Path, ctx: CheckContext = _NO_CHECKS) -> bool:
+    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:
         """Run the `name`d check from `ctx`, honoring `on_missing` when absent."""
+        if ctx is None:
+            ctx = _NO_CHECKS
         fn = ctx.checks.get(self.name)
         if fn is None:
             if ctx.on_missing == "skip":
@@ -381,7 +383,7 @@ class Variadic(Condition, ABC):
 class And(Variadic):
     """Satisfied when ALL of `conditions` are (conjunction)."""
 
-    def check(self, path: Path, ctx: CheckContext = _NO_CHECKS) -> bool:
+    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:
         """Whether every child condition holds for `path`."""
         return all(condition.check(path, ctx) for condition in self.conditions)
 
@@ -391,7 +393,7 @@ class And(Variadic):
 class Or(Variadic):
     """Satisfied when AT LEAST ONE of `conditions` is (disjunction)."""
 
-    def check(self, path: Path, ctx: CheckContext = _NO_CHECKS) -> bool:
+    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:
         """Whether at least one child condition holds for `path`."""
         return any(condition.check(path, ctx) for condition in self.conditions)
 
@@ -407,7 +409,7 @@ class Not(Condition):
         """Applicable wherever the wrapped condition is."""
         return self.condition.applies_to(kind)
 
-    def check(self, path: Path, ctx: CheckContext = _NO_CHECKS) -> bool:
+    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:
         """Whether the wrapped condition does not hold for `path`."""
         return not self.condition.check(path, ctx)
 
