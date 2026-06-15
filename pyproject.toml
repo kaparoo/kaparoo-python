@@ -24,14 +24,38 @@ authors = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Filesystems",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Utilities",
     "Typing :: Typed",
+    # `license = "MIT"` is an SPDX expression (PEP 639), so no
+    # `License ::` classifier here -- the two are mutually exclusive.
     # See https://pypi.org/classifiers/ for more classifiers
 ]
-keywords = ["filesystem", "pathlib", "paths", "utilities"]
+keywords = [
+    "filesystem",
+    "pathlib",
+    "paths",
+    "glob",
+    "filters",
+    "pattern-matching",
+    "dataset",
+    "sequence",
+    "batching",
+    "timer",
+    "aggregation",
+    "metrics",
+    "utilities",
+    "typed",
+]
 dependencies = []
 
 [project.urls]
