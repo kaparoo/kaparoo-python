@@ -150,6 +150,7 @@ class Exclusive(Group):
 
     @property
     def entries(self) -> tuple[Entry, ...]:
+        """The leaf entries across every alternative, flattened in order."""
         return flatten_entries(node for alt in self._alternatives for node in alt)
 
     def _key(self) -> tuple[object, ...]:
@@ -227,6 +228,7 @@ class Together(Group):
 
     @property
     def entries(self) -> tuple[Entry, ...]:
+        """The leaf entries across every member, flattened in order."""
         return flatten_entries(self._members)
 
     def _key(self) -> tuple[object, ...]:

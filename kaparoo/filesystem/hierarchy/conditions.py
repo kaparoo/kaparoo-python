@@ -60,9 +60,11 @@ def register_condition[C: Condition](kind: str) -> Callable[[type[C]], type[C]]:
 class CheckContext:
     """Runtime context threaded through `Condition.check`.
 
-    `checks` maps a `Content` name to its callable (supplied at `validate`
-    time); `on_missing` decides what happens when a `Content` name is absent
-    from `checks` -- `"error"` raises, `"skip"` treats it as satisfied.
+    Attributes:
+        checks: Maps a `Content` name to its callable, supplied at `validate`
+            time.
+        on_missing: What to do when a `Content` name is absent from `checks`
+            -- `"error"` raises, `"skip"` treats it as satisfied.
     """
 
     checks: Mapping[str, Callable[[Path], bool]] = field(default_factory=dict)
@@ -171,6 +173,7 @@ class Bound(Condition, ABC):
         raise NotImplementedError
 
     def check(self, path: Path, ctx: CheckContext = _NO_CHECKS) -> bool:  # noqa: ARG002
+        """Whether `_measure(path)` lies within the inclusive `[min, max]` bound."""
         value = self._measure(path)
         return (self.min is None or value >= self.min) and (
             self.max is None or value <= self.max
@@ -195,9 +198,11 @@ class Size(Bound):
     """An inclusive bound, in bytes, on a file's size (`min` / `max`)."""
 
     def applies_to(self, kind: EntryKind) -> bool:
+        """Applicable to files only."""
         return kind == "file"
 
     def _measure(self, path: Path) -> int:
+        """Return the file's size in bytes."""
         return path.stat().st_size
 
 
@@ -222,9 +227,11 @@ class ChildCount(Bound):
             raise ValueError(msg)
 
     def applies_to(self, kind: EntryKind) -> bool:
+        """Applicable to directories only."""
         return kind == "dir"
 
     def _measure(self, path: Path) -> int:
+        """Count the directory's entries, restricted by `of`."""
         if self.of == "files":
             return sum(1 for p in path.iterdir() if p.is_file())
         if self.of == "dirs":
@@ -253,9 +260,11 @@ class TreeSize(Bound):
     """
 
     def applies_to(self, kind: EntryKind) -> bool:
+        """Applicable to directories only."""
         return kind == "dir"
 
     def _measure(self, path: Path) -> int:
+        """Sum the sizes of every regular file in the subtree."""
         return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
 
 
@@ -265,6 +274,7 @@ class Empty(Condition):
     """A file with no bytes, or a directory with no entries."""
 
     def check(self, path: Path, ctx: CheckContext = _NO_CHECKS) -> bool:  # noqa: ARG002
+        """Whether `path` holds no bytes (file) or no entries (directory)."""
         if path.is_dir():
             return not any(path.iterdir())
         return path.stat().st_size == 0
@@ -283,6 +293,7 @@ class NonEmpty(Condition):
     """A file with at least one byte, or a directory with at least one entry."""
 
     def check(self, path: Path, ctx: CheckContext = _NO_CHECKS) -> bool:  # noqa: ARG002
+        """Whether `path` holds at least one byte (file) or one entry (directory)."""
         if path.is_dir():
             return any(path.iterdir())
         return path.stat().st_size > 0
@@ -317,6 +328,7 @@ class Content(Condition):
     name: str
 
     def check(self, path: Path, ctx: CheckContext = _NO_CHECKS) -> bool:
+        """Run the `name`d check from `ctx`, honoring `on_missing` when absent."""
         fn = ctx.checks.get(self.name)
         if fn is None:
             if ctx.on_missing == "skip":
@@ -353,6 +365,7 @@ class Variadic(Condition, ABC):
             raise ValueError(msg)
 
     def applies_to(self, kind: EntryKind) -> bool:
+        """Applicable where every child condition is (their intersection)."""
         return all(condition.applies_to(kind) for condition in self.conditions)
 
     def _payload(self) -> dict[str, Any]:
@@ -369,6 +382,7 @@ class And(Variadic):
     """Satisfied when ALL of `conditions` are (conjunction)."""
 
     def check(self, path: Path, ctx: CheckContext = _NO_CHECKS) -> bool:
+        """Whether every child condition holds for `path`."""
         return all(condition.check(path, ctx) for condition in self.conditions)
 
 
@@ -378,6 +392,7 @@ class Or(Variadic):
     """Satisfied when AT LEAST ONE of `conditions` is (disjunction)."""
 
     def check(self, path: Path, ctx: CheckContext = _NO_CHECKS) -> bool:
+        """Whether at least one child condition holds for `path`."""
         return any(condition.check(path, ctx) for condition in self.conditions)
 
 
@@ -389,9 +404,11 @@ class Not(Condition):
     condition: Condition
 
     def applies_to(self, kind: EntryKind) -> bool:
+        """Applicable wherever the wrapped condition is."""
         return self.condition.applies_to(kind)
 
     def check(self, path: Path, ctx: CheckContext = _NO_CHECKS) -> bool:
+        """Whether the wrapped condition does not hold for `path`."""
         return not self.condition.check(path, ctx)
 
     def _payload(self) -> dict[str, Any]:
