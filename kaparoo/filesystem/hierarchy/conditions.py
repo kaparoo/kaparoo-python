@@ -214,19 +214,20 @@ class Size(Bound):
 class ChildCount(Bound):
     """An inclusive bound on how many entries a directory holds (`min` / `max`).
 
-    `of` selects what to count: `"all"` entries (the default), `"files"`
-    only, or `"dirs"` only. The `"files"` / `"dirs"` filters follow symlinks
-    (a symlink to a file counts under `"files"`), matching `TreeSize`; an
-    entry that is neither a regular file nor a directory -- a broken symlink,
-    a socket -- is counted only under `"all"`.
+    `only` restricts what is counted: `None` (the default) counts every
+    entry, `"files"` counts only files, `"dirs"` only directories. The
+    `"files"` / `"dirs"` filters follow symlinks (a symlink to a file counts
+    under `"files"`), matching `TreeSize`; an entry that is neither a regular
+    file nor a directory -- a broken symlink, a socket -- is counted only by
+    the unrestricted default.
     """
 
-    of: Literal["all", "files", "dirs"] = field(default="all", kw_only=True)
+    only: Literal["files", "dirs"] | None = field(default=None, kw_only=True)
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        if self.of not in ("all", "files", "dirs"):
-            msg = f"ChildCount `of` must be 'all', 'files', or 'dirs', got {self.of!r}."
+        if self.only is not None and self.only not in ("files", "dirs"):
+            msg = f"ChildCount `only` must be 'files' or 'dirs', got {self.only!r}."
             raise ValueError(msg)
 
     def applies_to(self, kind: EntryKind) -> bool:
@@ -234,22 +235,22 @@ class ChildCount(Bound):
         return kind == "dir"
 
     def _measure(self, path: Path) -> int:
-        """Count the directory's entries, restricted by `of`."""
-        if self.of == "files":
+        """Count the directory's entries, restricted by `only`."""
+        if self.only == "files":
             return sum(1 for p in path.iterdir() if p.is_file())
-        if self.of == "dirs":
+        if self.only == "dirs":
             return sum(1 for p in path.iterdir() if p.is_dir())
         return sum(1 for _ in path.iterdir())
 
     def _payload(self) -> dict[str, Any]:
         payload = super()._payload()
-        if self.of != "all":
-            payload["of"] = self.of
+        if self.only is not None:
+            payload["only"] = self.only
         return payload
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
-        return cls(min=data.get("min"), max=data.get("max"), of=data.get("of", "all"))
+        return cls(min=data.get("min"), max=data.get("max"), only=data.get("only"))
 
 
 @register_condition("tree_size")

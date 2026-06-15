@@ -65,28 +65,28 @@ class TestChildCount:
         assert ChildCount(min=3).check(d) is False
         assert ChildCount(max=2).check(d)
 
-    def test_of_counts_only_the_selected_kind(self, tmp_path: Path) -> None:
+    def test_only_counts_the_selected_kind(self, tmp_path: Path) -> None:
         d = tmp_path / "d"
         d.mkdir()
         (d / "a").touch()
         (d / "b").touch()
         (d / "sub").mkdir()
-        assert ChildCount(min=3, max=3).check(d)  # default "all": 2 files + 1 dir
-        assert ChildCount(min=2, max=2, of="files").check(d)
-        assert ChildCount(min=1, max=1, of="dirs").check(d)
-        assert ChildCount(min=2, of="dirs").check(d) is False
+        assert ChildCount(min=3, max=3).check(d)  # default: 2 files + 1 dir
+        assert ChildCount(min=2, max=2, only="files").check(d)
+        assert ChildCount(min=1, max=1, only="dirs").check(d)
+        assert ChildCount(min=2, only="dirs").check(d) is False
 
-    def test_rejects_invalid_of(self) -> None:
-        with pytest.raises(ValueError, match="`of` must be"):
-            ChildCount(min=1, of="links")
+    def test_rejects_invalid_only(self) -> None:
+        with pytest.raises(ValueError, match="`only` must be"):
+            ChildCount(min=1, only="links")
 
     def test_round_trips(self) -> None:
         cc = ChildCount(min=8)
         assert cc.to_dict() == {"kind": "child_count", "min": 8}
         assert Condition.from_dict(cc.to_dict()) == cc
-        # `of` is serialized only when not the "all" default
-        only_files = ChildCount(min=1, of="files")
-        assert only_files.to_dict() == {"kind": "child_count", "min": 1, "of": "files"}
+        # `only` is serialized only when set (None default is omitted)
+        only_files = ChildCount(min=1, only="files")
+        assert only_files.to_dict() == {"kind": "child_count", "min": 1, "only": "files"}
         assert Condition.from_dict(only_files.to_dict()) == only_files
 
 

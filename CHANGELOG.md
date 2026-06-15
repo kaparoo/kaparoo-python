@@ -133,7 +133,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   failures in `report.failed` (and `report.ok` requires it empty), while
   `match` stays purely structural. Conditions: `Size` (a file's bytes),
   `ChildCount` (a directory's entries -- all, or only files / only
-  directories via `of`), and `TreeSize` (a directory's
+  directories via `only`), and `TreeSize` (a directory's
   recursive content size) -- all inclusive `min` / `max`; polymorphic
   `Empty` / `NonEmpty`; `Content` (a named content hook); and `And` / `Or`
   / `Not`. Each declares the entry kind(s) it can check (`Size` file-only,
