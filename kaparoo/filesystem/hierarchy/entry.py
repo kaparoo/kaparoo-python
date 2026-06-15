@@ -175,6 +175,7 @@ class Entry(Node, ABC):
                 f"{type(self).__name__}"
             )
             raise ValueError(msg)
+
         object.__setattr__(self, "_name", _as_filter(name))
         object.__setattr__(self, "_depth", _normalize_depth(depth))
         object.__setattr__(self, "_required", required)
@@ -227,6 +228,7 @@ class Entry(Node, ABC):
             payload["required"] = True
         if self._condition is not None:
             payload["condition"] = self._condition.to_dict()
+
         return payload
 
     def __repr__(self) -> str:

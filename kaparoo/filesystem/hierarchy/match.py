@@ -61,9 +61,11 @@ def match(
     root_path = Path(root)
     excluded = build_excluder(exclude, root_path)
     pairs = _match_children((tree,), root_path, excluded)
+
     if not unique:
         yield from pairs
         return
+
     seen: set[tuple[Path, Node]] = set()
     for pair in pairs:
         if pair not in seen:

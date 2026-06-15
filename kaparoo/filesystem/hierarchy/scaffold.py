@@ -120,6 +120,7 @@ class Scaffolder:
         if not _creatable(node):
             self._skip_or_raise(node, required=node.required)
             return
+
         for name in cast("Expandable", node.name).expand():
             path = parent / name
             if path.exists():
@@ -135,6 +136,7 @@ class Scaffolder:
         if not _creatable(node):
             self._skip_or_raise(node, required=node.required)
             return
+
         for name in cast("Expandable", node.name).expand():
             path = parent / name
             if path.exists():
@@ -153,6 +155,7 @@ class Scaffolder:
             # all-or-nothing: a non-creatable member skips the whole set
             self._skip_or_raise(node, required=node.required)
             return
+
         for member in node.members:
             self.visit(member, parent)
 
@@ -162,4 +165,5 @@ class Scaffolder:
                 for member in side:
                     self.visit(member, parent)
                 return
+
         self._skip_or_raise(node, required=node.required)  # none creatable
