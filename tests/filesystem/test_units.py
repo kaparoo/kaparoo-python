@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from kaparoo.filesystem import GB, GIB, KB, KIB, MB, MIB, TB, TIB
 from kaparoo.filesystem.hierarchy.conditions import Size, TreeSize
+from kaparoo.filesystem.units import GB, GIB, KB, KIB, MB, MIB, TB, TIB
 
 
 def test_decimal_units_are_powers_of_1000():

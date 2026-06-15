@@ -113,7 +113,7 @@ matched path's filesystem attributes — a serializable `Condition` from
 [`conditions.py`](./conditions.py):
 
 ```python
-from kaparoo.filesystem import GB, MB
+from kaparoo.filesystem.units import GB, MB
 from kaparoo.filesystem.hierarchy import Directory, File
 from kaparoo.filesystem.hierarchy.conditions import (
     And, ChildCount, Content, NonEmpty, Size, TreeSize,
@@ -129,7 +129,7 @@ Directory("dataset", condition=TreeSize(max=1 * GB))    # under 1 GB of content
 File("a", condition=And((Size(min=1), Size(max=1000))))  # And / Or / Not compose
 ```
 
-Sizes are byte counts; the `kaparoo.filesystem` units — decimal `KB` / `MB`
+Sizes are byte counts; the `kaparoo.filesystem.units` constants — decimal `KB` / `MB`
 / `GB` / `TB` (powers of 1000) and binary `KIB` / `MIB` / `GIB` / `TIB`
 (powers of 1024) — are plain `int` multipliers for readability, e.g.
 `TreeSize(max=2 * GIB)`.

@@ -15,10 +15,14 @@
   (atomic) writers usable as a context manager or explicitly
 - [`exceptions`](./exceptions.py) — `DirectoryNotFoundError`, `NotAFileError`
 - [`types`](./types.py) — `StrPath`, `StrPaths` type aliases
+- [`units`](./units.py) — byte-size multipliers (`KB` / `MB` / `GB` / `TB`,
+  `KIB` / `MIB` / `GIB` / `TIB`)
 - [`search/`](./search/) — composable filesystem search (own README)
 
 All public symbols are re-exported from the top-level `kaparoo.filesystem`
-namespace.
+namespace, **except the `units` constants** — those are import-only via
+`kaparoo.filesystem.units` (kept out of the top level so a bare `MB` / `GB`
+is always qualified to its convention).
 
 ## Existence checks
 
