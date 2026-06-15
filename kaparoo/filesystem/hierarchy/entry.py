@@ -77,18 +77,22 @@ def _normalize_depth(
     Raises:
         ValueError: If a bound is less than 1, or `max` is below `min`.
     """
-    if depth is None:
-        return (1, None)
-    if isinstance(depth, tuple):
-        min_depth, max_depth = depth
-    else:
-        min_depth = max_depth = depth
+    match depth:
+        case None:
+            return (1, None)
+        case tuple():
+            min_depth, max_depth = depth
+        case _:
+            min_depth = max_depth = depth
+
     if min_depth < 1:
         msg = f"depth must be >= 1, got {min_depth!r}"
         raise ValueError(msg)
+
     if max_depth is not None and max_depth < min_depth:
         msg = f"depth max {max_depth!r} is below min {min_depth!r}"
         raise ValueError(msg)
+
     return (min_depth, max_depth)
 
 
