@@ -49,6 +49,7 @@ def register_condition[C: Condition](kind: str) -> Callable[[type[C]], type[C]]:
                 f"{existing.__name__}; cannot reassign to {cls.__name__}."
             )
             raise ValueError(msg)
+
         _CONDITION_REGISTRY[kind] = cls
         cls._kind = kind
         return cls
@@ -163,6 +164,7 @@ class Bound(Condition, ABC):
         if self.min is None and self.max is None:
             msg = f"{type(self).__name__} requires at least one of min / max."
             raise ValueError(msg)
+
         if self.min is not None and self.max is not None and self.max < self.min:
             msg = f"{type(self).__name__} max {self.max} is below min {self.min}."
             raise ValueError(msg)
@@ -185,6 +187,7 @@ class Bound(Condition, ABC):
             payload["min"] = self.min
         if self.max is not None:
             payload["max"] = self.max
+
         return payload
 
     @classmethod
@@ -331,12 +334,14 @@ class Content(Condition):
         """Run the `name`d check from `ctx`, honoring `on_missing` when absent."""
         if ctx is None:
             ctx = _NO_CHECKS
+
         fn = ctx.checks.get(self.name)
         if fn is None:
             if ctx.on_missing == "skip":
                 return True
             msg = f"no check supplied for content condition {self.name!r}"
             raise ValueError(msg)
+
         return fn(path)
 
     def _payload(self) -> dict[str, Any]:

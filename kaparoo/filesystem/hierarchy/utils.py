@@ -36,6 +36,7 @@ def register_node[N: Node](node: str) -> Callable[[type[N]], type[N]]:
                 f"{existing.__name__}; cannot reassign to {cls.__name__}."
             )
             raise ValueError(msg)
+
         _NODE_REGISTRY[node] = cls
         return cls
 
