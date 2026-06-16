@@ -11,6 +11,27 @@ run of regularly-named siblings.
 > [`validate`](#validation-validate), [`conformer`](#filtering-paths-conformer)
 > (read), and [`scaffold`](#scaffolding-scaffold) (write).
 
+## Contents
+
+- [Nodes](#nodes)
+- [Names are filters](#names-are-filters)
+- [Depth: descendants at unknown levels](#depth-descendants-at-unknown-levels)
+- [Presence: `required`](#presence-required)
+- [Attribute conditions: `condition=`](#attribute-conditions-condition)
+- [Mutual exclusion: `Exclusive`](#mutual-exclusion-exclusive)
+  - [Resolving conflicts by priority: `on_conflict`](#resolving-conflicts-by-priority-on_conflict)
+- [Co-occurrence: `Together`](#co-occurrence-together)
+- [Enumerable names](#enumerable-names)
+- [Value semantics](#value-semantics)
+- [Serialization](#serialization)
+- [Custom nodes](#custom-nodes)
+- [Locating: `locate`](#locating-locate)
+  - [Pointing at the top directly: `at_root`](#pointing-at-the-top-directly-at_root)
+- [Validation: `validate`](#validation-validate)
+- [Filtering paths: `conformer`](#filtering-paths-conformer)
+- [Scaffolding: `scaffold`](#scaffolding-scaffold)
+- [See also](#see-also)
+
 ## Nodes
 
 Build a tree from two node types. As name sugar, a bare `str` becomes a
