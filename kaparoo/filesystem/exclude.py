@@ -22,11 +22,14 @@ def build_excluder(
 ) -> Callable[[Path], bool] | None:
     """Normalize `exclude` into a single exclusion predicate.
 
-    The returned predicate relativizes a candidate path to `root` and excludes
-    it when it matches *any* collected excluder -- a concrete path (exact match
-    on the root-relative POSIX string), a `Filter` (matched on that string), or
-    a callable (given the root-relative `Path`). It is the engine behind the
-    `exclude=` argument of the `kaparoo.filesystem` traversals.
+    The returned predicate excludes a candidate path when it matches *any*
+    collected excluder -- a concrete path (exact match on the root-relative
+    POSIX string), a `Filter` (matched on that string), or a callable (given
+    the root-relative `Path`). A candidate under `root` is stripped to its
+    root-relative part; any other relative candidate is taken to already be
+    root-relative (an absolute candidate outside `root` is a caller error and
+    raises `ValueError`). It is the engine behind the `exclude=` argument of
+    the `kaparoo.filesystem` traversals.
 
     Args:
         exclude: One excluder, an iterable of them (OR-combined), or `None`. An
@@ -37,9 +40,9 @@ def build_excluder(
             relative to it.
 
     Returns:
-        A predicate mapping an absolute candidate path (assumed under `root`) to
-        whether it is excluded, or `None` when nothing is excluded so callers
-        can skip the check.
+        A predicate mapping a candidate path -- under `root`, or already
+        root-relative -- to whether it is excluded, or `None` when nothing is
+        excluded so callers can skip the check.
     """
     if exclude is None:
         return None
@@ -60,8 +63,16 @@ def build_excluder(
     if not (exact or filters or predicates):  # Nothing to exclude.
         return None
 
-    def excluded(candidate: Path) -> bool:
-        rel = candidate.relative_to(root)
+    def excluder(candidate: Path) -> bool:
+        rel = candidate
+
+        try:
+            rel = candidate.relative_to(root)
+        except ValueError as error:
+            if candidate.is_absolute():
+                msg = f"absolute candidate {candidate!r} is outside the root {root!r}"
+                raise ValueError(msg) from error
+
         rel_str = rel.as_posix()
 
         if rel_str in exact:
@@ -72,7 +83,7 @@ def build_excluder(
 
         return any(p(rel) for p in predicates)
 
-    return excluded
+    return excluder
 
 
 def _iter_excluders(exclude: Excluder | Iterable[Excluder]) -> Iterator[Excluder]:
