@@ -3,6 +3,16 @@
 Filesystem traversal driven by the composable [`kaparoo.filters`](../../filters/)
 DSL.
 
+## Contents
+
+- [Entry points](#entry-points)
+- [How filters apply](#how-filters-apply)
+- [Excluding paths (with pruning)](#excluding-paths-with-pruning)
+- [Depth control](#depth-control)
+- [Filters](#filters)
+- [Platform notes](#platform-notes)
+- [See also](#see-also)
+
 ## Entry points
 
 | Function | Yields |

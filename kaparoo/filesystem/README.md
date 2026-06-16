@@ -2,6 +2,18 @@
 
 `pathlib`-based filesystem helpers.
 
+## Contents
+
+- [Modules](#modules)
+- [Existence checks](#existence-checks)
+- [Exception hierarchy](#exception-hierarchy)
+- [Creating and emptying directories](#creating-and-emptying-directories)
+- [Path manipulation](#path-manipulation)
+- [Reserving a destination](#reserving-a-destination)
+- [Safe (atomic) writes](#safe-atomic-writes)
+- [Platform notes](#platform-notes)
+- [See also](#see-also)
+
 ## Modules
 
 - [`existence`](./existence.py) — boolean predicates (`*_exists`) and

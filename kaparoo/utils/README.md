@@ -2,6 +2,16 @@
 
 Small, focused helpers — not enough material for their own packages.
 
+## Contents
+
+- [Modules](#modules)
+- [Timer](#timer)
+- [SpanTimer](#spantimer)
+- [Aggregation](#aggregation)
+- [Optional helpers](#optional-helpers)
+- [Checks](#checks)
+- [See also](#see-also)
+
 ## Modules
 
 - [`timer`](./timer.py) — `Timer`, `SpanTimer`, `SpanRecord`

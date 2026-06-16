@@ -3,6 +3,23 @@
 Building blocks for dataset code: a `Sequence`-based abstract base, a
 small set of composers, and ready-to-subclass file-backed templates.
 
+## Contents
+
+- [Modules](#modules)
+- [DataSequence](#datasequence)
+- [Composers](#composers)
+  - [`SlicedSequence`](#slicedsequence)
+  - [`ConcatSequence`](#concatsequence)
+  - [`TransformedSequence`](#transformedsequence)
+  - [`WindowedSequence`](#windowedsequence)
+  - [`ZippedSequence`](#zippedsequence)
+- [Templates](#templates)
+  - [`FileFolderSequence`](#filefoldersequence)
+  - [`FileListSequence`](#filelistsequence)
+  - [`SingleFileSequence`](#singlefilesequence)
+- [generate_batches](#generate_batches)
+- [See also](#see-also)
+
 ## Modules
 
 - [`sequences/base`](./sequences/base.py) — `DataSequence[T, M]` abstract base

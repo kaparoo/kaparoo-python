@@ -18,6 +18,14 @@ f.matches("module.py")      # True
 f.matches("__init__.py")    # False
 ```
 
+## Contents
+
+- [Filter catalog](#filter-catalog)
+- [JSON serialization](#json-serialization)
+- [Custom filters](#custom-filters)
+- [Case sensitivity](#case-sensitivity)
+- [See also](#see-also)
+
 ## Filter catalog
 
 Concrete classes end in `Filter`; the short TitleCase forms (`Equals`,
