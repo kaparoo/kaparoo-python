@@ -18,11 +18,15 @@
 - [`units`](./units.py) — byte-size multipliers (`KB` / `MB` / `GB` / `TB`,
   `KIB` / `MIB` / `GIB` / `TIB`)
 - [`search/`](./search/) — composable filesystem search (own README)
+- [`hierarchy/`](./hierarchy/) — declarative directory-tree specs and the
+  disk operations `locate` / `validate` / `conformer` / `scaffold` (own
+  README)
 
-All public symbols are re-exported from the top-level `kaparoo.filesystem`
-namespace, **except the `units` constants** — those are import-only via
-`kaparoo.filesystem.units` (kept out of the top level so a bare `MB` / `GB`
-is always qualified to its convention).
+Most public symbols are re-exported from the top-level `kaparoo.filesystem`
+namespace, **except** the `units` constants — import-only via
+`kaparoo.filesystem.units`, so a bare `MB` / `GB` is always qualified to its
+convention — **and the `hierarchy` subpackage**, imported via
+`kaparoo.filesystem.hierarchy`.
 
 ## Existence checks
 
