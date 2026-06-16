@@ -151,29 +151,35 @@ class Search(ABC):
             name_filter = Filter.parse(name_filter)
 
         root = ensure_dir_exists(root)
-        excluded = build_excluder(exclude, root)
         root_depth = len(root.parts)
+
+        excluder = build_excluder(exclude, root)
+
+        has_excluder = excluder is not None
+        has_predicate = predicate is not None
+        has_max_depth = max_depth is not None
+
         results: list[Path] = []
 
         for dirpath, dirnames, filenames in root.walk():
             child_depth = len(dirpath.parts) - root_depth + 1
 
-            if excluded is not None:
-                dirnames[:] = [d for d in dirnames if not excluded(dirpath / d)]
+            if has_excluder:
+                dirnames[:] = [d for d in dirnames if not excluder(dirpath / d)]
 
             if child_depth >= min_depth and cls._part_ok(part_filter, dirpath, root):
                 names = cls._select_names(dirnames, filenames)
                 names = cls._filter_names(names, name_filter)
 
                 paths = (dirpath / name for name in names)
-                if excluded is not None:
-                    paths = (path for path in paths if not excluded(path))
-                if callable(predicate):
-                    paths = (path for path in paths if predicate(path))
+                if has_excluder:
+                    paths = (p for p in paths if not excluder(p))
+                if has_predicate:
+                    paths = (p for p in paths if predicate(p))
 
                 results.extend(paths)
 
-            if max_depth is not None and child_depth >= max_depth:
+            if has_max_depth and child_depth >= max_depth:
                 dirnames.clear()  # prune deeper subtree; `Path.walk` honors in-place mutation
 
         if ordered:
