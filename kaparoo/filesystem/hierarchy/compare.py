@@ -50,47 +50,35 @@ def locate(
     exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
     at_root: bool = False,
 ) -> Iterator[tuple[Path, Node]]:
-    """Map each path under `root` to the spec `tree` node(s) it matches.
+    """Yield each on-disk path under `root` paired with the node it matches.
 
-    By default `root` is the *container*: `tree`'s top node is matched as an
-    entry under `root` (mirroring `search`'s `root`). For every on-disk path
-    that matches a node -- by name (the node's filter), type (`File` <-> file,
-    `Directory` <-> directory), and `depth` (intermediate levels of unknown
-    name are skipped) -- a `(path, node)` pair is yielded. A path matching
-    several nodes yields one pair per node.
-
-    `locate` reports only what is *present*: missing `required` entries and
-    `Exclusive` / `Together` violations are `validate`'s concern, so a
-    `Group` here is treated as "any of its entries may appear." A
-    nonexistent or non-directory `root` simply yields nothing.
+    By default `root` is the *container* and `tree`'s top is matched as an
+    entry beneath it (like `search`'s `root`). A path matches a node by name
+    (the node's filter), kind (`File` <-> file, `Directory` <-> directory),
+    and `depth` (intermediate levels of unknown name are skipped); a path
+    matching several nodes yields one pair each. Only what is *present* is
+    reported -- a `Group` counts as "any of its entries may appear", leaving
+    missing `required` and `Exclusive` / `Together` checks to `validate`. A
+    nonexistent or non-directory `root` yields nothing.
 
     Args:
-        unique: When `False` (default) the same `(path, node)` pair may
-            repeat (a reused subtree shows up once per occurrence) and
-            iteration stays lazy. When `True`, duplicate pairs are
-            suppressed (still streamed, backed by a `seen` set).
-        exclude: Paths to drop from the results -- e.g. specific cells of a
-            `Template` product. An exclude rule (or an iterable of them,
-            OR-combined) is a `StrPath` (absolute under `root`, or a concrete
-            **root-relative** path), a `Filter` (matched on the
-            **root-relative** POSIX string), or a `Callable` taking the
-            candidate's own `Path` (the real, filesystem-valid path) and
-            returning whether to drop it. A dropped directory has its whole
-            subtree pruned. A lone `str` / `PathLike` / `Filter` / callable is
-            one rule; only a non-string iterable is several.
-        at_root: When `True`, treat `root` *itself* as the realized top node
-            rather than its container -- so you point at the top directly
-            (`locate(Directory("dataset", ...), ".../dataset", at_root=True)`).
-            The top must be an `Entry` (a `Group` raises `TypeError`); `root`
-            realizes it only when `root`'s leaf name matches the top's name
-            filter and its kind agrees, otherwise nothing is yielded.
+        unique: Suppress duplicate `(path, node)` pairs (a reused subtree
+            otherwise repeats once per occurrence). Iteration stays lazy
+            either way; `True` backs it with a `seen` set.
+        exclude: Path(s) to drop -- a `StrPath` (absolute under `root` or
+            root-relative), a `Filter` (on the root-relative POSIX path), a
+            callable on the candidate's real `Path`, or an iterable of these
+            (OR-combined). A dropped directory is pruned whole.
+        at_root: Treat `root` *itself* as the realized top rather than its
+            container; the top must be an `Entry`, realized only when `root`'s
+            leaf name and kind match it.
 
     Yields:
-        `(path, node)` for each match -- paths in depth-first directory
-        order, a path's overlapping nodes in spec order.
+        `(path, node)` in depth-first order, a path's overlapping nodes in
+        spec order.
 
     Raises:
-        TypeError: If `at_root` is set and `tree`'s top node is a `Group`.
+        TypeError: If `at_root` and `tree`'s top is a `Group`.
     """
     root = Path(root)
     excluder = build_excluder(exclude, root)
@@ -105,13 +93,10 @@ def locate_map(
     *,
     exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
 ) -> dict[Path, tuple[Node, ...]]:
-    """Group `locate` results into a `path -> matching nodes` mapping.
+    """Group `locate`'s pairs into a `{path: (node, ...)}` mapping.
 
-    Each on-disk path maps to the tuple of distinct nodes it matches (in
-    spec order), so overlapping nodes for one path are collected rather than
-    yielded separately. Unlike `locate`, this materializes the full result
-    before returning. Iterate `.items()` for `(path, nodes)` pairs, or index
-    by path to look a single one up. `exclude` is as in `locate`.
+    Each path maps to the distinct nodes it matches, in spec order; unlike
+    `locate`, the full result is materialized. `exclude` is as in `locate`.
     """
     root = Path(root)
     excluder = build_excluder(exclude, root)
@@ -121,11 +106,10 @@ def locate_map(
 def _locate_map(
     tree: Node, root: Path, excluder: Callable[[Path], bool] | None
 ) -> dict[Path, tuple[Node, ...]]:
-    """`locate_map`'s core over a pre-built `excluder` predicate.
+    """Group located pairs over a pre-built `excluder` (core of `locate_map`).
 
-    `validate` reuses this so it can build the excluder once and share it
-    across every top node, rather than rebuilding it on each `locate_map`
-    call.
+    Separate from `locate_map` so `validate` builds the excluder once and
+    reuses it across every top node, instead of rebuilding it per call.
     """
     grouped: dict[Path, list[Node]] = {}
     for path, node in _unique(_locate_under(tree, root, excluder)):
@@ -136,12 +120,10 @@ def _locate_map(
 def _locate_at_root(
     top: Node, root: Path, excluder: Callable[[Path], bool] | None
 ) -> Iterator[tuple[Path, Node]]:
-    """Match `top` as `root` itself, not as a child of a container.
+    """Match `top` as `root` itself rather than a child of a container.
 
-    The `at_root` form of `_locate_under`: `root` realizes `top` only
-    when its leaf name matches `top`'s name filter and its kind agrees, in
-    which case the top pair is yielded and a `Directory`'s children are
-    located beneath `root`. A name / kind mismatch yields nothing.
+    Yields the top pair when `root`'s leaf name and kind match `top`, then
+    locates a `Directory`'s children beneath it; a mismatch yields nothing.
 
     Raises:
         TypeError: If `top` is a `Group` (it has no single name to anchor).
@@ -164,13 +146,12 @@ def _locate_at_root(
 def _locate_under(
     nodes: Node | Iterable[Node], parent: Path, excluder: Callable[[Path], bool] | None
 ) -> Iterator[tuple[Path, Node]]:
-    """Locate the sibling entries of `nodes` against one walk of `parent`.
+    """Locate `nodes` as entries under `parent`, against one walk of `parent`.
 
-    Groups flatten to their leaf entries (matched as siblings). `parent` is
-    walked a single time, deep enough for the deepest entry; each discovered
-    path is tested against every entry whose depth range admits it, and a
-    matched directory recurses into its own children. Excluded paths are
-    dropped (and pruned if directories) during the walk.
+    Groups flatten to leaf entries (matched as siblings). `parent` is walked
+    once, deep enough for the deepest entry; each path is tested against every
+    entry whose depth admits it, and a matched `Directory` recurses into its
+    children. Excluded paths are dropped, excluded directories pruned.
     """
 
     entries = flatten_entries(nodes)
@@ -202,13 +183,11 @@ def _unique(pairs: Iterable[tuple[Path, Node]]) -> Iterator[tuple[Path, Node]]:
 def _walk_depths(
     parent: Path, max_depth: int | None, excluder: Callable[[Path], bool] | None
 ) -> Iterator[tuple[Path, int]]:
-    """Yield `(path, depth)` for entries down to `max_depth` below `parent`.
+    """Yield `(path, depth)` for every entry down to `max_depth` below `parent`.
 
-    Built on `Path.walk` (iterative, like `search`) rather than Python
-    recursion, so arbitrarily deep trees never hit the recursion limit; a
-    nonexistent or non-directory `parent` yields nothing (walk errors are
-    ignored). Excluded entries are skipped, and excluded directories are
-    pruned from the descent.
+    Uses `Path.walk` (iterative, like `search`), so depth is not bound by the
+    recursion limit; a nonexistent or non-directory `parent` yields nothing.
+    Excluded entries are skipped and excluded directories pruned from descent.
     """
 
     has_max_depth = max_depth is not None
@@ -559,29 +538,20 @@ def conformer(
     checks: ContentChecks | None = None,
     on_missing: Literal["error", "skip"] = "error",
 ) -> Callable[[StrPath], bool]:
-    """Build a `search` predicate that accepts a path realizing `spec`'s top.
+    """Build a `search` predicate accepting paths that realize `spec`'s top.
 
-    The returned `Callable[[Path], bool]` accepts `path` when it realizes
-    the top of `spec`: a `File` whose name matches (and is a file) and whose
-    `condition` holds, or a `Directory` whose name matches, whose subtree
-    conforms, and whose `condition` holds; a top `Group` is realized by any
-    one of its alternatives / members. The path is always tested as the top
-    of `spec`, never against one of its inner nodes -- e.g.
-    `conformer(Directory("dataset", [...]))` accepts a conforming `dataset/`
-    directory, not the files inside it. `checks` / `on_missing` supply and
-    resolve `Content` conditions as in `validate`.
-
-    For an `Entry` top this is exactly `validate(spec, path, at_root=True).ok`;
-    a `Group` top conforms when any of its leaf entries does.
+    A path realizes the top when its name and kind match and its `condition`
+    holds; a `Directory`'s subtree must also conform (via `validate`), and a
+    `Group` top is realized by any one of its members. The path is tested only
+    as the *top* of `spec`, never an inner node -- so
+    `conformer(Directory("dataset", [...]))` accepts a conforming `dataset/`,
+    not its contents. For an `Entry` top this is exactly
+    `validate(spec, path, at_root=True).ok`. `checks` / `on_missing` supply
+    `Content` conditions as in `validate`.
 
     Because the predicate enforces the top's kind, pair it with the matching
-    `search`: a `File` top with `search_files`, a `Directory` top with
-    `search_dirs`. A kind mismatch (e.g. a `File` top under `search_dirs`,
-    which only ever offers directories) simply matches nothing -- no error.
-    A mixed `Group` top filters to its kind-matching members per search.
-
-    (Checking whether a concrete path or a sub-spec is *contained* anywhere
-    within a spec is a separate, future capability.)
+    search -- a `File` top with `search_files`, a `Directory` top with
+    `search_dirs`; a kind mismatch matches nothing rather than raising.
     """
     ctx = CheckContext(checks or {}, on_missing)
     tops = flatten_entries(spec)
