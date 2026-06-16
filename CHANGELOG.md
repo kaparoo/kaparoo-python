@@ -165,6 +165,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `checks={name: callable}`; an absent name is governed by
   `on_missing="error" | "skip"`. The metadata conditions round-trip through
   `to_dict` / `from_dict`.
+- `Entry.accepts_depth(depth)` / `Entry.accepts_kind(path)`: two predicate
+  methods on the `Entry` base. `accepts_depth(depth)` returns `True` when
+  `depth` falls within the entry's inclusive `[min_depth, max_depth]` range
+  (`max_depth=None` is unbounded). `accepts_kind(path)` returns `True` when
+  the on-disk kind of `path` matches the entry's own kind (`File` ↔ file,
+  `Directory` ↔ directory).
+- `kaparoo.filesystem.hierarchy.group.max_depth_of(nodes)`: returns the
+  deepest level any node in `nodes` requires (once flattened to leaf entries),
+  or `None` if any entry's depth is unbounded. Groups are accepted and
+  flattened transparently, so callers need not pre-flatten.
 - `kaparoo.filesystem.units`: byte-size unit constants -- decimal `KB` / `MB`
   / `GB` / `TB` (powers of 1000) and binary `KIB` / `MIB` / `GIB` / `TIB`
   (powers of 1024). They are plain `int` multipliers for readable file-size

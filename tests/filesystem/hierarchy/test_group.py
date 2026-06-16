@@ -13,6 +13,7 @@ from kaparoo.filesystem.hierarchy import (
     Node,
     Together,
 )
+from kaparoo.filesystem.hierarchy.group import max_depth_of
 
 
 class TestExclusive:
@@ -186,3 +187,21 @@ class TestGroup:
         ):
             with pytest.raises(FrozenInstanceError):
                 group._required = True  # noqa: SLF001
+
+
+class TestMaxDepthOf:
+    def test_single_bounded_entry(self) -> None:
+        assert max_depth_of([File("a", depth=3)]) == 3
+
+    def test_returns_the_deepest_of_several_entries(self) -> None:
+        assert max_depth_of([File("a", depth=2), File("b", depth=5)]) == 5
+
+    def test_unbounded_entry_returns_none(self) -> None:
+        assert max_depth_of([File("a", depth=2), File("b", depth=None)]) is None
+
+    def test_groups_are_flattened(self) -> None:
+        group = Together(File("a", depth=3), File("b", depth=2))
+        assert max_depth_of([group]) == 3
+
+    def test_empty_input_returns_one(self) -> None:
+        assert max_depth_of([]) == 1

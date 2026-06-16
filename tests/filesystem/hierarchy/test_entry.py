@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import FrozenInstanceError
+from typing import TYPE_CHECKING
 
 import pytest
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 from kaparoo.filesystem.hierarchy import Directory, File
 from kaparoo.filesystem.hierarchy.conditions import And, ChildCount, Empty, Size
@@ -237,6 +241,52 @@ class TestFrozen:
     def test_deletion_is_rejected(self) -> None:
         with pytest.raises(FrozenInstanceError):
             del File("a")._name  # noqa: SLF001
+
+
+class TestAcceptsDepth:
+    def test_default_depth_accepts_one(self) -> None:
+        assert File("a").accepts_depth(1) is True
+
+    def test_exact_depth_accepts_only_that_level(self) -> None:
+        f = File("a", depth=3)
+        assert f.accepts_depth(3) is True
+        assert f.accepts_depth(2) is False
+        assert f.accepts_depth(4) is False
+
+    def test_range_depth_accepts_inclusive_bounds(self) -> None:
+        f = File("a", depth=(2, 4))
+        assert f.accepts_depth(1) is False
+        assert f.accepts_depth(2) is True
+        assert f.accepts_depth(3) is True
+        assert f.accepts_depth(4) is True
+        assert f.accepts_depth(5) is False
+
+    def test_unbounded_max_accepts_any_depth_at_or_above_min(self) -> None:
+        f = File("a", depth=None)
+        assert f.accepts_depth(1) is True
+        assert f.accepts_depth(100) is True
+
+
+class TestAcceptsKind:
+    def test_file_entry_matches_a_file_path(self, tmp_path: Path) -> None:
+        p = tmp_path / "x.txt"
+        p.touch()
+        assert File("x.txt").accepts_kind(p) is True
+
+    def test_file_entry_rejects_a_directory_path(self, tmp_path: Path) -> None:
+        d = tmp_path / "sub"
+        d.mkdir()
+        assert File("sub").accepts_kind(d) is False
+
+    def test_directory_entry_matches_a_directory_path(self, tmp_path: Path) -> None:
+        d = tmp_path / "sub"
+        d.mkdir()
+        assert Directory("sub").accepts_kind(d) is True
+
+    def test_directory_entry_rejects_a_file_path(self, tmp_path: Path) -> None:
+        p = tmp_path / "x.txt"
+        p.touch()
+        assert Directory("x.txt").accepts_kind(p) is False
 
     def test_directory_children_are_frozen(self) -> None:
         with pytest.raises(FrozenInstanceError):
