@@ -5,7 +5,7 @@ __all__ = ("FileFolderSequence", "FileListSequence", "SingleFileSequence")
 from abc import abstractmethod
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from kaparoo.data.sequences.base import DataSequence
 from kaparoo.filesystem.existence import ensure_dir_exists, ensure_file_exists
@@ -51,6 +51,7 @@ class FileListSequence[T, M = Path](DataSequence[T, M]):
         """Full Path of the file at `index`."""
         return Path(self._files[index])
 
+    @override
     def get_item(self, index: int) -> T:
         """Load the file at `index` via `load_file`."""
         return self.load_file(self.get_file(index))
@@ -120,6 +121,7 @@ class FileFolderSequence[T, M = Path](FileListSequence[T, M]):
         """The base directory the sequence was constructed from."""
         return self._root
 
+    @override
     def get_file(self, index: int) -> Path:
         """Full Path of the file at `index`."""
         return wrap_path(self._files[index], prepend=self._root)

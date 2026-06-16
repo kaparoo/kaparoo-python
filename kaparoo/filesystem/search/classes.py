@@ -3,7 +3,7 @@ from __future__ import annotations
 __all__ = ("DirSearch", "FileSearch", "PathSearch", "Search")
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, overload, override
 
 from kaparoo.filesystem.exclude import build_excluder
 from kaparoo.filesystem.existence import ensure_dir_exists
@@ -190,17 +190,20 @@ class Search(ABC):
 
 class PathSearch(Search):
     @classmethod
+    @override
     def _select_names(cls, dirnames: list[str], filenames: list[str], /) -> list[str]:
         return [*dirnames, *filenames]
 
 
 class FileSearch(Search):
     @classmethod
+    @override
     def _select_names(cls, _dirnames: list[str], filenames: list[str], /) -> list[str]:
         return list(filenames)
 
 
 class DirSearch(Search):
     @classmethod
+    @override
     def _select_names(cls, dirnames: list[str], _filenames: list[str], /) -> list[str]:
         return list(dirnames)

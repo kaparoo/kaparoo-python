@@ -5,7 +5,7 @@ __all__ = ("SpanRecord", "SpanTimer", "Timer")
 import time
 from collections import defaultdict
 from contextlib import ContextDecorator, contextmanager
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, TypedDict, override
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -344,6 +344,7 @@ class SpanTimer(Timer):
 
         return {label: self._apply_ndigits(total) for label, total in grouped.items()}
 
+    @override
     def _resume(self) -> int:
         """Resume the timer and advance the lap baseline.
 
@@ -356,6 +357,7 @@ class SpanTimer(Timer):
 
         return pause_duration
 
+    @override
     def _reset(self) -> None:
         """Clear per-`with`-block state so the timer can be reused safely."""
         self._last_time = self._start_time

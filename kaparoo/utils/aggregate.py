@@ -25,7 +25,7 @@ from abc import ABC, abstractmethod
 from bisect import bisect_left
 from dataclasses import dataclass
 from itertools import accumulate
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
@@ -89,7 +89,8 @@ class UnweightedReduction[S](Reduction[S]):
     does not affect the outcome.
     """
 
-    def step(self, state: S, value: float, weight: float) -> S:  # noqa: ARG002
+    @override
+    def step(self, state: S, value: float, weight: float) -> S:
         """Fold one sample into `state`, discarding `weight`.
 
         `weight` stays in the signature to honour the `Reduction.step`
@@ -116,22 +117,26 @@ class Mean(Reduction[tuple[float, float]]):
     `(weighted_sum, total_weight)` pair.
     """
 
+    @override
     def identity(self) -> tuple[float, float]:
         """Return the zero accumulator `(weighted_sum=0, total_weight=0)`."""
         return (0.0, 0.0)
 
+    @override
     def step(
         self, state: tuple[float, float], value: float, weight: float
     ) -> tuple[float, float]:
         """Add `weight * value` to the sum and `weight` to the total weight."""
         return (state[0] + weight * value, state[1] + weight)
 
+    @override
     def merge(
         self, a: tuple[float, float], b: tuple[float, float]
     ) -> tuple[float, float]:
         """Add two `(weighted_sum, total_weight)` pairs component-wise."""
         return (a[0] + b[0], a[1] + b[1])
 
+    @override
     def result(self, state: tuple[float, float]) -> float:
         """Divide the weighted sum by the total weight."""
         return state[0] / state[1] if state[1] else float("nan")
@@ -149,10 +154,12 @@ class Var(Reduction[tuple[float, float, float]]):
     `M2` is the weighted sum of squared deviations from the running mean.
     """
 
+    @override
     def identity(self) -> tuple[float, float, float]:
         """Return the zero accumulator `(total_weight=0, mean=0, M2=0)`."""
         return (0.0, 0.0, 0.0)
 
+    @override
     def step(
         self, state: tuple[float, float, float], value: float, weight: float
     ) -> tuple[float, float, float]:
@@ -166,6 +173,7 @@ class Var(Reduction[tuple[float, float, float]]):
 
         return (total, mean, m2)
 
+    @override
     def merge(
         self,
         a: tuple[float, float, float],
@@ -185,6 +193,7 @@ class Var(Reduction[tuple[float, float, float]]):
 
         return (total, mean, m2)
 
+    @override
     def result(self, state: tuple[float, float, float]) -> float:
         """Divide `M2` by the total weight to get the population variance."""
         total, _mean, m2 = state
@@ -199,6 +208,7 @@ class Std(Var):
     projection: a square root.
     """
 
+    @override
     def result(self, state: tuple[float, float, float]) -> float:
         """Take the square root of the population variance."""
         variance = super().result(state)
@@ -216,18 +226,22 @@ class Sum(UnweightedReduction[float]):
     The state is the partial sum so far.
     """
 
+    @override
     def identity(self) -> float:
         """Return the additive unit, `0.0`."""
         return 0.0
 
+    @override
     def accumulate(self, state: float, value: float) -> float:
         """Add `value` to the running sum."""
         return state + value
 
+    @override
     def merge(self, a: float, b: float) -> float:
         """Add two partial sums."""
         return a + b
 
+    @override
     def result(self, state: float) -> float:
         """Return the accumulated sum unchanged."""
         return state
@@ -250,14 +264,17 @@ class OptionalFold(UnweightedReduction[float | None]):
     wants the `nan` that the `None` seed gives.
     """
 
+    @override
     def identity(self) -> float | None:
         """Return `None`, the unseeded state that projects to `nan`."""
         return None
 
+    @override
     def accumulate(self, state: float | None, value: float) -> float | None:
         """Seed with `value` when unseeded, otherwise fold it via `_combine`."""
         return value if state is None else self._combine(state, value)
 
+    @override
     def merge(self, a: float | None, b: float | None) -> float | None:
         """Combine two states, treating `None` as "saw no samples"."""
         if a is None:
@@ -266,6 +283,7 @@ class OptionalFold(UnweightedReduction[float | None]):
             return a
         return self._combine(a, b)
 
+    @override
     def result(self, state: float | None) -> float:
         """Return the seeded value, or `nan` if no sample was ever seen."""
         return float("nan") if state is None else state
@@ -279,6 +297,7 @@ class OptionalFold(UnweightedReduction[float | None]):
 class Min(OptionalFold):
     """The smallest value seen in the stream; empty -> `nan`."""
 
+    @override
     def _combine(self, a: float, b: float) -> float:
         """Return the smaller of `a` and `b`."""
         return min(a, b)
@@ -288,6 +307,7 @@ class Min(OptionalFold):
 class Max(OptionalFold):
     """The largest value seen in the stream; empty -> `nan`."""
 
+    @override
     def _combine(self, a: float, b: float) -> float:
         """Return the larger of `a` and `b`."""
         return max(a, b)
@@ -300,7 +320,8 @@ class Last(OptionalFold):
     On `merge`, "most recent" is taken to be the right-hand state.
     """
 
-    def _combine(self, a: float, b: float) -> float:  # noqa: ARG002
+    @override
+    def _combine(self, a: float, b: float) -> float:
         """Return the later value, `b`."""
         return b
 
@@ -330,18 +351,22 @@ class Fold(UnweightedReduction[float]):
     initial: float
     finalize: Callable[[float], float] | None = None
 
+    @override
     def identity(self) -> float:
         """Return `initial`, the fold's unit value."""
         return self.initial
 
+    @override
     def accumulate(self, state: float, value: float) -> float:
         """Fold `value` into `state` with `combine`."""
         return self.combine(state, value)
 
+    @override
     def merge(self, a: float, b: float) -> float:
         """Combine two accumulated scalars with `combine`."""
         return self.combine(a, b)
 
+    @override
     def result(self, state: float) -> float:
         """Return the accumulated scalar, applying `finalize` if set."""
         return state if self.finalize is None else self.finalize(state)
@@ -392,10 +417,12 @@ class StoredReduction(Reduction[list[tuple[float, float]]], ABC):
     decomposable reduction when one exists.
     """
 
+    @override
     def identity(self) -> list[tuple[float, float]]:
         """Return a fresh empty sample list."""
         return []
 
+    @override
     def step(
         self, state: list[tuple[float, float]], value: float, weight: float
     ) -> list[tuple[float, float]]:
@@ -403,12 +430,14 @@ class StoredReduction(Reduction[list[tuple[float, float]]], ABC):
         state.append((value, weight))
         return state
 
+    @override
     def merge(
         self, a: list[tuple[float, float]], b: list[tuple[float, float]]
     ) -> list[tuple[float, float]]:
         """Concatenate two sample lists into a new one."""
         return [*a, *b]
 
+    @override
     def result(self, state: list[tuple[float, float]]) -> float:
         """Reduce the gathered samples via `_reduce`, or `nan` if there are none."""
         if not state:
@@ -437,6 +466,7 @@ class Stored(StoredReduction):
 
     reduce: Callable[[Sequence[float], Sequence[float]], float]
 
+    @override
     def _reduce(self, values: Sequence[float], weights: Sequence[float]) -> float:
         """Apply the stored `reduce` callable to the gathered samples."""
         return self.reduce(values, weights)
@@ -465,6 +495,7 @@ class Quantile(StoredReduction):
             msg = f"q must be in [0, 1] (got {self.q})"
             raise ValueError(msg)
 
+    @override
     def _reduce(self, values: Sequence[float], weights: Sequence[float]) -> float:
         """Return the weighted `q`-quantile of the gathered samples."""
         return _weighted_quantile(values, weights, self.q)
@@ -474,6 +505,7 @@ class Quantile(StoredReduction):
 class Median(StoredReduction):
     """The weighted median (the 0.5-quantile) of the stream; empty -> `nan`."""
 
+    @override
     def _reduce(self, values: Sequence[float], weights: Sequence[float]) -> float:
         """Return the weighted median of the gathered samples."""
         return _weighted_quantile(values, weights, 0.5)

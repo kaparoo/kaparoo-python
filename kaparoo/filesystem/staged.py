@@ -10,7 +10,7 @@ import tempfile
 import weakref
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, cast, overload
+from typing import TYPE_CHECKING, cast, overload, override
 
 from kaparoo.filesystem.utils import reserve_path
 
@@ -324,6 +324,7 @@ class StagedFile[AnyStrT: (str, bytes)](StagedTarget):
         """Return the current stream position."""
         return self._file.tell()
 
+    @override
     def commit(self) -> Path:
         """Flush, fsync, and atomically move the staged file into `path`.
 
@@ -470,6 +471,7 @@ class StagedDirectory(StagedTarget):
         """The staging directory to populate before commit."""
         return self._workdir
 
+    @override
     def commit(self) -> Path:
         """Atomically move the staged directory into `path`.
 
