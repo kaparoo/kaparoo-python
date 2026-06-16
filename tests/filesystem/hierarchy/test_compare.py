@@ -608,6 +608,12 @@ class TestLocateExclude:
         assert "d/keep/x.txt" in got
         assert "d/scratch/y.txt" not in got  # the matched directory is pruned
 
+    def test_empty_iterable_excludes_nothing(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/a.txt"])
+        spec = Directory("d", [File(Glob("*.txt"))])
+        # an iterable that yields no excluders is a no-op (nothing dropped)
+        assert "d/a.txt" in rels(locate(spec, tmp_path, exclude=[]), tmp_path)
+
 
 class TestLocateAtRoot:
     def test_directory_top_at_its_own_path(self, tmp_path: Path) -> None:

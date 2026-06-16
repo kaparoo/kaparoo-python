@@ -20,36 +20,57 @@ type Excluder = StrPath | Filter | Callable[[Path], bool]
 def build_excluder(
     exclude: Excluder | Iterable[Excluder] | None, root: Path
 ) -> Callable[[Path], bool] | None:
-    """Normalize `exclude` to one predicate over an absolute candidate path.
+    """Normalize `exclude` into a single exclusion predicate.
 
-    The predicate relativizes the candidate to `root` and tests it against the
-    collected concrete paths (set membership), `Filter`s (matched on the
-    root-relative POSIX string), and callables (each given the root-relative
-    `Path`). Returns `None` when nothing is excluded. Shared by the
-    `kaparoo.filesystem` traversals that take an `exclude=` argument.
+    The returned predicate relativizes a candidate path to `root` and excludes
+    it when it matches *any* collected excluder -- a concrete path (exact match
+    on the root-relative POSIX string), a `Filter` (matched on that string), or
+    a callable (given the root-relative `Path`). It is the engine behind the
+    `exclude=` argument of the `kaparoo.filesystem` traversals.
+
+    Args:
+        exclude: One excluder, an iterable of them (OR-combined), or `None`. An
+            excluder is a root-relative `StrPath`, a `Filter`, or a callable; a
+            lone `str` / `PathLike` / `Filter` / callable counts as one, while a
+            non-string iterable is several.
+        root: The base directory; every excluder and candidate is interpreted
+            relative to it.
+
+    Returns:
+        A predicate mapping an absolute candidate path (assumed under `root`) to
+        whether it is excluded, or `None` when nothing is excluded so callers
+        can skip the check.
     """
     if exclude is None:
         return None
 
-    relposix: set[str] = set()
+    exact: set[str] = set()
     filters: list[Filter] = []
     predicates: list[Callable[[Path], bool]] = []
+
     for excluder in _iter_excluders(exclude):
-        if isinstance(excluder, Filter):
+        if isinstance(excluder, str | PathLike):
+            path = Path(cast("StrPath", excluder))
+            exact.add(path.as_posix())
+        elif isinstance(excluder, Filter):
             filters.append(excluder)
-        elif isinstance(excluder, str | PathLike):
-            relposix.add(Path(cast("StrPath", excluder)).as_posix())
         else:
             predicates.append(excluder)
 
+    if not (exact or filters or predicates):  # Nothing to exclude.
+        return None
+
     def excluded(candidate: Path) -> bool:
         rel = candidate.relative_to(root)
-        relstr = rel.as_posix()
-        return (
-            relstr in relposix
-            or any(f.matches(relstr) for f in filters)
-            or any(p(rel) for p in predicates)
-        )
+        rel_str = rel.as_posix()
+
+        if rel_str in exact:
+            return True
+
+        if any(f.matches(rel_str) for f in filters):
+            return True
+
+        return any(p(rel) for p in predicates)
 
     return excluded
 
