@@ -287,5 +287,10 @@ ensure_in_range(n, lower=0, upper=10, step=2, name="n")        # 0, 2, ..., 10
 
 ## See also
 
-These are foundational helpers with no single peer module; see the
-[package overview](../../README.md) for where they fit.
+`kaparoo.utils` underpins the rest of the package rather than depending on a
+particular module; the other top-level modules:
+
+- [`kaparoo.filesystem`](../filesystem/) — path helpers, traversal, and
+  directory-tree specs
+- [`kaparoo.filters`](../filters/) — the string-matching filter DSL
+- [`kaparoo.data`](../data/) — lazy, composable data sequences
