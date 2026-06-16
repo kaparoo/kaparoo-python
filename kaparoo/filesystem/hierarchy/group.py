@@ -149,20 +149,23 @@ class Exclusive(Group):
         on_conflict: Literal["error", "priority"] = "error",
     ) -> None:
         normalized = tuple(_normalize_alternative(alt) for alt in alternatives)
+
         if len(normalized) < 2:
             msg = "Exclusive requires at least two alternatives."
             raise ValueError(msg)
+
         if any(not alt for alt in normalized):
             msg = "each Exclusive alternative must be non-empty."
             raise ValueError(msg)
+
         if on_conflict not in ("error", "priority"):
-            msg = (
-                "Exclusive on_conflict must be 'error' or 'priority', "
-                f"got {on_conflict!r}"
-            )
+            msg = "Exclusive on_conflict must be 'error' or 'priority', "
+            msg += f"got {on_conflict!r}"
             raise ValueError(msg)
+
         object.__setattr__(self, "_alternatives", normalized)
         object.__setattr__(self, "_on_conflict", on_conflict)
+
         super().__init__(required=required)
 
     @property
@@ -190,10 +193,13 @@ class Exclusive(Group):
                 [node.to_dict() for node in alt] for alt in self._alternatives
             ],
         }
+
         if self._required:
             result["required"] = True
+
         if self._on_conflict != "error":
             result["on_conflict"] = self._on_conflict
+
         return result
 
     @classmethod
@@ -201,6 +207,7 @@ class Exclusive(Group):
         alternatives = [
             [Node.from_dict(node) for node in alt] for alt in data["alternatives"]
         ]
+
         return cls(
             *alternatives,
             required=data.get("required", False),
@@ -211,10 +218,13 @@ class Exclusive(Group):
         parts = [
             repr(alt[0]) if len(alt) == 1 else repr(alt) for alt in self._alternatives
         ]
+
         if self._required:
             parts.append("required=True")
+
         if self._on_conflict != "error":
             parts.append(f"on_conflict={self._on_conflict!r}")
+
         return f"Exclusive({', '.join(parts)})"
 
 
