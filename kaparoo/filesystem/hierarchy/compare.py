@@ -62,9 +62,11 @@ def locate(
     nonexistent or non-directory `root` yields nothing.
 
     Args:
+        tree: The spec whose top node anchors the match.
+        root: The directory walked for matches; the realized top itself when
+            `at_root`.
         unique: Suppress duplicate `(path, node)` pairs (a reused subtree
-            otherwise repeats once per occurrence). Iteration stays lazy
-            either way; `True` backs it with a `seen` set.
+            otherwise repeats once per occurrence); iteration stays lazy.
         exclude: Path(s) to drop -- a `StrPath` (absolute under `root` or
             root-relative), a `Filter` (on the root-relative POSIX path), a
             callable on the candidate's real `Path`, or an iterable of these
@@ -95,8 +97,16 @@ def locate_map(
 ) -> dict[Path, tuple[Node, ...]]:
     """Group `locate`'s pairs into a `{path: (node, ...)}` mapping.
 
-    Each path maps to the distinct nodes it matches, in spec order; unlike
-    `locate`, the full result is materialized. `exclude` is as in `locate`.
+    Unlike `locate`, the full result is materialized before returning.
+
+    Args:
+        tree: The spec whose top node anchors the match.
+        root: The directory walked for matches.
+        exclude: Path(s) to drop, as in `locate`.
+
+    Returns:
+        Each on-disk path mapped to the distinct nodes it matches, in spec
+        order.
     """
     root = Path(root)
     excluder = build_excluder(exclude, root)
@@ -110,6 +120,14 @@ def _locate_map(
 
     Separate from `locate_map` so `validate` builds the excluder once and
     reuses it across every top node, instead of rebuilding it per call.
+
+    Args:
+        tree: The spec whose top node anchors the match.
+        root: The directory walked for matches.
+        excluder: A pre-built drop predicate, or `None` to exclude nothing.
+
+    Returns:
+        Each path mapped to the distinct nodes it matches, in spec order.
     """
     grouped: dict[Path, list[Node]] = {}
     for path, node in _unique(_locate_under(tree, root, excluder)):
@@ -122,8 +140,14 @@ def _locate_at_root(
 ) -> Iterator[tuple[Path, Node]]:
     """Match `top` as `root` itself rather than a child of a container.
 
-    Yields the top pair when `root`'s leaf name and kind match `top`, then
-    locates a `Directory`'s children beneath it; a mismatch yields nothing.
+    Args:
+        top: The spec's top node; must be an `Entry`.
+        root: The path tested as the realized `top`.
+        excluder: A pre-built drop predicate, or `None` to exclude nothing.
+
+    Yields:
+        The `(root, top)` pair when `root`'s leaf name and kind match `top`,
+        then a `Directory`'s located children; nothing on a mismatch.
 
     Raises:
         TypeError: If `top` is a `Group` (it has no single name to anchor).
@@ -148,10 +172,19 @@ def _locate_under(
 ) -> Iterator[tuple[Path, Node]]:
     """Locate `nodes` as entries under `parent`, against one walk of `parent`.
 
-    Groups flatten to leaf entries (matched as siblings). `parent` is walked
-    once, deep enough for the deepest entry; each path is tested against every
-    entry whose depth admits it, and a matched `Directory` recurses into its
-    children. Excluded paths are dropped, excluded directories pruned.
+    Groups flatten to leaf entries (matched as siblings); `parent` is walked
+    once, deep enough for the deepest entry, and a matched `Directory`
+    recurses into its children.
+
+    Args:
+        nodes: The sibling node(s) expected directly under `parent`.
+        parent: The directory walked for matches.
+        excluder: A pre-built drop predicate, or `None`. Dropped directories
+            are pruned from the walk.
+
+    Yields:
+        `(path, entry)` for each entry whose depth, name, and kind match a
+        walked path.
     """
 
     entries = flatten_entries(nodes)
@@ -172,7 +205,14 @@ def _locate_under(
 
 
 def _unique(pairs: Iterable[tuple[Path, Node]]) -> Iterator[tuple[Path, Node]]:
-    """Stream `pairs`, suppressing ones already seen (backed by a `set`)."""
+    """Stream `pairs`, suppressing ones already seen.
+
+    Args:
+        pairs: The `(path, node)` pairs to deduplicate.
+
+    Yields:
+        Each distinct pair in first-seen order (backed by a `seen` set).
+    """
     seen: set[tuple[Path, Node]] = set()
     for pair in pairs:
         if pair not in seen:
@@ -186,8 +226,18 @@ def _walk_depths(
     """Yield `(path, depth)` for every entry down to `max_depth` below `parent`.
 
     Uses `Path.walk` (iterative, like `search`), so depth is not bound by the
-    recursion limit; a nonexistent or non-directory `parent` yields nothing.
-    Excluded entries are skipped and excluded directories pruned from descent.
+    recursion limit.
+
+    Args:
+        parent: The directory walked; a nonexistent or non-directory `parent`
+            yields nothing.
+        max_depth: The deepest level to descend, or `None` for no limit.
+        excluder: A pre-built drop predicate, or `None`. Excluded entries are
+            skipped and excluded directories pruned from the descent.
+
+    Yields:
+        `(path, depth)` for each non-excluded entry, `depth` counted from 1 at
+        `parent`'s direct children.
     """
 
     has_max_depth = max_depth is not None
@@ -552,6 +602,15 @@ def conformer(
     Because the predicate enforces the top's kind, pair it with the matching
     search -- a `File` top with `search_files`, a `Directory` top with
     `search_dirs`; a kind mismatch matches nothing rather than raising.
+
+    Args:
+        spec: The spec whose top node the predicate tests.
+        checks: `Content` hooks by name, supplied as in `validate`.
+        on_missing: How a missing `Content` name resolves (`"error"` /
+            `"skip"`), as in `validate`.
+
+    Returns:
+        A predicate that is `True` for a path realizing `spec`'s top.
     """
     ctx = CheckContext(checks or {}, on_missing)
     tops = flatten_entries(spec)
