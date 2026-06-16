@@ -215,7 +215,7 @@ class TestTogether:
         assert report.violations == ()  # all-absent is not a partial violation
 
 
-class TestConforms:
+class TestConformer:
     def test_top_directory_conforms(self, tmp_path: Path) -> None:
         build(tmp_path, ["dataset/metadata.json", "dataset/images/a.png"])
         keep = conformer(dataset_spec())
