@@ -39,8 +39,7 @@ path stringification, and a small exception hierarchy.
 
 Filesystem traversal with composable filters. Includes `search_paths` /
 `search_files` / `search_dirs`, wired to the `kaparoo.filters` DSL via
-`part_filter` / `name_filter` / `predicate`, with depth control and a
-deprecated `get_*` family.
+`part_filter` / `name_filter` / `predicate`, with depth control.
 
 ### [`kaparoo.filesystem.hierarchy`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/filesystem/hierarchy)
 

@@ -102,21 +102,6 @@ search_files(
 )
 ```
 
-## Deprecation: `get_*` -> `search_*`
-
-`get_paths`, `get_files`, and `get_dirs` are kept for backward
-compatibility but emit a `DeprecationWarning` and call into the new
-search internally. Migration:
-
-| Deprecated | Replacement |
-| --- | --- |
-| `get_paths(root, recursive=True)` | `search_paths(root)` |
-| `get_paths(root, pattern="*.py")` | `search_paths(root, name_filter=Glob("*.py"))` |
-| `get_paths(root, excludes=[...])` | `search_paths(root, name_filter=Not(EqualsAny((...))))` |
-| `get_paths(root, condition=fn)` | `search_paths(root, predicate=fn)` |
-| `get_files(...)` | `search_files(...)` |
-| `get_dirs(...)` | `search_dirs(...)` |
-
 ## Platform notes
 
 - **Forward-slash paths**: `part_filter` matches against the relative

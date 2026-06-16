@@ -272,6 +272,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `ValueError` (`"path ... does not start with ..."`) instead of surfacing
   pathlib's raw `"is not in the subpath of"` message.
 
+### Removed
+
+- **Breaking:** the deprecated `get_paths` / `get_files` / `get_dirs`
+  accessors (and the internal `search.deprecated` module) are removed --
+  deprecated since 0.2.1, superseded by `search_paths` / `search_files` /
+  `search_dirs`. Migration: a `pattern=` glob maps to `name_filter` (with
+  `min_depth` / `max_depth` for `**`, or a `part_filter` for literal
+  directory segments); `excludes=` maps to `exclude` (which prunes an
+  excluded directory's subtree) or a `predicate` to drop only the entry;
+  `condition=` maps to `predicate`; `recursive=True` is the default
+  (unbounded depth).
+
 ### Fixed
 
 - `kaparoo.filters.GlobFilter` (`Glob`) case-insensitive matching now uses
@@ -291,8 +303,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `kaparoo.filesystem.search` no longer re-exports the whole
   `kaparoo.filters` namespace (`Filter`, `Glob`, `register_filter`, ...). The
   independent `filters` package is the canonical import; `search` now exports
-  only its own `search_paths` / `search_files` / `search_dirs` (and the
-  deprecated `get_*`).
+  only its own `search_paths` / `search_files` / `search_dirs`.
 
 ## [0.7.0] - 2026-06-04
 

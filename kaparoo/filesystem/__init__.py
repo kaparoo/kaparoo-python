@@ -22,9 +22,6 @@ __all__ = (
     "ensure_paths_exist",
     "file_exists",
     "files_exist",
-    "get_dirs",
-    "get_files",
-    "get_paths",
     "make_dir",
     "make_dirs",
     "path_exists",
@@ -67,14 +64,7 @@ from kaparoo.filesystem.existence import (
     path_exists,
     paths_exist,
 )
-from kaparoo.filesystem.search import (
-    get_dirs,
-    get_files,
-    get_paths,
-    search_dirs,
-    search_files,
-    search_paths,
-)
+from kaparoo.filesystem.search import search_dirs, search_files, search_paths
 from kaparoo.filesystem.staged import StagedDirectory, StagedFile
 from kaparoo.filesystem.utils import (
     ensure_file_extension,
