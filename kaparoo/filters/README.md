@@ -51,12 +51,12 @@ Regex(r"\d{4}-\d{2}-\d{2}\.log")        # matches "2026-01-15.log"
 Take a tuple of `patterns`; match when *any* one matches. Duplicates are
 deduplicated, first occurrence wins.
 
-| Class / alias |
-| --- |
-| `EqualsAnyFilter` / `EqualsAny` |
-| `StartsWithAnyFilter` / `StartsWithAny` |
-| `EndsWithAnyFilter` / `EndsWithAny` |
-| `ContainsAnyFilter` / `ContainsAny` |
+| Class / alias | Matches when target ... |
+| --- | --- |
+| `EqualsAnyFilter` / `EqualsAny` | equals any of the patterns |
+| `StartsWithAnyFilter` / `StartsWithAny` | starts with any of the patterns |
+| `EndsWithAnyFilter` / `EndsWithAny` | ends with any of the patterns |
+| `ContainsAnyFilter` / `ContainsAny` | contains any of the patterns |
 
 ```python
 from kaparoo.filters import EndsWithAny
@@ -65,6 +65,9 @@ EndsWithAny((".png", ".jpg", ".jpeg"))
 ```
 
 ### Logical filters ([`logical.py`](./logical.py))
+
+Combine child filters with boolean logic; children may be composites, so
+filters nest arbitrarily.
 
 | Class / alias | Semantics |
 | --- | --- |
