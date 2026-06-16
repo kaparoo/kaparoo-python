@@ -32,20 +32,6 @@ A consistency sweep over the prose, independent of the per-module review:
 
 ---
 
-## 🗂️ `kaparoo.filesystem.hierarchy` — refactors (behavior-preserving)
-
-### Build the `exclude` predicate once in `validate` (`validate.py`)
-
-`validate` re-normalizes its `exclude=` argument repeatedly: every
-`match_map` call (one per top node) rebuilds the excluder via
-`build_excluder`, then `_build_report` builds it again for `_unexpected`.
-Build it once in `_build_report` and thread the resulting predicate down
-into `match` / `match_map` / `_unexpected`. `build_excluder` is already the
-shared seam, so behavior is unchanged; keep `match`'s public `exclude=`
-signature intact.
-
----
-
 ## 🗂️ `kaparoo.filesystem.hierarchy` — contract decisions
 
 These need a design call (and possibly a guard), not just a refactor:
