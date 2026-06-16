@@ -78,26 +78,93 @@ def validate(
     exclude: Excluder | Iterable[Excluder] | None = None,
     checks: ContentChecks | None = None,
     on_missing: Literal["error", "skip"] = "error",
+    at_root: bool = False,
 ) -> ValidationReport:
     """Check the directory at `root` against the spec `tree`.
 
-    `root` is the container (as in `locate`); returns a `ValidationReport`. A
-    path is `unexpected` when it is neither matched nor an ancestor of a
-    match, so an unspecified directory's contents count too. A `required`
-    entry is satisfied as soon as its name matches one present path -- for an
-    enumerable name (`OneOf` / `Template`) that means *at least one* of the
-    listed names exists, not all. `exclude` is as in `locate`: excluded paths
-    are dropped from `matched` and not reported `unexpected` (a dropped
-    directory is pruned).
+    By default `root` is the container (as in `locate`); returns a
+    `ValidationReport`. A path is `unexpected` when it is neither matched nor
+    an ancestor of a match, so an unspecified directory's contents count too.
+    A `required` entry is satisfied as soon as its name matches one present
+    path -- for an enumerable name (`OneOf` / `Template`) that means *at least
+    one* of the listed names exists, not all. `exclude` is as in `locate`:
+    excluded paths are dropped from `matched` and not reported `unexpected` (a
+    dropped directory is pruned).
 
     An entry's attribute `condition` is checked on each matched path and the
     failures collected in `report.failed`. `checks` supplies the callables
     for `Content` conditions (keyed by name); `on_missing` decides what
     happens when a `Content` name is absent (`"error"` raises, `"skip"`
     treats it as satisfied).
+
+    Args:
+        at_root: When `True`, treat `root` *itself* as the realized top node
+            rather than its container, so you point at the top directly. The
+            top must be an `Entry` (a `Group` raises `ValueError`); when
+            `root`'s leaf name / kind do not realize it, the top is reported
+            `missing` and its subtree is not descended.
+
+    Raises:
+        TypeError: If `at_root` is set and `tree`'s top node is a `Group`.
     """
     ctx = CheckContext(checks or {}, on_missing)
-    return _build_report((tree,), Path(root), exclude, ctx)
+    root_path = Path(root)
+    if at_root:
+        return _validate_at_root(tree, root_path, exclude, ctx)
+
+    return _build_report((tree,), root_path, exclude, ctx)
+
+
+def _validate_at_root(
+    top: Node,
+    root_path: Path,
+    exclude: Excluder | Iterable[Excluder] | None,
+    ctx: CheckContext,
+) -> ValidationReport:
+    """Validate `root_path` as the realized top entry, not as a container.
+
+    The `at_root` form of `_build_report`. When `root_path` does not realize
+    `top` (leaf name / kind mismatch) the top is reported `missing` and the
+    subtree is not descended; otherwise the directory's children are validated
+    beneath `root_path` and the top's own `condition` is checked on it.
+
+    Raises:
+        TypeError: If `top` is a `Group` (it has no single name to anchor).
+    """
+    if isinstance(top, Group):
+        msg = "at_root requires an Entry top node, not a Group"
+        raise TypeError(msg)
+
+    entry = cast("Entry", top)
+    name_ok = entry.name.matches(root_path.name)
+    if isinstance(entry, File):
+        if not (name_ok and root_path.is_file()):
+            return ValidationReport({}, (), (entry,), (), ())
+        failed = _failed_condition(entry, root_path, ctx)
+        return ValidationReport({root_path: (entry,)}, (), (), (), failed)
+
+    directory = cast("Directory", entry)
+    if not (name_ok and root_path.is_dir()):
+        return ValidationReport({}, (), (entry,), (), ())
+
+    report = _build_report(directory.children, root_path, exclude, ctx)
+    return ValidationReport(
+        matched={root_path: (entry,), **report.matched},
+        unexpected=report.unexpected,
+        missing=report.missing,
+        violations=report.violations,
+        failed=report.failed + _failed_condition(entry, root_path, ctx),
+    )
+
+
+def _failed_condition(
+    entry: Entry, path: Path, ctx: CheckContext
+) -> tuple[tuple[Path, Node], ...]:
+    """The `(path, entry)` failure tuple if `entry`'s condition breaks, else empty."""
+    if entry.condition is not None and not entry.condition.check(path, ctx):
+        return ((path, entry),)
+
+    return ()
 
 
 def conforms(

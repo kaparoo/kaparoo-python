@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from kaparoo.filesystem.hierarchy.entry import Directory, File
-from kaparoo.filesystem.hierarchy.group import flatten_entries
+from kaparoo.filesystem.hierarchy.group import Group, flatten_entries
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
@@ -26,12 +26,13 @@ def locate(
     *,
     unique: bool = False,
     exclude: Excluder | Iterable[Excluder] | None = None,
+    at_root: bool = False,
 ) -> Iterator[tuple[Path, Node]]:
     """Map each path under `root` to the spec `tree` node(s) it matches.
 
-    `root` is the *container*: `tree`'s top node is matched as an entry
-    under `root` (mirroring `search`'s `root`). For every on-disk path that
-    matches a node -- by name (the node's filter), type (`File` <-> file,
+    By default `root` is the *container*: `tree`'s top node is matched as an
+    entry under `root` (mirroring `search`'s `root`). For every on-disk path
+    that matches a node -- by name (the node's filter), type (`File` <-> file,
     `Directory` <-> directory), and `depth` (intermediate levels of unknown
     name are skipped) -- a `(path, node)` pair is yielded. A path matching
     several nodes yields one pair per node.
@@ -53,14 +54,27 @@ def locate(
             returning whether to drop it. A dropped directory has its whole
             subtree pruned. A lone `str` / `PathLike` / callable is one
             excluder; only a non-string iterable is several.
+        at_root: When `True`, treat `root` *itself* as the realized top node
+            rather than its container -- so you point at the top directly
+            (`locate(Directory("dataset", ...), ".../dataset", at_root=True)`).
+            The top must be an `Entry` (a `Group` raises `ValueError`); `root`
+            realizes it only when `root`'s leaf name matches the top's name
+            filter and its kind agrees, otherwise nothing is yielded.
 
     Yields:
         `(path, node)` for each match -- paths in depth-first directory
         order, a path's overlapping nodes in spec order.
+
+    Raises:
+        TypeError: If `at_root` is set and `tree`'s top node is a `Group`.
     """
     root_path = Path(root)
     excluded = build_excluder(exclude, root_path)
-    pairs = _locate_children((tree,), root_path, excluded)
+    pairs = (
+        _locate_at_root(tree, root_path, excluded)
+        if at_root
+        else _locate_children((tree,), root_path, excluded)
+    )
 
     if not unique:
         yield from pairs
@@ -71,6 +85,32 @@ def locate(
         if pair not in seen:
             seen.add(pair)
             yield pair
+
+
+def _locate_at_root(
+    top: Node, root_path: Path, excluded: Callable[[Path], bool] | None
+) -> Iterator[tuple[Path, Node]]:
+    """Match `top` as `root_path` itself, not as a child of a container.
+
+    The `at_root` form of `_locate_children`: `root_path` realizes `top` only
+    when its leaf name matches `top`'s name filter and its kind agrees, in
+    which case the top pair is yielded and a `Directory`'s children are
+    located beneath `root_path`. A name / kind mismatch yields nothing.
+
+    Raises:
+        TypeError: If `top` is a `Group` (it has no single name to anchor).
+    """
+    if isinstance(top, Group):
+        msg = "at_root requires an Entry top node, not a Group"
+        raise TypeError(msg)
+
+    entry = cast("Entry", top)
+    if not (entry.name.matches(root_path.name) and _type_ok(entry, root_path)):
+        return
+
+    yield (root_path, entry)
+    if isinstance(entry, Directory):
+        yield from _locate_children(entry.children, root_path, excluded)
 
 
 def locate_map(

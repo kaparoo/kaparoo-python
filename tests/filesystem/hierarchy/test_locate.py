@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 from kaparoo.filesystem.hierarchy import (
     Directory,
     Exclusive,
@@ -192,3 +194,51 @@ class TestExclude:
         mapping = locate_map(spec, tmp_path, exclude=["d/b.txt"])
         assert (tmp_path / "d" / "a.txt") in mapping
         assert (tmp_path / "d" / "b.txt") not in mapping
+
+
+class TestAtRoot:
+    def test_directory_top_at_its_own_path(self, tmp_path: Path) -> None:
+        build(tmp_path, ["dataset/metadata.json", "dataset/images/cat.png"])
+        png = File(Glob("*.png"))
+        images = Directory("images", [png])
+        meta = File("metadata.json")
+        spec = Directory("dataset", [meta, images])
+        ds = tmp_path / "dataset"
+
+        pairs = set(locate(spec, ds, at_root=True))
+        assert (ds, spec) in pairs
+        assert (ds / "metadata.json", meta) in pairs
+        assert (ds / "images", images) in pairs
+        assert (ds / "images" / "cat.png", png) in pairs
+        # container mode at the same path finds no "dataset" inside it
+        assert list(locate(spec, ds)) == []
+
+    def test_file_top(self, tmp_path: Path) -> None:
+        build(tmp_path, ["dataset/metadata.json"])
+        f = tmp_path / "dataset" / "metadata.json"
+        assert set(locate(File("metadata.json"), f, at_root=True)) == {
+            (f, File("metadata.json"))
+        }
+
+    def test_patterned_top_is_verified(self, tmp_path: Path) -> None:
+        build(tmp_path, ["releases/v3/data.bin"])
+        spec = Directory(Glob("v*"), [File("data.bin")])
+        v3 = tmp_path / "releases" / "v3"
+        pairs = set(locate(spec, v3, at_root=True))
+        assert (v3, spec) in pairs
+        assert (v3 / "data.bin", File("data.bin")) in pairs
+
+    def test_name_mismatch_yields_nothing(self, tmp_path: Path) -> None:
+        (tmp_path / "myrun").mkdir()
+        spec = Directory("dataset", [File("metadata.json")])
+        assert list(locate(spec, tmp_path / "myrun", at_root=True)) == []
+
+    def test_type_mismatch_yields_nothing(self, tmp_path: Path) -> None:
+        (tmp_path / "dataset").write_text("x")  # a file, but the top is a Directory
+        spec = Directory("dataset", [File("a")])
+        assert list(locate(spec, tmp_path / "dataset", at_root=True)) == []
+
+    def test_group_top_raises(self, tmp_path: Path) -> None:
+        spec = Exclusive(File("a"), File("b"))
+        with pytest.raises(TypeError, match="Entry top node"):
+            list(locate(spec, tmp_path, at_root=True))

@@ -90,7 +90,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   drop paths from the results (e.g. specific cells of a `Template` product):
   an excluder — or an iterable of them, OR-combined — is a concrete
   root-relative `StrPath` or a callable taking the root-relative `Path`, and
-  a dropped directory has its whole subtree pruned.
+  a dropped directory has its whole subtree pruned. Pass `at_root=True` to
+  treat `root` as the realized top node itself (you point at the top
+  directly) rather than its container; the top must be an `Entry` (a `Group`
+  raises `TypeError`) and `root` realizes it only when its leaf name / kind
+  match, otherwise nothing is yielded.
 - `kaparoo.filesystem.hierarchy.validate(tree, root)`: checks a real
   directory against a spec, returning a `ValidationReport` with `matched`
   (as `locate_map`), `unexpected` (paths matching no node — anything not
@@ -102,8 +106,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   last three are empty. A `required` enumerable name (`OneOf` / `Template`)
   is satisfied by at least one present match. `validate` also accepts the
   same `exclude=` as `locate`, so excluded paths are dropped from `matched`
-  and not reported `unexpected`. Also exports the `ValidationReport` and
-  `Violation` result types.
+  and not reported `unexpected`. It also takes the same `at_root=True` to
+  validate `root` as the realized top entry itself (a `Group` top raises
+  `TypeError`); a leaf name / kind mismatch reports the top as `missing`
+  without descending. Also exports the `ValidationReport` and `Violation`
+  result types.
 - `kaparoo.filesystem.hierarchy.conforms(spec)`: builds a path predicate (a
   `search` predicate) that accepts a path realizing `spec`'s *top* node — a
   file matching a top `File`'s name, or a directory matching a top

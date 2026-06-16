@@ -360,3 +360,62 @@ class TestValidateExclude:
         report = validate(spec, tmp_path, exclude=["d/scratch"])
         assert report.ok
         assert (tmp_path / "d" / "scratch") not in report.unexpected
+
+
+class TestAtRoot:
+    def test_validates_subtree_at_its_own_path(self, tmp_path: Path) -> None:
+        build(tmp_path, ["dataset/metadata.json", "dataset/images/cat.png"])
+        ds = tmp_path / "dataset"
+        report = validate(dataset_spec(), ds, at_root=True)
+        assert report.ok
+        assert report.matched[ds] == (dataset_spec(),)
+
+    def test_required_child_missing(self, tmp_path: Path) -> None:
+        (tmp_path / "dataset").mkdir()  # an empty dataset directory
+        spec = Directory("dataset", [File("metadata.json", required=True)])
+        report = validate(spec, tmp_path / "dataset", at_root=True)
+        assert not report.ok
+        assert report.missing == (File("metadata.json", required=True),)
+
+    def test_name_mismatch_reports_top_missing(self, tmp_path: Path) -> None:
+        (tmp_path / "myrun").mkdir()
+        spec = dataset_spec()
+        report = validate(spec, tmp_path / "myrun", at_root=True)
+        assert not report.ok
+        assert report.missing == (spec,)
+        assert report.matched == {}  # did not descend
+        assert report.unexpected == ()
+
+    def test_unexpected_child_under_root(self, tmp_path: Path) -> None:
+        build(
+            tmp_path, ["dataset/metadata.json", "dataset/images/x.png", "dataset/junk"]
+        )
+        ds = tmp_path / "dataset"
+        report = validate(dataset_spec(), ds, at_root=True)
+        assert not report.ok
+        assert (ds / "junk") in report.unexpected
+
+    def test_file_top_condition_on_root(self, tmp_path: Path) -> None:
+        empty = tmp_path / "model.bin"
+        empty.write_bytes(b"")
+        spec = File("model.bin", condition=Size(min=1))
+        report = validate(spec, empty, at_root=True)
+        assert not report.ok
+        assert report.failed == ((empty, spec),)
+
+        full = tmp_path / "good.bin"
+        full.write_bytes(b"x")
+        ok_spec = File("good.bin", condition=Size(min=1))
+        assert validate(ok_spec, full, at_root=True).ok
+
+    def test_file_top_name_mismatch_reports_missing(self, tmp_path: Path) -> None:
+        (tmp_path / "other.bin").write_bytes(b"x")  # wrong name for the top File
+        spec = File("model.bin")
+        report = validate(spec, tmp_path / "other.bin", at_root=True)
+        assert not report.ok
+        assert report.missing == (spec,)
+
+    def test_group_top_raises(self, tmp_path: Path) -> None:
+        spec = Exclusive(File("a"), File("b"))
+        with pytest.raises(TypeError, match="Entry top node"):
+            validate(spec, tmp_path, at_root=True)

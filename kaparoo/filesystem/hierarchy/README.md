@@ -437,6 +437,27 @@ its entries may appear," so it does not enforce `Exclusive` / `Together`,
 and it does not report missing `required` entries. Those are the job of
 `validate`.
 
+### Pointing at the top directly: `at_root`
+
+By default `root` is the **container** of the spec's top node, so you pass
+the parent (`locate(Directory("dataset", ...), "/data")` looks for
+`/data/dataset`). Pass `at_root=True` to treat `root` as the top node
+*itself* — convenient when you already hold the directory you want to check.
+Both `locate` and `validate` take it:
+
+```python
+locate(Directory("dataset", [...]),   "/data/dataset", at_root=True)
+validate(Directory("dataset", [...]), "/data/dataset", at_root=True)
+```
+
+The top must be an `Entry` (a `Group` raises `TypeError`). `root` realizes
+it only when `root`'s own leaf name matches the top's name filter and its
+kind agrees — so a patterned top works too (`Directory(Glob("v*"))` at
+`/releases/v3`). On a name / kind mismatch, `locate` yields nothing and
+`validate` reports the top as `missing` (without descending). When it does
+realize the top, `validate` checks the subtree under `root` and the top's
+own `condition` on `root`.
+
 ## Validation: `validate`
 
 `validate(tree, root)` checks a real directory against the spec and returns
