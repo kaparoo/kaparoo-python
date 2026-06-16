@@ -94,7 +94,7 @@ def locate(
     """
     root = Path(root)
     excluder = build_excluder(exclude, root)
-    locate_fn = _locate_at_root if at_root else _locate_children
+    locate_fn = _locate_at_root if at_root else _locate_under
     pairs = locate_fn(tree, root, excluder)
     yield from _unique(pairs) if unique else pairs
 
@@ -128,7 +128,7 @@ def _locate_map(
     call.
     """
     grouped: dict[Path, list[Node]] = {}
-    for path, node in _unique(_locate_children(tree, root, excluder)):
+    for path, node in _unique(_locate_under(tree, root, excluder)):
         grouped.setdefault(path, []).append(node)
     return {path: tuple(nodes) for path, nodes in grouped.items()}
 
@@ -138,7 +138,7 @@ def _locate_at_root(
 ) -> Iterator[tuple[Path, Node]]:
     """Match `top` as `root` itself, not as a child of a container.
 
-    The `at_root` form of `_locate_children`: `root` realizes `top` only
+    The `at_root` form of `_locate_under`: `root` realizes `top` only
     when its leaf name matches `top`'s name filter and its kind agrees, in
     which case the top pair is yielded and a `Directory`'s children are
     located beneath `root`. A name / kind mismatch yields nothing.
@@ -158,10 +158,10 @@ def _locate_at_root(
     yield (root, entry)
 
     if isinstance(entry, Directory):
-        yield from _locate_children(entry.children, root, excluder)
+        yield from _locate_under(entry.children, root, excluder)
 
 
-def _locate_children(
+def _locate_under(
     nodes: Node | Iterable[Node], parent: Path, excluder: Callable[[Path], bool] | None
 ) -> Iterator[tuple[Path, Node]]:
     """Locate the sibling entries of `nodes` against one walk of `parent`.
@@ -187,7 +187,7 @@ def _locate_children(
                 yield (candidate, entry)
 
                 if isinstance(entry, Directory):
-                    yield from _locate_children(entry.children, candidate, excluder)
+                    yield from _locate_under(entry.children, candidate, excluder)
 
 
 def _unique(pairs: Iterable[tuple[Path, Node]]) -> Iterator[tuple[Path, Node]]:
