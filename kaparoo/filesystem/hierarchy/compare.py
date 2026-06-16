@@ -84,8 +84,8 @@ def locate(
     """
     root = Path(root)
     excluder = build_excluder(exclude, root)
-    locate_fn = _locate_at_root if at_root else _locate_under
-    pairs = locate_fn(tree, root, excluder)
+    worker = _locate_at_root if at_root else _locate_under
+    pairs = worker(tree, root, excluder)
     yield from _unique(pairs) if unique else pairs
 
 
@@ -130,8 +130,10 @@ def _locate_map(
         Each path mapped to the distinct nodes it matches, in spec order.
     """
     grouped: dict[Path, list[Node]] = {}
+
     for path, node in _unique(_locate_under(tree, root, excluder)):
         grouped.setdefault(path, []).append(node)
+
     return {path: tuple(nodes) for path, nodes in grouped.items()}
 
 
@@ -358,19 +360,16 @@ def validate(
         TypeError: If `at_root` and `tree`'s top is a `Group`.
     """
     root = Path(root)
-
     ctx = CheckContext(checks or {}, on_missing)
-
-    if at_root:
-        return _validate_at_root(tree, root, exclude, ctx)
-
-    return _validate_under(tree, root, exclude, ctx)
+    excluder = build_excluder(exclude, root)
+    worker = _validate_at_root if at_root else _validate_under
+    return worker(tree, root, excluder, ctx)
 
 
 def _validate_at_root(
     top: Node,
     root: Path,
-    exclude: ExcludeRule | Iterable[ExcludeRule] | None,
+    excluder: Callable[[Path], bool] | None,
     ctx: CheckContext,
 ) -> ValidationReport:
     """Validate `root` as the realized top entry, not as a container.
@@ -381,7 +380,7 @@ def _validate_at_root(
     Args:
         top: The spec's top node; must be an `Entry`.
         root: The path validated as the realized `top`.
-        exclude: Path(s) to drop, as in `locate`.
+        excluder: A pre-built drop predicate, or `None` to exclude nothing.
         ctx: The `Content`-check context (`checks` / `on_missing`).
 
     Returns:
@@ -407,7 +406,7 @@ def _validate_at_root(
         return ValidationReport({root: (entry,)}, (), (), (), failed)
 
     directory = cast("Directory", entry)
-    report = _validate_under(directory.children, root, exclude, ctx)
+    report = _validate_under(directory.children, root, excluder, ctx)
     return ValidationReport(
         matched={root: (entry,), **report.matched},
         unexpected=report.unexpected,
@@ -420,7 +419,7 @@ def _validate_at_root(
 def _validate_under(
     tops: Node | tuple[Node, ...],
     root: Path,
-    exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
+    excluder: Callable[[Path], bool] | None,
     ctx: CheckContext = _NO_CHECKS,
 ) -> ValidationReport:
     """Validate `tops` as entries realized directly under `root`.
@@ -433,7 +432,7 @@ def _validate_under(
     Args:
         tops: The sibling nodes expected directly under `root`.
         root: The directory validated.
-        exclude: Path(s) to drop, as in `locate`.
+        excluder: A pre-built drop predicate, or `None` to exclude nothing.
         ctx: The `Content`-check context.
 
     Returns:
@@ -442,7 +441,6 @@ def _validate_under(
     if isinstance(tops, Node):
         tops = (tops,)
 
-    excluder = build_excluder(exclude, root)
     matched = _merge_matched(tops, root, excluder)
     present: set[Node] = {node for nodes in matched.values() for node in nodes}
 
