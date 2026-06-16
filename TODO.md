@@ -23,13 +23,6 @@ already-created paths on disk.
 
 ---
 
-## 🏷️ Add `@override` decorators
-
-Mark overriding methods with `typing.override`, except where the override is
-self-evident (dunders such as `__repr__` / `__bool__`).
-
----
-
 ## 📝 Unify docstrings to a consistent Google style
 
 One style library-wide: imperative title, an optional summary, then `Args` /
@@ -42,18 +35,6 @@ not mechanism (per AGENTS.md).
 
 Tighten each module's `README.md`: clearer public-API presentation,
 idiomatic and copy-pasteable examples, public members over private.
-
----
-
-## 🗑️ `kaparoo.filesystem.search` — remove the deprecated accessors
-
-`get_paths` / `get_files` / `get_dirs` have been deprecated since 0.2.1 and
-the library is now at 0.7.0 -- five minor releases of warnings. Remove the
-`deprecated.py` module, its re-exports in `search/__init__.py` (and the
-`get_*` names from `__all__`), the "Deprecation" section in
-`search/README.md`, and `tests/filesystem/search/test_deprecated.py`. This
-is an intended **breaking** change; land it in a minor release (e.g. with
-the next breaking batch).
 
 ---
 
