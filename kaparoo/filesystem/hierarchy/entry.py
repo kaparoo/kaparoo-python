@@ -156,7 +156,7 @@ class Entry(Node, ABC):
 
     __slots__ = ("_condition", "_depth", "_name", "_required")
 
-    _entry_kind: ClassVar[EntryKind]
+    _kind: ClassVar[EntryKind]
     _name: Filter
     _depth: tuple[int, int | None]
     _required: bool
@@ -170,7 +170,7 @@ class Entry(Node, ABC):
         required: bool = False,
         condition: Condition | None = None,
     ) -> None:
-        if condition is not None and not condition.applies_to(self._entry_kind):
+        if condition is not None and not condition.applies_to(self._kind):
             msg = (
                 f"{type(condition).__name__} condition does not apply to a "
                 f"{type(self).__name__}"
@@ -213,7 +213,7 @@ class Entry(Node, ABC):
 
     def accepts_kind(self, path: Path) -> bool:
         """Whether `path`'s on-disk kind matches this entry's (file vs dir)."""
-        return path.is_dir() if self._entry_kind == "dir" else path.is_file()
+        return path.is_dir() if self._kind == "dir" else path.is_file()
 
     @abstractmethod
     def _fields(self) -> tuple[object, ...]:
@@ -256,7 +256,7 @@ class File(Entry):
 
     __slots__ = ()
 
-    _entry_kind = "file"
+    _kind = "file"
 
     def _fields(self) -> tuple[object, ...]:
         return (self._name,)
@@ -287,7 +287,7 @@ class Directory(Entry):
 
     __slots__ = ("_children",)
 
-    _entry_kind = "dir"
+    _kind = "dir"
     _children: tuple[Node, ...]
 
     def __init__(
