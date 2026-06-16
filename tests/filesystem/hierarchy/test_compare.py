@@ -16,7 +16,7 @@ from kaparoo.filesystem.hierarchy import (
     validate,
 )
 from kaparoo.filesystem.hierarchy.conditions import Content, Size
-from kaparoo.filters import Glob, OneOf
+from kaparoo.filters import EndsWith, Glob, OneOf
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -591,6 +591,22 @@ class TestLocateExclude:
         mapping = locate_map(spec, tmp_path, exclude=["d/b.txt"])
         assert (tmp_path / "d" / "a.txt") in mapping
         assert (tmp_path / "d" / "b.txt") not in mapping
+
+    def test_filter_excluder(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/a.txt", "d/keep.log", "d/b.txt"])
+        spec = Directory("d", [File(Glob("*"))])
+        # a lone Filter is one excluder, matched on the root-relative path
+        got = rels(locate(spec, tmp_path, exclude=EndsWith(".txt")), tmp_path)
+        assert "d/keep.log" in got
+        assert "d/a.txt" not in got
+        assert "d/b.txt" not in got
+
+    def test_filter_excluder_prunes_directory(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/keep/x.txt", "d/scratch/y.txt"])
+        spec = Directory("d", [File("x.txt", depth=None), File("y.txt", depth=None)])
+        got = rels(locate(spec, tmp_path, exclude=Glob("d/scratch")), tmp_path)
+        assert "d/keep/x.txt" in got
+        assert "d/scratch/y.txt" not in got  # the matched directory is pruned
 
 
 class TestLocateAtRoot:

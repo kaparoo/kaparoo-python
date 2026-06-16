@@ -89,8 +89,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   mapping (distinct nodes, spec-traversal order). Both take `exclude=` to
   drop paths from the results (e.g. specific cells of a `Template` product):
   an excluder — or an iterable of them, OR-combined — is a concrete
-  root-relative `StrPath` or a callable taking the root-relative `Path`, and
-  a dropped directory has its whole subtree pruned. Pass `at_root=True` to
+  root-relative `StrPath`, a `kaparoo.filters` `Filter` matched on the
+  root-relative POSIX string (the serializable counterpart of a callable),
+  or a callable taking the root-relative `Path`, and a dropped directory has
+  its whole subtree pruned. Pass `at_root=True` to
   treat `root` as the realized top node itself (you point at the top
   directly) rather than its container; the top must be an `Entry` (a `Group`
   raises `TypeError`) and `root` realizes it only when its leaf name / kind

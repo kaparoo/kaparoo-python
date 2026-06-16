@@ -422,15 +422,23 @@ returning (its nodes are distinct, in spec-traversal order).
 `exclude=` drops specific paths from the results — e.g. punching holes in a
 nested `Template` product, which the name-level `Without` cannot do because
 the axes live at different tree levels. An excluder (or an iterable of
-them, OR-combined) is a concrete **root-relative** `StrPath`, or a callable
-taking the **root-relative** `Path`; a dropped directory has its whole
-subtree pruned:
+them, OR-combined) is a concrete **root-relative** `StrPath`, a
+[`Filter`](../../filters/) matched on the **root-relative** POSIX string, or
+a callable taking the **root-relative** `Path`; a dropped directory has its
+whole subtree pruned:
 
 ```python
+from kaparoo.filters import EndsWith, Glob
+
 locate(spec, "/data", exclude=["cam_01/frame_0003.png"])     # drop one cell
-locate(spec, "/data", exclude=lambda p: p.suffix == ".tmp")  # drop by rule
-locate(spec, "/data", exclude=["scratch", "cam_02/frame_0010.png"])  # branch + cell
+locate(spec, "/data", exclude=EndsWith(".tmp"))              # drop by filter
+locate(spec, "/data", exclude=lambda p: p.suffix == ".tmp")  # drop by callable
+locate(spec, "/data", exclude=["scratch", Glob("cam_02/*")])  # branch + filter
 ```
+
+A `Filter` excluder is the serializable counterpart of the callable form
+(it round-trips through `to_dict` / `from_dict`), and generalizes the exact
+`StrPath` to a pattern over the relative path.
 
 `locate` reports only what is *present* — a `Group` is treated as "any of
 its entries may appear," so it does not enforce `Exclusive` / `Together`,
