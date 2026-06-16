@@ -90,10 +90,12 @@ def search_paths(
             or a `FilterDict`. None (default) accepts all names.
         predicate: Callable on each entry's full `Path` for a final check.
             None (default) accepts all paths.
-        exclude: Paths to skip -- a root-relative `StrPath`, a `Filter` (on
-            the root-relative POSIX path), a `Callable` on the `Path`, or an
-            iterable of these (OR-combined). An excluded *directory* is pruned
-            (its subtree is not descended). None (default) excludes nothing.
+        exclude: Paths to skip -- a `StrPath` (absolute under `root` or
+            root-relative), a `Filter` (on the root-relative POSIX path), a
+            `Callable` on the candidate `Path` (the real, filesystem-valid
+            path), or an iterable of these (OR-combined). An excluded
+            *directory* is pruned (its subtree is not descended). None
+            (default) excludes nothing.
         min_depth: Minimum inclusion depth (>= 1, direct children of
             `root` are at depth 1). Defaults to 1.
         max_depth: Maximum inclusion depth (>= `min_depth`), or None for
@@ -200,10 +202,12 @@ def search_files(
             or a `FilterDict`. None (default) accepts all names.
         predicate: Callable on each file's full `Path` for a final check.
             None (default) accepts all paths.
-        exclude: Paths to skip -- a root-relative `StrPath`, a `Filter` (on
-            the root-relative POSIX path), a `Callable` on the `Path`, or an
-            iterable of these (OR-combined). An excluded *directory* is pruned
-            (its subtree is not descended). None (default) excludes nothing.
+        exclude: Paths to skip -- a `StrPath` (absolute under `root` or
+            root-relative), a `Filter` (on the root-relative POSIX path), a
+            `Callable` on the candidate `Path` (the real, filesystem-valid
+            path), or an iterable of these (OR-combined). An excluded
+            *directory* is pruned (its subtree is not descended). None
+            (default) excludes nothing.
         min_depth: Minimum inclusion depth (>= 1, direct children of
             `root` are at depth 1). Defaults to 1.
         max_depth: Maximum inclusion depth (>= `min_depth`), or None for
@@ -310,10 +314,12 @@ def search_dirs(
             `Filter` or a `FilterDict`. None (default) accepts all names.
         predicate: Callable on each sub-directory's full `Path` for a
             final check. None (default) accepts all paths.
-        exclude: Paths to skip -- a root-relative `StrPath`, a `Filter` (on
-            the root-relative POSIX path), a `Callable` on the `Path`, or an
-            iterable of these (OR-combined). An excluded *directory* is pruned
-            (its subtree is not descended). None (default) excludes nothing.
+        exclude: Paths to skip -- a `StrPath` (absolute under `root` or
+            root-relative), a `Filter` (on the root-relative POSIX path), a
+            `Callable` on the candidate `Path` (the real, filesystem-valid
+            path), or an iterable of these (OR-combined). An excluded
+            *directory* is pruned (its subtree is not descended). None
+            (default) excludes nothing.
         min_depth: Minimum inclusion depth (>= 1, direct sub-directories
             of `root` are at depth 1). Defaults to 1.
         max_depth: Maximum inclusion depth (>= `min_depth`), or None for

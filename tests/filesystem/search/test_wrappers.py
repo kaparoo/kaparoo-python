@@ -340,6 +340,15 @@ def test_search_exclude_callable(tmp_filesystem: TmpFilesystem):
     assert fs.file1 in result
 
 
+def test_search_exclude_callable_gets_the_real_path(tmp_filesystem: TmpFilesystem):
+    # The callable receives the candidate's real path, so a filesystem op
+    # (here `stat`) resolves correctly instead of raising on a root-relative
+    # path that would be looked up against the cwd.
+    fs = tmp_filesystem
+    result = search_files(fs.root, exclude=lambda p: p.stat().st_size > 10**9)
+    assert fs.file1 in result  # nothing is that large; `stat()` simply resolved
+
+
 def test_search_exclude_iterable_is_or_combined(tmp_filesystem: TmpFilesystem):
     fs = tmp_filesystem
     result = search_files(fs.root, exclude=["file1.txt", Glob("*.png")])

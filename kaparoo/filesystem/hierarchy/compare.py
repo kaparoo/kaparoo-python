@@ -70,12 +70,13 @@ def locate(
             suppressed (still streamed, backed by a `seen` set).
         exclude: Paths to drop from the results -- e.g. specific cells of a
             `Template` product. An exclude rule (or an iterable of them,
-            OR-combined) is a `StrPath` (a concrete **root-relative** path), a
-            `Filter` (matched on the **root-relative** POSIX string), or a
-            `Callable` taking the **root-relative** `Path` and returning
-            whether to drop it. A dropped directory has its whole subtree
-            pruned. A lone `str` / `PathLike` / `Filter` / callable is one
-            rule; only a non-string iterable is several.
+            OR-combined) is a `StrPath` (absolute under `root`, or a concrete
+            **root-relative** path), a `Filter` (matched on the
+            **root-relative** POSIX string), or a `Callable` taking the
+            candidate's own `Path` (the real, filesystem-valid path) and
+            returning whether to drop it. A dropped directory has its whole
+            subtree pruned. A lone `str` / `PathLike` / `Filter` / callable is
+            one rule; only a non-string iterable is several.
         at_root: When `True`, treat `root` *itself* as the realized top node
             rather than its container -- so you point at the top directly
             (`locate(Directory("dataset", ...), ".../dataset", at_root=True)`).

@@ -11,9 +11,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - `kaparoo.filesystem.search` (`search_paths` / `search_files` /
-  `search_dirs`) gains an `exclude=` argument: paths to skip, as a
-  root-relative `StrPath`, a `Filter` (matched on the root-relative POSIX
-  path), a callable on the `Path`, or an iterable of these (OR-combined). An
+  `search_dirs`) gains an `exclude=` argument: paths to skip, as a `StrPath`
+  (absolute under `root`, or root-relative), a `Filter` (matched on the
+  root-relative POSIX path), a callable on the candidate `Path` (the real,
+  filesystem-valid path), or an iterable of these (OR-combined). An
   excluded *directory* is **pruned** -- its subtree is never walked -- which
   `name_filter` cannot do (a directory failing `name_filter` is still
   descended). The excluder engine is shared with `kaparoo.filesystem.hierarchy`
@@ -97,11 +98,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `locate_map(tree, root)` groups the results into a `{path: (node, ...)}`
   mapping (distinct nodes, spec-traversal order). Both take `exclude=` to
   drop paths from the results (e.g. specific cells of a `Template` product):
-  an excluder — or an iterable of them, OR-combined — is a concrete
-  root-relative `StrPath`, a `kaparoo.filters` `Filter` matched on the
-  root-relative POSIX string (the serializable counterpart of a callable),
-  or a callable taking the root-relative `Path`, and a dropped directory has
-  its whole subtree pruned. Pass `at_root=True` to
+  an exclude rule — or an iterable of them, OR-combined — is a `StrPath`
+  (absolute under `root`, or root-relative), a `kaparoo.filters` `Filter`
+  matched on the root-relative POSIX string (the serializable counterpart of
+  a callable), or a callable taking the candidate's own `Path` (the real,
+  filesystem-valid path, so it may inspect the file), and a dropped directory
+  has its whole subtree pruned. Pass `at_root=True` to
   treat `root` as the realized top node itself (you point at the top
   directly) rather than its container; the top must be an `Entry` (a `Group`
   raises `TypeError`) and `root` realizes it only when its leaf name / kind
