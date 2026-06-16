@@ -91,11 +91,11 @@ def locate(
         TypeError: If `at_root` is set and `tree`'s top node is a `Group`.
     """
     root_path = Path(root)
-    excluded = build_excluder(exclude, root_path)
+    excluder = build_excluder(exclude, root_path)
     pairs = (
-        _locate_at_root(tree, root_path, excluded)
+        _locate_at_root(tree, root_path, excluder)
         if at_root
-        else _locate_children((tree,), root_path, excluded)
+        else _locate_children((tree,), root_path, excluder)
     )
 
     yield from _unique(pairs) if unique else pairs
@@ -113,7 +113,7 @@ def _unique(
 
 
 def _locate_at_root(
-    top: Node, root_path: Path, excluded: Callable[[Path], bool] | None
+    top: Node, root_path: Path, excluder: Callable[[Path], bool] | None
 ) -> Iterator[tuple[Path, Node]]:
     """Match `top` as `root_path` itself, not as a child of a container.
 
@@ -135,7 +135,7 @@ def _locate_at_root(
 
     yield (root_path, entry)
     if isinstance(entry, Directory):
-        yield from _locate_children(entry.children, root_path, excluded)
+        yield from _locate_children(entry.children, root_path, excluder)
 
 
 def locate_map(
@@ -157,35 +157,35 @@ def locate_map(
 
 
 def _locate_map(
-    tree: Node, root_path: Path, excluded: Callable[[Path], bool] | None
+    tree: Node, root_path: Path, excluder: Callable[[Path], bool] | None
 ) -> dict[Path, tuple[Node, ...]]:
-    """`locate_map`'s core over a pre-built `excluded` predicate.
+    """`locate_map`'s core over a pre-built `excluder` predicate.
 
     `validate` reuses this so it can build the excluder once and share it
     across every top node, rather than rebuilding it on each `locate_map`
     call.
     """
     grouped: dict[Path, list[Node]] = {}
-    for path, node in _unique(_locate_children((tree,), root_path, excluded)):
+    for path, node in _unique(_locate_children((tree,), root_path, excluder)):
         grouped.setdefault(path, []).append(node)
     return {path: tuple(nodes) for path, nodes in grouped.items()}
 
 
 def _locate_children(
-    nodes: Iterable[Node], parent: Path, excluded: Callable[[Path], bool] | None
+    nodes: Iterable[Node], parent: Path, excluder: Callable[[Path], bool] | None
 ) -> Iterator[tuple[Path, Node]]:
     """Locate the sibling entries of `nodes` against one walk of `parent`.
 
     Groups flatten to their leaf entries (matched as siblings). `parent` is
     walked a single time, deep enough for the deepest entry; each discovered
     path is tested against every entry whose depth range admits it, and a
-    matched directory recurses into its own children. `excluded` paths are
+    matched directory recurses into its own children. Excluded paths are
     dropped (and pruned if directories) during the walk.
     """
     entries = flatten_entries(nodes)
     if not entries:
         return
-    for candidate, depth in _walk_depths(parent, _max_depth(entries), excluded):
+    for candidate, depth in _walk_depths(parent, _max_depth(entries), excluder):
         for entry in entries:
             if (
                 _depth_ok(entry, depth)
@@ -194,7 +194,7 @@ def _locate_children(
             ):
                 yield (candidate, entry)
                 if isinstance(entry, Directory):
-                    yield from _locate_children(entry.children, candidate, excluded)
+                    yield from _locate_children(entry.children, candidate, excluder)
 
 
 def _type_ok(entry: Entry, path: Path) -> bool:
@@ -222,14 +222,14 @@ def _max_depth(entries: tuple[Entry, ...]) -> int | None:
 
 
 def _walk_depths(
-    parent: Path, max_depth: int | None, excluded: Callable[[Path], bool] | None
+    parent: Path, max_depth: int | None, excluder: Callable[[Path], bool] | None
 ) -> Iterator[tuple[Path, int]]:
     """Yield `(path, depth)` for entries down to `max_depth` below `parent`.
 
     Built on `Path.walk` (iterative, like `search`) rather than Python
     recursion, so arbitrarily deep trees never hit the recursion limit; a
     nonexistent or non-directory `parent` yields nothing (walk errors are
-    ignored). `excluded` entries are skipped, and excluded directories are
+    ignored). Excluded entries are skipped, and excluded directories are
     pruned from the descent.
     """
     parent_depth = len(parent.parts)
@@ -237,11 +237,11 @@ def _walk_depths(
         depth = len(dirpath.parts) - parent_depth + 1
         for name in sorted((*dirnames, *filenames)):
             candidate = dirpath / name
-            if excluded is not None and excluded(candidate):
+            if excluder is not None and excluder(candidate):
                 continue
             yield (candidate, depth)
-        if excluded is not None:
-            dirnames[:] = [d for d in dirnames if not excluded(dirpath / d)]
+        if excluder is not None:
+            dirnames[:] = [d for d in dirnames if not excluder(dirpath / d)]
         if max_depth is not None and depth >= max_depth:
             dirnames.clear()  # prune deeper levels (Path.walk honors the edit)
 
@@ -398,8 +398,8 @@ def _build_report(
     match phase (`_merge_matched`) and the `_unexpected` sweep, rather than
     rebuilt per top node.
     """
-    excluded = build_excluder(exclude, root_path)
-    matched = _merge_matched(top_nodes, root_path, excluded)
+    excluder = build_excluder(exclude, root_path)
+    matched = _merge_matched(top_nodes, root_path, excluder)
     present: set[Node] = {node for nodes in matched.values() for node in nodes}
 
     missing: list[Node] = []
@@ -441,7 +441,7 @@ def _build_report(
 
     return ValidationReport(
         matched=matched,
-        unexpected=tuple(_unexpected(root_path, matched, excluded)),
+        unexpected=tuple(_unexpected(root_path, matched, excluder)),
         missing=tuple(missing),
         violations=tuple(violations),
         failed=failed,
@@ -451,16 +451,16 @@ def _build_report(
 def _merge_matched(
     top_nodes: tuple[Node, ...],
     root_path: Path,
-    excluded: Callable[[Path], bool] | None,
+    excluder: Callable[[Path], bool] | None,
 ) -> dict[Path, tuple[Node, ...]]:
     """Union each top node's `locate_map`, by path (spec order kept).
 
-    Takes the pre-built `excluded` predicate so every top node reuses one
+    Takes the pre-built `excluder` predicate so every top node reuses one
     excluder instead of rebuilding it per `locate_map` call.
     """
     merged: dict[Path, tuple[Node, ...]] = {}
     for node in top_nodes:
-        for path, nodes in _locate_map(node, root_path, excluded).items():
+        for path, nodes in _locate_map(node, root_path, excluder).items():
             merged[path] = merged.get(path, ()) + nodes
     return merged
 
@@ -505,12 +505,12 @@ def _check_group(
 def _unexpected(
     root_path: Path,
     matched: dict[Path, tuple[Node, ...]],
-    excluded: Callable[[Path], bool] | None,
+    excluder: Callable[[Path], bool] | None,
 ) -> list[Path]:
     """List paths under `root_path` matching no node (subtrees included).
 
     A path is unexpected unless it is matched or an ancestor of a match; an
-    unexpected directory is reported once and not descended. An `excluded`
+    unexpected directory is reported once and not descended. An excluded
     path is neither reported nor descended (it was dropped on purpose).
     """
     allowed: set[Path] = set(matched)
@@ -518,7 +518,7 @@ def _unexpected(
         allowed.update(path.parents)
 
     def keep(candidate: Path) -> bool:
-        return candidate in allowed or (excluded is not None and excluded(candidate))
+        return candidate in allowed or (excluder is not None and excluder(candidate))
 
     result: list[Path] = []
     for dirpath, dirnames, filenames in root_path.walk(top_down=True):
