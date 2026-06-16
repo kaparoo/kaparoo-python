@@ -75,6 +75,21 @@ def flatten_entries(nodes: Iterable[Node]) -> tuple[Entry, ...]:
     return tuple(result)
 
 
+def max_depth_of(nodes: Iterable[Node]) -> int | None:
+    """The deepest level any of `nodes` needs once flattened to entries.
+
+    `None` if any entry's depth is unbounded. Accepts raw nodes (groups
+    included), flattening them, so callers need not pre-flatten.
+    """
+    bound = 1
+    for entry in flatten_entries(nodes):
+        if entry.max_depth is None:
+            return None
+        bound = max(bound, entry.max_depth)
+
+    return bound
+
+
 @register_node("exclusive")
 class Exclusive(Group):
     """A mutual-exclusion constraint among sibling alternatives.

@@ -12,6 +12,7 @@ from kaparoo.filters import Filter, Literal, OneOf
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
+    from pathlib import Path
     from typing import Any, ClassVar, Self
 
     from kaparoo.filesystem.hierarchy.conditions import EntryKind
@@ -205,6 +206,14 @@ class Entry(Node, ABC):
     def condition(self) -> Condition | None:
         """The optional attribute condition `validate` checks (or `None`)."""
         return self._condition
+
+    def accepts_depth(self, depth: int) -> bool:
+        """Whether `depth` falls in this entry's inclusive depth range."""
+        return self.max_depth is None or self.min_depth <= depth <= self.max_depth
+
+    def accepts_kind(self, path: Path) -> bool:
+        """Whether `path`'s on-disk kind matches this entry's (file vs dir)."""
+        return path.is_dir() if self._entry_kind == "dir" else path.is_file()
 
     @abstractmethod
     def _fields(self) -> tuple[object, ...]:
