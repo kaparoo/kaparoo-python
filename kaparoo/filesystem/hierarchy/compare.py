@@ -3,7 +3,7 @@ from __future__ import annotations
 __all__ = (
     "ValidationReport",
     "Violation",
-    "conforms",
+    "conformer",
     "locate",
     "locate_map",
     "validate",
@@ -321,25 +321,25 @@ def validate(
         TypeError: If `at_root` is set and `tree`'s top node is a `Group`.
     """
     ctx = CheckContext(checks or {}, on_missing)
-    root_path = Path(root)
+    root = Path(root)
     if at_root:
-        return _validate_at_root(tree, root_path, exclude, ctx)
+        return _validate_at_root(tree, root, exclude, ctx)
 
-    return _build_report((tree,), root_path, exclude, ctx)
+    return _build_report((tree,), root, exclude, ctx)
 
 
 def _validate_at_root(
     top: Node,
-    root_path: Path,
+    root: Path,
     exclude: ExcludeRule | Iterable[ExcludeRule] | None,
     ctx: CheckContext,
 ) -> ValidationReport:
-    """Validate `root_path` as the realized top entry, not as a container.
+    """Validate `root` as the realized top entry, not as a container.
 
-    The `at_root` form of `_build_report`. When `root_path` does not realize
+    The `at_root` form of `_build_report`. When `root` does not realize
     `top` (leaf name / kind mismatch) the top is reported `missing` and the
     subtree is not descended; otherwise the directory's children are validated
-    beneath `root_path` and the top's own `condition` is checked on it.
+    beneath `root` and the top's own `condition` is checked on it.
 
     Raises:
         TypeError: If `top` is a `Group` (it has no single name to anchor).
@@ -349,21 +349,21 @@ def _validate_at_root(
         raise TypeError(msg)
 
     entry = cast("Entry", top)
-    if not (entry.name.matches(root_path.name) and entry.accepts_kind(root_path)):
+    if not (entry.name.matches(root.name) and entry.accepts_kind(root)):
         return ValidationReport({}, (), (entry,), (), ())
 
     if isinstance(entry, File):
-        failed = _failed_condition(entry, root_path, ctx)
-        return ValidationReport({root_path: (entry,)}, (), (), (), failed)
+        failed = _failed_condition(entry, root, ctx)
+        return ValidationReport({root: (entry,)}, (), (), (), failed)
 
     directory = cast("Directory", entry)
-    report = _build_report(directory.children, root_path, exclude, ctx)
+    report = _build_report(directory.children, root, exclude, ctx)
     return ValidationReport(
-        matched={root_path: (entry,), **report.matched},
+        matched={root: (entry,), **report.matched},
         unexpected=report.unexpected,
         missing=report.missing,
         violations=report.violations,
-        failed=report.failed + _failed_condition(entry, root_path, ctx),
+        failed=report.failed + _failed_condition(entry, root, ctx),
     )
 
 
@@ -379,18 +379,18 @@ def _failed_condition(
 
 def _build_report(
     top_nodes: tuple[Node, ...],
-    root_path: Path,
+    root: Path,
     exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
     ctx: CheckContext = _NO_CHECKS,
 ) -> ValidationReport:
-    """Validate `top_nodes` matched directly under `root_path`.
+    """Validate `top_nodes` matched directly under `root`.
 
     The `exclude` predicate is built once here and threaded into both the
     match phase (`_merge_matched`) and the `_unexpected` sweep, rather than
     rebuilt per top node.
     """
-    excluder = build_excluder(exclude, root_path)
-    matched = _merge_matched(top_nodes, root_path, excluder)
+    excluder = build_excluder(exclude, root)
+    matched = _merge_matched(top_nodes, root, excluder)
     present: set[Node] = {node for nodes in matched.values() for node in nodes}
 
     missing: list[Node] = []
@@ -432,7 +432,7 @@ def _build_report(
 
     return ValidationReport(
         matched=matched,
-        unexpected=tuple(_unexpected(root_path, matched, excluder)),
+        unexpected=tuple(_unexpected(root, matched, excluder)),
         missing=tuple(missing),
         violations=tuple(violations),
         failed=failed,
@@ -441,7 +441,7 @@ def _build_report(
 
 def _merge_matched(
     top_nodes: tuple[Node, ...],
-    root_path: Path,
+    root: Path,
     excluder: Callable[[Path], bool] | None,
 ) -> dict[Path, tuple[Node, ...]]:
     """Union each top node's `locate_map`, by path (spec order kept).
@@ -451,7 +451,7 @@ def _merge_matched(
     """
     merged: dict[Path, tuple[Node, ...]] = {}
     for node in top_nodes:
-        for path, nodes in _locate_map(node, root_path, excluder).items():
+        for path, nodes in _locate_map(node, root, excluder).items():
             merged[path] = merged.get(path, ()) + nodes
     return merged
 
@@ -494,11 +494,11 @@ def _check_group(
 
 
 def _unexpected(
-    root_path: Path,
+    root: Path,
     matched: dict[Path, tuple[Node, ...]],
     excluder: Callable[[Path], bool] | None,
 ) -> list[Path]:
-    """List paths under `root_path` matching no node (subtrees included).
+    """List paths under `root` matching no node (subtrees included).
 
     A path is unexpected unless it is matched or an ancestor of a match; an
     unexpected directory is reported once and not descended. An excluded
@@ -512,7 +512,7 @@ def _unexpected(
         return candidate in allowed or (excluder is not None and excluder(candidate))
 
     result: list[Path] = []
-    for dirpath, dirnames, filenames in root_path.walk(top_down=True):
+    for dirpath, dirnames, filenames in root.walk(top_down=True):
         for name in filenames:
             candidate = dirpath / name
             if not keep(candidate):
@@ -553,7 +553,7 @@ def _present_leaves(nodes: Iterable[Node], present: set[Node]) -> tuple[Entry, .
 # ========================== #
 
 
-def conforms(
+def conformer(
     spec: Node,
     *,
     checks: ContentChecks | None = None,
@@ -567,7 +567,7 @@ def conforms(
     conforms, and whose `condition` holds; a top `Group` is realized by any
     one of its alternatives / members. The path is always tested as the top
     of `spec`, never against one of its inner nodes -- e.g.
-    `conforms(Directory("dataset", [...]))` accepts a conforming `dataset/`
+    `conformer(Directory("dataset", [...]))` accepts a conforming `dataset/`
     directory, not the files inside it. `checks` / `on_missing` supply and
     resolve `Content` conditions as in `validate`.
 

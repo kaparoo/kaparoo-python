@@ -10,7 +10,7 @@ from kaparoo.filesystem.hierarchy import (
     File,
     Node,
     Together,
-    conforms,
+    conformer,
     locate,
     locate_map,
     validate,
@@ -190,7 +190,7 @@ class TestExclusivePriority:
             File("pyproject.toml"), File("setup.py"), on_conflict="priority"
         )
         # the loser is unexpected, so the resolved subtree is not clean
-        assert not conforms(Directory("proj", [group]))(tmp_path / "proj")
+        assert not conformer(Directory("proj", [group]))(tmp_path / "proj")
 
 
 class TestTogether:
@@ -218,47 +218,47 @@ class TestTogether:
 class TestConforms:
     def test_top_directory_conforms(self, tmp_path: Path) -> None:
         build(tmp_path, ["dataset/metadata.json", "dataset/images/a.png"])
-        keep = conforms(dataset_spec())
+        keep = conformer(dataset_spec())
         assert keep(tmp_path / "dataset")  # top node, conforming subtree
 
     def test_inner_nodes_are_not_accepted(self, tmp_path: Path) -> None:
         # The path is tested as the *top* node only, never an inner one.
         build(tmp_path, ["dataset/metadata.json", "dataset/images/a.png"])
-        keep = conforms(dataset_spec())
+        keep = conformer(dataset_spec())
         assert not keep(tmp_path / "dataset" / "images")
         assert not keep(tmp_path / "dataset" / "metadata.json")
         assert not keep(tmp_path / "dataset" / "images" / "a.png")
 
     def test_top_dir_nonconforming_subtree_rejected(self, tmp_path: Path) -> None:
         build(tmp_path, ["dataset/metadata.json", "dataset/junk.bin"])  # junk: extra
-        keep = conforms(dataset_spec())
+        keep = conformer(dataset_spec())
         assert not keep(tmp_path / "dataset")
 
     def test_top_dir_name_mismatch_rejected(self, tmp_path: Path) -> None:
         (tmp_path / "other").mkdir()
-        assert not conforms(dataset_spec())(tmp_path / "other")
+        assert not conformer(dataset_spec())(tmp_path / "other")
 
     def test_top_file(self, tmp_path: Path) -> None:
         build(tmp_path, ["a.csv", "b.txt"])
         (tmp_path / "d").mkdir()
-        keep = conforms(File(Glob("*.csv")))
+        keep = conformer(File(Glob("*.csv")))
         assert keep(tmp_path / "a.csv")  # file, name matches
         assert not keep(tmp_path / "b.txt")  # file, name mismatch
         assert not keep(tmp_path / "d")  # not a file
 
     def test_top_group(self, tmp_path: Path) -> None:
         build(tmp_path, ["a", "c"])
-        keep = conforms(Exclusive(File("a"), File("b")))
+        keep = conformer(Exclusive(File("a"), File("b")))
         assert keep(tmp_path / "a")  # realizes one alternative
         assert not keep(tmp_path / "c")  # realizes neither
 
     def test_childless_directory_must_be_empty(self, tmp_path: Path) -> None:
         (tmp_path / "logs").mkdir()
-        assert conforms(Directory("logs"))(tmp_path / "logs")
+        assert conformer(Directory("logs"))(tmp_path / "logs")
 
     def test_childless_directory_with_contents_rejected(self, tmp_path: Path) -> None:
         build(tmp_path, ["logs/a.txt"])
-        assert not conforms(Directory("logs"))(tmp_path / "logs")
+        assert not conformer(Directory("logs"))(tmp_path / "logs")
 
 
 class TestValidateDepth:
@@ -324,9 +324,9 @@ class TestValidateCondition:
 
     def test_conforms_checks_the_condition(self, tmp_path: Path) -> None:
         (tmp_path / "f").write_bytes(b"")  # empty
-        assert not conforms(File("f", condition=Size(min=1)))(tmp_path / "f")
+        assert not conformer(File("f", condition=Size(min=1)))(tmp_path / "f")
         (tmp_path / "g").write_bytes(b"x")
-        assert conforms(File(Glob("*"), condition=Size(min=1)))(tmp_path / "g")
+        assert conformer(File(Glob("*"), condition=Size(min=1)))(tmp_path / "g")
 
     def test_content_check_can_reach_a_sibling(self, tmp_path: Path) -> None:
         # the callable gets a live Path, so it may navigate to a sibling dir

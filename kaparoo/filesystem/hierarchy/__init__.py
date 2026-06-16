@@ -10,7 +10,7 @@ __all__ = (
     "Together",
     "ValidationReport",
     "Violation",
-    "conforms",
+    "conformer",
     "locate",
     "locate_map",
     "register_node",
@@ -22,7 +22,7 @@ from kaparoo.filesystem.hierarchy.base import Node
 from kaparoo.filesystem.hierarchy.compare import (
     ValidationReport,
     Violation,
-    conforms,
+    conformer,
     locate,
     locate_map,
     validate,

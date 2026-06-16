@@ -8,7 +8,7 @@ run of regularly-named siblings.
 > **Scope.** This package is the *representation* plus name-level semantics
 > (filter `matches` and, where applicable, `expand`) and the disk
 > operations [`locate`](#locating-locate),
-> [`validate`](#validation-validate), [`conforms`](#filtering-paths-conforms)
+> [`validate`](#validation-validate), [`conformer`](#filtering-paths-conformer)
 > (read), and [`scaffold`](#scaffolding-scaffold) (write).
 
 ## Nodes
@@ -137,7 +137,7 @@ Sizes are byte counts; the `kaparoo.filesystem.units` constants — decimal `KB`
 Conditions are a **validation** concern: `locate` still maps paths by name /
 type / depth alone, while `validate` checks each matched path's `condition`
 and lists the failures in `report.failed` (`report.ok` requires it empty);
-`conforms` likewise requires the top node's `condition` to hold. The
+`conformer` likewise requires the top node's `condition` to hold. The
 metadata conditions (`Size`, `ChildCount`, `TreeSize`, `Empty` /
 `NonEmpty`) are declarative and round-trip through `to_dict` / `from_dict`.
 
@@ -502,21 +502,21 @@ also takes the same
 `exclude=` as `locate`; excluded paths are dropped from `matched` and are not
 reported `unexpected`.
 
-## Filtering paths: `conforms`
+## Filtering paths: `conformer`
 
-`conforms(spec)` builds a path predicate (a `search` predicate) that
+`conformer(spec)` builds a path predicate (a `search` predicate) that
 accepts a path when it realizes `spec`'s **top** node:
 
 ```python
 from kaparoo.filesystem.search import search_dirs
-from kaparoo.filesystem.hierarchy import Directory, File, conforms
+from kaparoo.filesystem.hierarchy import Directory, File, conformer
 from kaparoo.filters import Glob
 
 spec = Directory("dataset", [
     File("metadata.json"),
     Directory("images", [File(Glob("*.png"))]),
 ])
-keep = conforms(spec)
+keep = conformer(spec)
 # keep the subdirectories that are themselves a conforming `dataset`
 search_dirs("/data", predicate=keep)
 ```
@@ -525,7 +525,7 @@ A path realizes the top node when it is a **file** matching a top `File`'s
 name, or a **directory** matching a top `Directory`'s name *whose subtree
 conforms* (via `validate`); a top `Group` is realized by any one of its
 alternatives / members. The path is always tested as the *top* of `spec`,
-never against an inner node — `conforms(Directory("dataset", [...]))`
+never against an inner node — `conformer(Directory("dataset", [...]))`
 accepts a conforming `dataset/` directory, not the files inside it. A
 `condition` on the top node is enforced too: a top `File` / `Directory`
 carrying a `Size`, `ChildCount`, `Content`, … condition realizes the spec

@@ -83,7 +83,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the filter registry), so specs can be stored as JSON. The package
   depends on `kaparoo.filters` but nothing in `kaparoo.filesystem.search`.
   This first cut is the representation plus name-level semantics and the
-  disk operations `locate`, `validate`, `conforms`, and `scaffold` (below).
+  disk operations `locate`, `validate`, `conformer`, and `scaffold` (below).
 - `kaparoo.filesystem.hierarchy.locate(tree, root)`: the first operation
   that applies a spec to a real filesystem. It maps each on-disk path
   under `root` (the container) to the spec node(s) it matches — by name
@@ -124,7 +124,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `TypeError`); a leaf name / kind mismatch reports the top as `missing`
   without descending. Also exports the `ValidationReport` and `Violation`
   result types.
-- `kaparoo.filesystem.hierarchy.conforms(spec)`: builds a path predicate (a
+- `kaparoo.filesystem.hierarchy.conformer(spec)`: builds a path predicate (a
   `search` predicate) that accepts a path realizing `spec`'s *top* node — a
   file matching a top `File`'s name, or a directory matching a top
   `Directory`'s name whose subtree conforms (via `validate`); a top `Group`
@@ -161,7 +161,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the intersection of its children), so a kind-mismatched `condition`
   raises at construction. Arbitrary content checks —
   unserializable as callables — are referenced by `Content("name")` (only
-  the name is stored) and supplied to `validate` / `conforms` as
+  the name is stored) and supplied to `validate` / `conformer` as
   `checks={name: callable}`; an absent name is governed by
   `on_missing="error" | "skip"`. The metadata conditions round-trip through
   `to_dict` / `from_dict`.
