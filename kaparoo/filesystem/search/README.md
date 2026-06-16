@@ -12,7 +12,7 @@ DSL.
 | [`search_dirs`](./wrappers.py) | directories only |
 
 All three share the same keyword arguments: `part_filter`, `name_filter`,
-`predicate`, `min_depth`, `max_depth`, `ordered`, `stringify`.
+`predicate`, `exclude`, `min_depth`, `max_depth`, `ordered`, `stringify`.
 
 ```python
 from kaparoo.filesystem.search import search_files
@@ -51,6 +51,26 @@ search_files(
     predicate=lambda p: p.stat().st_size > 0,
 )
 ```
+
+## Excluding paths (with pruning)
+
+`exclude` drops paths from the results **and prunes an excluded directory's
+whole subtree** — something the filters cannot do (a directory failing
+`name_filter` is still descended). It accepts the same excluders as
+[`kaparoo.filesystem.hierarchy`](../hierarchy/): a root-relative `StrPath`, a
+`Filter` (matched on the root-relative POSIX path), a `Callable` on the
+`Path`, or an iterable of these (OR-combined).
+
+```python
+from kaparoo.filesystem.search import search_files
+from kaparoo.filters import Glob
+
+# skip .git / node_modules entirely -- their subtrees are never walked
+search_files("repo", name_filter=Glob("*.py"), exclude=[".git", "node_modules"])
+```
+
+`exclude` is applied before the filter gates, so a huge irrelevant subtree
+is never visited (unlike a `name_filter`, which would still descend into it).
 
 ## Depth control
 

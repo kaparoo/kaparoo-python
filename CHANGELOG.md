@@ -10,6 +10,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `kaparoo.filesystem.search` (`search_paths` / `search_files` /
+  `search_dirs`) gains an `exclude=` argument: paths to skip, as a
+  root-relative `StrPath`, a `Filter` (matched on the root-relative POSIX
+  path), a callable on the `Path`, or an iterable of these (OR-combined). An
+  excluded *directory* is **pruned** -- its subtree is never walked -- which
+  `name_filter` cannot do (a directory failing `name_filter` is still
+  descended). The excluder engine is shared with `kaparoo.filesystem.hierarchy`
+  via the new internal `kaparoo.filesystem.exclude` module.
+
 - `kaparoo.utils.checks`: small validation guards, re-exported from
   `kaparoo.utils`. `ensure_one_of(value, options, *, name)` checks discrete
   membership (pass a `range` for an integer grid); `ensure_in_range(value, *,

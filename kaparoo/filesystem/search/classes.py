@@ -5,6 +5,7 @@ __all__ = ("DirSearch", "FileSearch", "PathSearch", "Search")
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, overload
 
+from kaparoo.filesystem.exclude import build_excluder
 from kaparoo.filesystem.existence import ensure_dir_exists
 from kaparoo.filesystem.utils import stringify_path, stringify_paths
 from kaparoo.filters import Filter
@@ -14,6 +15,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Literal
 
+    from kaparoo.filesystem.exclude import Excluder
     from kaparoo.filesystem.types import StrPath
     from kaparoo.filters.types import FilterDict
 
@@ -66,6 +68,7 @@ class Search(ABC):
         part_filter: Filter | FilterDict | None = None,
         name_filter: Filter | FilterDict | None = None,
         predicate: Callable[[Path], bool] | None = None,
+        exclude: Excluder | Iterable[Excluder] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
         ordered: bool = True,
@@ -81,6 +84,7 @@ class Search(ABC):
         part_filter: Filter | FilterDict | None = None,
         name_filter: Filter | FilterDict | None = None,
         predicate: Callable[[Path], bool] | None = None,
+        exclude: Excluder | Iterable[Excluder] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
         ordered: bool = True,
@@ -96,6 +100,7 @@ class Search(ABC):
         part_filter: Filter | FilterDict | None = None,
         name_filter: Filter | FilterDict | None = None,
         predicate: Callable[[Path], bool] | None = None,
+        exclude: Excluder | Iterable[Excluder] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
         ordered: bool = True,
@@ -110,6 +115,7 @@ class Search(ABC):
         part_filter: Filter | FilterDict | None = None,
         name_filter: Filter | FilterDict | None = None,
         predicate: Callable[[Path], bool] | None = None,
+        exclude: Excluder | Iterable[Excluder] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
         ordered: bool = True,
@@ -128,6 +134,11 @@ class Search(ABC):
             2. `name_filter` -- each candidate entry's leaf name.
             3. `predicate`   -- each surviving entry's full `Path`.
 
+        `exclude` is applied before those gates: excluded entries are dropped
+        and an excluded *directory* is pruned (its subtree is never visited),
+        which the filters cannot do (a directory failing `name_filter` is
+        still descended).
+
         Depth is measured from `root` (a direct child is depth 1): entries
         below `min_depth` are skipped but still descended, and entries at
         `max_depth` are included but not descended past.
@@ -140,17 +151,23 @@ class Search(ABC):
             name_filter = Filter.parse(name_filter)
 
         root = ensure_dir_exists(root)
+        excluded = build_excluder(exclude, root)
         root_depth = len(root.parts)
         results: list[Path] = []
 
         for dirpath, dirnames, filenames in root.walk():
             child_depth = len(dirpath.parts) - root_depth + 1
 
+            if excluded is not None:
+                dirnames[:] = [d for d in dirnames if not excluded(dirpath / d)]
+
             if child_depth >= min_depth and cls._part_ok(part_filter, dirpath, root):
                 names = cls._select_names(dirnames, filenames)
                 names = cls._filter_names(names, name_filter)
 
                 paths = (dirpath / name for name in names)
+                if excluded is not None:
+                    paths = (path for path in paths if not excluded(path))
                 if callable(predicate):
                     paths = (path for path in paths if predicate(path))
 

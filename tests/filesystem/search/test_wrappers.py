@@ -305,3 +305,44 @@ def test_search_max_depth_prunes_deepest_level(tmp_tree: TmpTree):
 def test_search_dirs_finds_empty_directory(tmp_tree: TmpTree):
     # An empty directory is still a directory and must be returned.
     assert tmp_tree.empty in set(search_dirs(tmp_tree.root))
+
+
+# --- exclude ----------------------------------------------------------------
+
+
+def test_search_exclude_drops_a_file(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    result = search_files(fs.root, exclude=["file1.txt"])
+    assert fs.file1 not in result
+    assert fs.file2 in result
+
+
+def test_search_exclude_prunes_a_directory(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    # excluding a directory prunes its whole subtree -- name_filter cannot,
+    # since a directory failing name_filter is still descended.
+    result = search_paths(fs.root, exclude=["sub_dir"])
+    assert fs.sub_dir not in result
+    assert fs.sub_file not in result  # never descended into
+
+
+def test_search_exclude_filter_matches_relative_path(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    result = search_files(fs.root, exclude=Glob("sub_dir/*"))
+    assert fs.sub_file not in result
+    assert fs.file1 in result
+
+
+def test_search_exclude_callable(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    result = search_files(fs.root, exclude=lambda p: p.suffix == ".png")
+    assert fs.file3 not in result  # the .png file
+    assert fs.file1 in result
+
+
+def test_search_exclude_iterable_is_or_combined(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    result = search_files(fs.root, exclude=["file1.txt", Glob("*.png")])
+    assert fs.file1 not in result  # by exact path
+    assert fs.file3 not in result  # by filter (*.png)
+    assert fs.file2 in result
