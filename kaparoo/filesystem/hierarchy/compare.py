@@ -236,13 +236,15 @@ def _walk_depths(
     parent_depth = len(parent.parts)
     for dirpath, dirnames, filenames in parent.walk():
         depth = len(dirpath.parts) - parent_depth + 1
+        excluded: set[str] = set()
         for name in sorted((*dirnames, *filenames)):
             candidate = dirpath / name
             if excluder is not None and excluder(candidate):
+                excluded.add(name)
                 continue
             yield (candidate, depth)
-        if excluder is not None:
-            dirnames[:] = [d for d in dirnames if not excluder(dirpath / d)]
+        if excluded:
+            dirnames[:] = [d for d in dirnames if d not in excluded]
         if max_depth is not None and depth >= max_depth:
             dirnames.clear()  # prune deeper levels (Path.walk honors the edit)
 
