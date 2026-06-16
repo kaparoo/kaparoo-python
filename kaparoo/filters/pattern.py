@@ -1,3 +1,5 @@
+"""Single-pattern filters: `Equals`, `StartsWith`, `Regex`, `Glob`, and more."""
+
 from __future__ import annotations
 
 __all__ = (

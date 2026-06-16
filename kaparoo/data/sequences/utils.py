@@ -1,3 +1,5 @@
+"""Helpers for `DataSequence` code, such as `generate_batches`."""
+
 from __future__ import annotations
 
 __all__ = ("generate_batches",)

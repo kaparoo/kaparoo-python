@@ -1,3 +1,5 @@
+"""Logical-composition filters: `And`, `Or`, and `Not`."""
+
 from __future__ import annotations
 
 __all__ = ("And", "AndFilter", "LogicalFilter", "Not", "NotFilter", "Or", "OrFilter")

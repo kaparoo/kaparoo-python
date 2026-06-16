@@ -1,3 +1,5 @@
+"""Public search entry points: `search_paths` / `search_files` / `search_dirs`."""
+
 from __future__ import annotations
 
 __all__ = ("search_dirs", "search_files", "search_paths")

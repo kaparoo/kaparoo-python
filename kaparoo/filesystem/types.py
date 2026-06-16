@@ -1,3 +1,5 @@
+"""Shared filesystem type aliases (`StrPath`, `StrPaths`)."""
+
 from __future__ import annotations
 
 __all__ = ("StrPath", "StrPaths")

@@ -1,3 +1,5 @@
+"""Named hierarchy nodes: the `Entry` base and `File` / `Directory`."""
+
 from __future__ import annotations
 
 __all__ = ("Directory", "Entry", "File")

@@ -1,3 +1,5 @@
+"""Enumerable filters that also `expand` the names they match."""
+
 from __future__ import annotations
 
 __all__ = (

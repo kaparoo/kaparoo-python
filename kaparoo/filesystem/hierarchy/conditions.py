@@ -1,3 +1,5 @@
+"""Declarative, serializable conditions on a matched path's attributes."""
+
 from __future__ import annotations
 
 __all__ = (

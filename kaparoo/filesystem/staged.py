@@ -1,3 +1,5 @@
+"""Atomic staged writes: `StagedFile` and `StagedDirectory`."""
+
 from __future__ import annotations
 
 __all__ = ("StagedDirectory", "StagedFile")

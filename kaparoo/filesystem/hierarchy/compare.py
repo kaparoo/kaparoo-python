@@ -1,3 +1,5 @@
+"""Apply a hierarchy spec to a real tree: `locate`, `validate`, `conformer`."""
+
 from __future__ import annotations
 
 __all__ = (

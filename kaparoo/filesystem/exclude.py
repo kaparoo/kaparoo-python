@@ -1,3 +1,5 @@
+"""Internal: a path-exclusion predicate shared by `search` and `hierarchy`."""
+
 from __future__ import annotations
 
 __all__ = ("ExcludeRule", "build_excluder")

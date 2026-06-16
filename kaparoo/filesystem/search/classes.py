@@ -1,3 +1,5 @@
+"""Internal walk-and-filter engine behind the `search_*` wrappers."""
+
 from __future__ import annotations
 
 __all__ = ("DirSearch", "FileSearch", "PathSearch", "Search")

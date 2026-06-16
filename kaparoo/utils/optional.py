@@ -1,3 +1,5 @@
+"""Helpers for `Optional[T]` values: substitute and unwrap with a default."""
+
 from __future__ import annotations
 
 __all__ = (

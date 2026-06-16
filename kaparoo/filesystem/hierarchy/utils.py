@@ -1,3 +1,5 @@
+"""Internal node registry backing hierarchy `to_dict` / `from_dict`."""
+
 from __future__ import annotations
 
 __all__ = ("register_node",)

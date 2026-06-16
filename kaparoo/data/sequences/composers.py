@@ -1,3 +1,5 @@
+"""Lazy `DataSequence` composers: slice, concat, transform, window, zip."""
+
 from __future__ import annotations
 
 __all__ = (

@@ -1,3 +1,5 @@
+"""Filesystem exception types (`DirectoryNotFoundError`, `NotAFileError`)."""
+
 from __future__ import annotations
 
 __all__ = ("DirectoryNotFoundError", "NotAFileError")

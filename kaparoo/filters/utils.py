@@ -1,3 +1,5 @@
+"""Internal filter registry backing `register_filter` / `from_dict`."""
+
 from __future__ import annotations
 
 __all__ = ("register_filter",)

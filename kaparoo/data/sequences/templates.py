@@ -1,3 +1,5 @@
+"""File-backed `DataSequence` templates (folder, list, single-file)."""
+
 from __future__ import annotations
 
 __all__ = ("FileFolderSequence", "FileListSequence", "SingleFileSequence")

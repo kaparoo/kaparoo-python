@@ -1,3 +1,5 @@
+"""The `Node` base for hierarchy spec trees."""
+
 from __future__ import annotations
 
 __all__ = ("Node",)

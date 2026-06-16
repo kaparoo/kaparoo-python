@@ -1,3 +1,5 @@
+"""Multi-pattern filters that match when any pattern matches."""
+
 from __future__ import annotations
 
 __all__ = (

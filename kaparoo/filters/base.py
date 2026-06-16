@@ -1,3 +1,5 @@
+"""The `Filter` abstract base and its polymorphic `from_dict` dispatch."""
+
 from __future__ import annotations
 
 __all__ = ("Filter",)

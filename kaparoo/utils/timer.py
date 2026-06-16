@@ -1,3 +1,5 @@
+"""Context-manager and decorator timers: `Timer` and `SpanTimer`."""
+
 from __future__ import annotations
 
 __all__ = ("SpanRecord", "SpanTimer", "Timer")

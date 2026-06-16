@@ -1,3 +1,5 @@
+"""`TypedDict`s for statically-checked filter dicts."""
+
 from __future__ import annotations
 
 __all__ = (

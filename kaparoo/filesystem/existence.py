@@ -1,3 +1,5 @@
+"""Existence checks (`*_exists`) and validating `ensure_*` variants."""
+
 from __future__ import annotations
 
 __all__ = (

@@ -1,3 +1,5 @@
+"""Create on disk the structure a hierarchy spec describes (`scaffold`)."""
+
 from __future__ import annotations
 
 __all__ = ("scaffold",)

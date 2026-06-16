@@ -1,3 +1,5 @@
+"""Sibling constraint nodes: `Group`, `Exclusive`, and `Together`."""
+
 from __future__ import annotations
 
 __all__ = ("Exclusive", "Group", "Together")

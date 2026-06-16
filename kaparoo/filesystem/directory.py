@@ -1,3 +1,5 @@
+"""Create and inspect directories: `make_dir(s)`, `dir_empty(s)`, and kin."""
+
 from __future__ import annotations
 
 __all__ = (

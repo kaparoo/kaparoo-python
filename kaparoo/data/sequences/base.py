@@ -1,3 +1,5 @@
+"""The `DataSequence[T, M]` abstract base: indexable items with metadata."""
+
 from __future__ import annotations
 
 __all__ = ("DataSequence",)
