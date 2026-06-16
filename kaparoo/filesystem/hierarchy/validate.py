@@ -14,7 +14,7 @@ from kaparoo.filesystem.hierarchy.group import (
     Together,
     flatten_entries,
 )
-from kaparoo.filesystem.hierarchy.locate import build_excluder, locate_map
+from kaparoo.filesystem.hierarchy.locate import _locate_map, build_excluder
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
@@ -100,7 +100,7 @@ def validate(
     Args:
         at_root: When `True`, treat `root` *itself* as the realized top node
             rather than its container, so you point at the top directly. The
-            top must be an `Entry` (a `Group` raises `ValueError`); when
+            top must be an `Entry` (a `Group` raises `TypeError`); when
             `root`'s leaf name / kind do not realize it, the top is reported
             `missing` and its subtree is not descended.
 
@@ -223,8 +223,14 @@ def _build_report(
     exclude: Excluder | Iterable[Excluder] | None = None,
     ctx: CheckContext = _NO_CHECKS,
 ) -> ValidationReport:
-    """Validate `top_nodes` matched directly under `root_path`."""
-    matched = _merge_matched(top_nodes, root_path, exclude)
+    """Validate `top_nodes` matched directly under `root_path`.
+
+    The `exclude` predicate is built once here and threaded into both the
+    match phase (`_merge_matched`) and the `_unexpected` sweep, rather than
+    rebuilt per top node.
+    """
+    excluded = build_excluder(exclude, root_path)
+    matched = _merge_matched(top_nodes, root_path, excluded)
     present: set[Node] = {node for nodes in matched.values() for node in nodes}
 
     missing: list[Node] = []
@@ -264,7 +270,6 @@ def _build_report(
         and not node.condition.check(path, ctx)
     )
 
-    excluded = build_excluder(exclude, root_path)
     return ValidationReport(
         matched=matched,
         unexpected=tuple(_unexpected(root_path, matched, excluded)),
@@ -277,12 +282,16 @@ def _build_report(
 def _merge_matched(
     top_nodes: tuple[Node, ...],
     root_path: Path,
-    exclude: Excluder | Iterable[Excluder] | None,
+    excluded: Callable[[Path], bool] | None,
 ) -> dict[Path, tuple[Node, ...]]:
-    """Union the `locate_map` of each top node, by path (spec order kept)."""
+    """Union each top node's `locate_map`, by path (spec order kept).
+
+    Takes the pre-built `excluded` predicate so every top node reuses one
+    excluder instead of rebuilding it per `locate_map` call.
+    """
     merged: dict[Path, tuple[Node, ...]] = {}
     for node in top_nodes:
-        for path, nodes in locate_map(node, root_path, exclude=exclude).items():
+        for path, nodes in _locate_map(node, root_path, excluded).items():
             merged[path] = merged.get(path, ()) + nodes
     return merged
 

@@ -57,7 +57,7 @@ def locate(
         at_root: When `True`, treat `root` *itself* as the realized top node
             rather than its container -- so you point at the top directly
             (`locate(Directory("dataset", ...), ".../dataset", at_root=True)`).
-            The top must be an `Entry` (a `Group` raises `ValueError`); `root`
+            The top must be an `Entry` (a `Group` raises `TypeError`); `root`
             realizes it only when `root`'s leaf name matches the top's name
             filter and its kind agrees, otherwise nothing is yielded.
 
@@ -76,10 +76,13 @@ def locate(
         else _locate_children((tree,), root_path, excluded)
     )
 
-    if not unique:
-        yield from pairs
-        return
+    yield from _unique(pairs) if unique else pairs
 
+
+def _unique(
+    pairs: Iterable[tuple[Path, Node]],
+) -> Iterator[tuple[Path, Node]]:
+    """Stream `pairs`, suppressing ones already seen (backed by a `set`)."""
     seen: set[tuple[Path, Node]] = set()
     for pair in pairs:
         if pair not in seen:
@@ -127,8 +130,20 @@ def locate_map(
     before returning. Iterate `.items()` for `(path, nodes)` pairs, or index
     by path to look a single one up. `exclude` is as in `locate`.
     """
+    root_path = Path(root)
+    return _locate_map(tree, root_path, build_excluder(exclude, root_path))
+
+
+def _locate_map(
+    tree: Node, root_path: Path, excluded: Callable[[Path], bool] | None
+) -> dict[Path, tuple[Node, ...]]:
+    """`locate_map`'s core over a pre-built `excluded`; shared with `validate`.
+
+    Lets `validate` build the excluder once and reuse it across every top
+    node, rather than rebuilding it on each `locate_map` call.
+    """
     grouped: dict[Path, list[Node]] = {}
-    for path, node in locate(tree, root, unique=True, exclude=exclude):
+    for path, node in _unique(_locate_children((tree,), root_path, excluded)):
         grouped.setdefault(path, []).append(node)
     return {path: tuple(nodes) for path, nodes in grouped.items()}
 
