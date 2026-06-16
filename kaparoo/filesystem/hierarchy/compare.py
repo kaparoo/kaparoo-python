@@ -275,10 +275,12 @@ def _walk_depths(
 class Violation:
     """A constraint that a matched tree breaks.
 
-    `kind` is the group's type, `node` the offending `Exclusive` /
-    `Together`, and `present` the leaf entries found present: for
-    `exclusive`, the entries across the more-than-one sides that coexist;
-    for `together`, the members present while others are absent.
+    Attributes:
+        kind: The offending group's type (`"exclusive"` / `"together"`).
+        node: The offending `Exclusive` / `Together`.
+        present: The leaf entries found present -- for `exclusive`, those
+            across the multiple coexisting sides; for `together`, the members
+            present while others are absent.
     """
 
     kind: Literal["exclusive", "together"]
@@ -290,13 +292,17 @@ class Violation:
 class ValidationReport:
     """The outcome of checking a real directory against a spec tree.
 
-    `matched` maps each on-disk path to the node(s) it matched (exactly
-    `locate_map`); `unexpected` are paths matching no node; `missing` are
-    `required` entries / groups left unsatisfied; `violations` are broken
-    `Exclusive` / `Together` constraints; `failed` are `(path, node)` pairs
-    where the matched path broke the node's attribute `condition`. `ok` --
-    and the report's truthiness -- is `True` only when `unexpected`,
-    `missing`, `violations`, and `failed` are all empty.
+    The report's truthiness is `ok`.
+
+    Attributes:
+        matched: Each on-disk path mapped to the node(s) it matched (exactly
+            `locate_map`).
+        unexpected: Paths matching no node (an unspecified directory's
+            contents included).
+        missing: `required` entries / groups left unsatisfied.
+        violations: Broken `Exclusive` / `Together` constraints.
+        failed: `(path, node)` pairs where the matched path broke the node's
+            attribute `condition`.
     """
 
     matched: dict[Path, tuple[Node, ...]]
@@ -307,6 +313,7 @@ class ValidationReport:
 
     @property
     def ok(self) -> bool:
+        """Whether nothing is wrong (all four problem lists empty)."""
         return not (self.unexpected or self.missing or self.violations or self.failed)
 
     def __bool__(self) -> bool:
@@ -324,30 +331,31 @@ def validate(
 ) -> ValidationReport:
     """Check the directory at `root` against the spec `tree`.
 
-    By default `root` is the container (as in `locate`); returns a
-    `ValidationReport`. A path is `unexpected` when it is neither matched nor
-    an ancestor of a match, so an unspecified directory's contents count too.
-    A `required` entry is satisfied as soon as its name matches one present
-    path -- for an enumerable name (`OneOf` / `Template`) that means *at least
-    one* of the listed names exists, not all. `exclude` is as in `locate`:
-    excluded paths are dropped from `matched` and not reported `unexpected` (a
-    dropped directory is pruned).
-
-    An entry's attribute `condition` is checked on each matched path and the
-    failures collected in `report.failed`. `checks` supplies the callables
-    for `Content` conditions (keyed by name); `on_missing` decides what
-    happens when a `Content` name is absent (`"error"` raises, `"skip"`
-    treats it as satisfied).
+    By default `root` is the container (as in `locate`). A path is
+    `unexpected` when it is neither matched nor an ancestor of a match, so an
+    unspecified directory's contents count too. A `required` entry is
+    satisfied as soon as its name matches one present path -- for an
+    enumerable name (`OneOf` / `Template`), *at least one* listed name must
+    exist, not all. Each matched path is also checked against its entry's
+    `condition`, with failures collected in `report.failed`.
 
     Args:
-        at_root: When `True`, treat `root` *itself* as the realized top node
-            rather than its container, so you point at the top directly. The
-            top must be an `Entry` (a `Group` raises `TypeError`); when
-            `root`'s leaf name / kind do not realize it, the top is reported
-            `missing` and its subtree is not descended.
+        tree: The spec to check the directory against.
+        root: The directory checked; the realized top itself when `at_root`.
+        exclude: Path(s) to drop, as in `locate` (dropped paths are not
+            reported `unexpected`).
+        checks: Callables for `Content` conditions, keyed by name.
+        on_missing: What to do when a `Content` name is absent -- `"error"`
+            raises, `"skip"` treats it as satisfied.
+        at_root: Treat `root` *itself* as the realized top rather than its
+            container; the top must be an `Entry`, and a leaf name / kind
+            mismatch reports the top as `missing` without descending.
+
+    Returns:
+        A `ValidationReport` whose `ok` is `True` when nothing is wrong.
 
     Raises:
-        TypeError: If `at_root` is set and `tree`'s top node is a `Group`.
+        TypeError: If `at_root` and `tree`'s top is a `Group`.
     """
     ctx = CheckContext(checks or {}, on_missing)
     root = Path(root)
@@ -365,10 +373,18 @@ def _validate_at_root(
 ) -> ValidationReport:
     """Validate `root` as the realized top entry, not as a container.
 
-    The `at_root` form of `_build_report`. When `root` does not realize
-    `top` (leaf name / kind mismatch) the top is reported `missing` and the
-    subtree is not descended; otherwise the directory's children are validated
-    beneath `root` and the top's own `condition` is checked on it.
+    The `at_root` form of `_build_report`: a `Directory`'s children are
+    validated beneath `root` and the top's own `condition` is checked on it.
+
+    Args:
+        top: The spec's top node; must be an `Entry`.
+        root: The path validated as the realized `top`.
+        exclude: Path(s) to drop, as in `locate`.
+        ctx: The `Content`-check context (`checks` / `on_missing`).
+
+    Returns:
+        A `ValidationReport`; when `root` does not realize `top` (leaf name /
+        kind mismatch) the top is reported `missing` and not descended.
 
     Raises:
         TypeError: If `top` is a `Group` (it has no single name to anchor).
@@ -399,7 +415,17 @@ def _validate_at_root(
 def _failed_condition(
     entry: Entry, path: Path, ctx: CheckContext
 ) -> tuple[tuple[Path, Node], ...]:
-    """The `(path, entry)` failure tuple if `entry`'s condition breaks, else empty."""
+    """Check `entry`'s attribute `condition` on `path`.
+
+    Args:
+        entry: The entry whose `condition` is checked.
+        path: The matched path the condition runs against.
+        ctx: The `Content`-check context.
+
+    Returns:
+        The single `(path, entry)` failure pair, or empty when the condition
+        holds (or `entry` has none).
+    """
     if entry.condition is not None and not entry.condition.check(path, ctx):
         return ((path, entry),)
 
@@ -412,11 +438,20 @@ def _build_report(
     exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
     ctx: CheckContext = _NO_CHECKS,
 ) -> ValidationReport:
-    """Validate `top_nodes` matched directly under `root`.
+    """Build a `ValidationReport` for `top_nodes` directly under `root`.
 
     The `exclude` predicate is built once here and threaded into both the
-    match phase (`_merge_matched`) and the `_unexpected` sweep, rather than
+    locate phase (`_merge_matched`) and the `_unexpected` sweep, rather than
     rebuilt per top node.
+
+    Args:
+        top_nodes: The sibling nodes expected directly under `root`.
+        root: The directory validated.
+        exclude: Path(s) to drop, as in `locate`.
+        ctx: The `Content`-check context.
+
+    Returns:
+        The combined report for `top_nodes` under `root`.
     """
     excluder = build_excluder(exclude, root)
     matched = _merge_matched(top_nodes, root, excluder)
@@ -473,10 +508,18 @@ def _merge_matched(
     root: Path,
     excluder: Callable[[Path], bool] | None,
 ) -> dict[Path, tuple[Node, ...]]:
-    """Union each top node's `locate_map`, by path (spec order kept).
+    """Union each top node's `locate_map` by path (spec order kept).
 
-    Takes the pre-built `excluder` predicate so every top node reuses one
-    excluder instead of rebuilding it per `locate_map` call.
+    Takes a pre-built `excluder` so every top node reuses one excluder instead
+    of rebuilding it per `locate_map` call.
+
+    Args:
+        top_nodes: The sibling top nodes to locate under `root`.
+        root: The directory walked for matches.
+        excluder: A pre-built drop predicate, or `None` to exclude nothing.
+
+    Returns:
+        Each path mapped to the nodes it matched, across all top nodes.
     """
     merged: dict[Path, tuple[Node, ...]] = {}
     for node in top_nodes:
@@ -488,12 +531,18 @@ def _merge_matched(
 def _check_group(
     group: Group, present: set[Node]
 ) -> tuple[Violation | None, bool, tuple[Node, ...]]:
-    """Inspect one constraint; return `(violation, is_missing, demoted)`.
+    """Inspect one constraint against the present nodes.
 
-    `demoted` is non-empty only when a `priority` `Exclusive` resolves a
-    multi-side conflict: it is every node beneath the losing (lower-priority)
-    present sides, which the caller drops from `matched` (so they surface as
-    `unexpected`) and skips in the spec walk.
+    Args:
+        group: The `Exclusive` / `Together` to inspect.
+        present: Every node found present on disk.
+
+    Returns:
+        `(violation, is_missing, demoted)`. `demoted` is non-empty only when a
+        `priority` `Exclusive` resolves a multi-side conflict: every node
+        beneath the losing (lower-priority) present sides, which the caller
+        drops from `matched` (so they surface as `unexpected`) and skips in
+        the spec walk.
     """
     if isinstance(group, Exclusive):
         present_sides = [
@@ -530,8 +579,16 @@ def _unexpected(
     """List paths under `root` matching no node (subtrees included).
 
     A path is unexpected unless it is matched or an ancestor of a match; an
-    unexpected directory is reported once and not descended. An excluded
-    path is neither reported nor descended (it was dropped on purpose).
+    unexpected directory is reported once and not descended, and an excluded
+    path is neither reported nor descended.
+
+    Args:
+        root: The directory walked.
+        matched: The matched paths (and their nodes) treated as expected.
+        excluder: A pre-built drop predicate, or `None` to exclude nothing.
+
+    Returns:
+        The unexpected paths, in walk order.
     """
     allowed: set[Path] = set(matched)
     for path in matched:
@@ -558,7 +615,14 @@ def _unexpected(
 
 
 def _walk_nodes(node: Node) -> Iterator[Node]:
-    """Yield `node` and every node beneath it (descending into groups)."""
+    """Yield `node` and every node beneath it (descending into groups).
+
+    Args:
+        node: The subtree root to traverse.
+
+    Yields:
+        Each node in the subtree, `node` first.
+    """
     yield node
     if isinstance(node, Directory):
         for child in node.children:
@@ -573,7 +637,15 @@ def _walk_nodes(node: Node) -> Iterator[Node]:
 
 
 def _present_leaves(nodes: Iterable[Node], present: set[Node]) -> tuple[Entry, ...]:
-    """The leaf entries of `nodes` that are present on disk."""
+    """Filter `nodes`' leaf entries to those present on disk.
+
+    Args:
+        nodes: The nodes whose leaf entries are considered.
+        present: Every node found present on disk.
+
+    Returns:
+        The present leaf entries of `nodes`, in flattened order.
+    """
     return tuple(entry for entry in flatten_entries(nodes) if entry in present)
 
 
