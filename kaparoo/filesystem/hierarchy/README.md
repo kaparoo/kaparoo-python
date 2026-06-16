@@ -585,4 +585,3 @@ runs every check but no write, returning the paths that *would* be created.
   drawn from
 - [`kaparoo.filesystem.search`](../search/) — the traversal layer;
   `conformer` builds a search `predicate` from a spec
-- [`kaparoo.filesystem`](../) — the surrounding filesystem helpers
