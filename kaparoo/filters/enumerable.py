@@ -15,7 +15,7 @@ __all__ = (
 from abc import ABC, abstractmethod
 from dataclasses import FrozenInstanceError, dataclass, field
 from itertools import pairwise, product
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, override
 
 from kaparoo.filters.base import Filter
 from kaparoo.filters.utils import register_filter
@@ -76,16 +76,20 @@ class LiteralFilter(Expandable):
 
     name: str
 
+    @override
     def matches(self, target: str) -> bool:
         return target == self.name
 
+    @override
     def expand(self) -> Iterator[str]:
         yield self.name
 
+    @override
     def _payload(self) -> dict[str, Any]:
         return {"name": self.name}
 
     @classmethod
+    @override
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         return cls(name=data["name"])
 
@@ -119,16 +123,20 @@ class OneOfFilter(Expandable):
         object.__setattr__(self, "names", names)
         object.__setattr__(self, "_name_set", frozenset(names))
 
+    @override
     def matches(self, target: str) -> bool:
         return target in self._name_set
 
+    @override
     def expand(self) -> Iterator[str]:
         yield from self.names
 
+    @override
     def _payload(self) -> dict[str, Any]:
         return {"names": list(self.names)}
 
     @classmethod
+    @override
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         return cls(names=data["names"])
 
@@ -200,6 +208,7 @@ class TemplateFilter(Frozen, Expandable):
         """The value axes, each frozen to a tuple, combined as a product."""
         return self._axes
 
+    @override
     def matches(self, target: str) -> bool:
         # Cache the expanded name set on first match. This is a frozen value
         # object, so stash it via `object.__setattr__` rather than a field.
@@ -209,10 +218,12 @@ class TemplateFilter(Frozen, Expandable):
             object.__setattr__(self, "_matchable", names)
         return target in names
 
+    @override
     def expand(self) -> Iterator[str]:
         for combo in product(*self._axes):
             yield self._template.format(*combo)
 
+    @override
     def _payload(self) -> dict[str, Any]:
         return {
             "template": self._template,
@@ -220,6 +231,7 @@ class TemplateFilter(Frozen, Expandable):
         }
 
     @classmethod
+    @override
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         return cls(data["template"], *data["axes"])
 
@@ -286,16 +298,19 @@ class WithoutFilter(Frozen, Expandable):
         """The filters whose matches are removed from `base`."""
         return self._excluded
 
+    @override
     def matches(self, target: str) -> bool:
         return self._base.matches(target) and not any(
             e.matches(target) for e in self._excluded
         )
 
+    @override
     def expand(self) -> Iterator[str]:
         for name in self._base.expand():
             if not any(e.matches(name) for e in self._excluded):
                 yield name
 
+    @override
     def _payload(self) -> dict[str, Any]:
         return {
             "base": self._base.to_dict(),
@@ -303,6 +318,7 @@ class WithoutFilter(Frozen, Expandable):
         }
 
     @classmethod
+    @override
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         base = cast("Expandable", Filter.from_dict(data["base"]))
         return cls(base, *[Filter.from_dict(e) for e in data["excluded"]])

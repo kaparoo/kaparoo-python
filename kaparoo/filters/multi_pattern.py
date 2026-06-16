@@ -14,7 +14,7 @@ __all__ = (
 
 from abc import ABC
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from kaparoo.filters.base import Filter
 from kaparoo.filters.utils import register_filter
@@ -65,6 +65,7 @@ class MultiPatternFilter(Filter, ABC):
         """Return `target` normalized for `case_sensitive`."""
         return target if self.case_sensitive else target.casefold()
 
+    @override
     def _payload(self) -> dict[str, Any]:
         payload: dict[str, Any] = {"patterns": list(self.patterns)}
         if not self.case_sensitive:
@@ -72,6 +73,7 @@ class MultiPatternFilter(Filter, ABC):
         return payload
 
     @classmethod
+    @override
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         return cls(
             patterns=tuple(data["patterns"]),
@@ -94,6 +96,7 @@ class EqualsAnyFilter(MultiPatternFilter):
         super().__post_init__()  # validate / casefold / dedupe `patterns`
         object.__setattr__(self, "_pattern_set", frozenset(self.patterns))
 
+    @override
     def matches(self, target: str) -> bool:
         return self._prepare_target(target) in self._pattern_set
 
@@ -103,6 +106,7 @@ class EqualsAnyFilter(MultiPatternFilter):
 class StartsWithAnyFilter(MultiPatternFilter):
     """A filter matching strings that start with ANY of `patterns`."""
 
+    @override
     def matches(self, target: str) -> bool:
         return self._prepare_target(target).startswith(self.patterns)
 
@@ -112,6 +116,7 @@ class StartsWithAnyFilter(MultiPatternFilter):
 class EndsWithAnyFilter(MultiPatternFilter):
     """A filter matching strings that end with ANY of `patterns`."""
 
+    @override
     def matches(self, target: str) -> bool:
         return self._prepare_target(target).endswith(self.patterns)
 
@@ -121,6 +126,7 @@ class EndsWithAnyFilter(MultiPatternFilter):
 class ContainsAnyFilter(MultiPatternFilter):
     """A filter matching strings that contain ANY of `patterns` as a substring."""
 
+    @override
     def matches(self, target: str) -> bool:
         t = self._prepare_target(target)
         return any(p in t for p in self.patterns)

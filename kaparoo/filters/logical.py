@@ -4,7 +4,7 @@ __all__ = ("And", "AndFilter", "LogicalFilter", "Not", "NotFilter", "Or", "OrFil
 
 from abc import ABC
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from kaparoo.filters.base import Filter
 from kaparoo.filters.utils import register_filter
@@ -47,10 +47,12 @@ class NaryLogicalFilter(LogicalFilter, ABC):
             msg = f"{type(self).__name__} requires at least one child filter."
             raise ValueError(msg)
 
+    @override
     def _payload(self) -> dict[str, Any]:
         return {"children": [child.to_dict() for child in self.children]}
 
     @classmethod
+    @override
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         return cls(
             children=tuple(Filter.from_dict(child) for child in data["children"]),
@@ -66,6 +68,7 @@ class NaryLogicalFilter(LogicalFilter, ABC):
 class AndFilter(NaryLogicalFilter):
     """A filter matching strings that satisfy ALL of `children` (logical conjunction)."""
 
+    @override
     def matches(self, target: str) -> bool:
         return all(child.matches(target) for child in self.children)
 
@@ -75,6 +78,7 @@ class AndFilter(NaryLogicalFilter):
 class OrFilter(NaryLogicalFilter):
     """A filter matching strings that satisfy AT LEAST ONE of `children` (disjunction)."""
 
+    @override
     def matches(self, target: str) -> bool:
         return any(child.matches(target) for child in self.children)
 
@@ -86,13 +90,16 @@ class NotFilter(LogicalFilter):
 
     child: Filter
 
+    @override
     def matches(self, target: str) -> bool:
         return not self.child.matches(target)
 
+    @override
     def _payload(self) -> dict[str, Any]:
         return {"child": self.child.to_dict()}
 
     @classmethod
+    @override
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         return cls(child=Filter.from_dict(data["child"]))
 

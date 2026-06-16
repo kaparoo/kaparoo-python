@@ -20,7 +20,7 @@ import fnmatch
 import re
 from abc import ABC
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from kaparoo.filters.base import Filter
 from kaparoo.filters.utils import register_filter
@@ -59,6 +59,7 @@ class PatternFilter(Filter, ABC):
         """Return `target` normalized for `case_sensitive`."""
         return target if self.case_sensitive else target.casefold()
 
+    @override
     def _payload(self) -> dict[str, Any]:
         payload: dict[str, Any] = {"pattern": self.pattern}
         if not self.case_sensitive:
@@ -66,6 +67,7 @@ class PatternFilter(Filter, ABC):
         return payload
 
     @classmethod
+    @override
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         return cls(
             pattern=data["pattern"],
@@ -82,6 +84,7 @@ class PatternFilter(Filter, ABC):
 class EqualsFilter(PatternFilter):
     """A filter matching strings that equal `pattern` exactly."""
 
+    @override
     def matches(self, target: str) -> bool:
         return self._prepare_target(target) == self.pattern
 
@@ -91,6 +94,7 @@ class EqualsFilter(PatternFilter):
 class StartsWithFilter(PatternFilter):
     """A filter matching strings that start with `pattern`."""
 
+    @override
     def matches(self, target: str) -> bool:
         return self._prepare_target(target).startswith(self.pattern)
 
@@ -100,6 +104,7 @@ class StartsWithFilter(PatternFilter):
 class EndsWithFilter(PatternFilter):
     """A filter matching strings that end with `pattern`."""
 
+    @override
     def matches(self, target: str) -> bool:
         return self._prepare_target(target).endswith(self.pattern)
 
@@ -109,6 +114,7 @@ class EndsWithFilter(PatternFilter):
 class ContainsFilter(PatternFilter):
     """A filter matching strings that contain `pattern` as a substring."""
 
+    @override
     def matches(self, target: str) -> bool:
         return self.pattern in self._prepare_target(target)
 
@@ -141,6 +147,7 @@ class RegexFilter(PatternFilter):
             raise ValueError(msg) from e
         object.__setattr__(self, "_compiled", compiled)
 
+    @override
     def matches(self, target: str) -> bool:
         return self._compiled.fullmatch(target) is not None
 
@@ -168,6 +175,7 @@ class GlobFilter(PatternFilter):
             self, "_compiled", re.compile(fnmatch.translate(self.pattern), flags)
         )
 
+    @override
     def matches(self, target: str) -> bool:
         return self._compiled.match(target) is not None
 
