@@ -246,6 +246,16 @@ class TestConforms:
         assert not keep(tmp_path / "b.txt")  # file, name mismatch
         assert not keep(tmp_path / "d")  # not a file
 
+    def test_kind_mismatch_matches_nothing(self, tmp_path: Path) -> None:
+        # The predicate enforces the top's kind even when the name matches, so
+        # pairing it with the wrong search -- a `File` top under `search_dirs`,
+        # a `Directory` top under `search_files` -- rejects every candidate
+        # rather than raising.
+        build(tmp_path, ["x"])  # a file named "x"
+        (tmp_path / "y").mkdir()  # a directory named "y"
+        assert not conformer(File("y"))(tmp_path / "y")  # File top, real dir
+        assert not conformer(Directory("x"))(tmp_path / "x")  # Directory top, real file
+
     def test_top_group(self, tmp_path: Path) -> None:
         build(tmp_path, ["a", "c"])
         keep = conformer(Exclusive(File("a"), File("b")))
