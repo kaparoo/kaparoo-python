@@ -266,6 +266,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   / `Stored`) a later `update` on the absorbing tracker then mutated the
   source's samples too. It now copies the adopted state, and merging a tracker
   into itself is a no-op.
+- `kaparoo.filesystem.search` no longer re-exports the whole
+  `kaparoo.filters` namespace (`Filter`, `Glob`, `register_filter`, ...). The
+  independent `filters` package is the canonical import; `search` now exports
+  only its own `search_paths` / `search_files` / `search_dirs` (and the
+  deprecated `get_*`).
 
 ## [0.7.0] - 2026-06-04
 
