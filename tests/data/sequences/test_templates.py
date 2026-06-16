@@ -335,7 +335,7 @@ def test_file_folder_list_files_outside_root_raises(tmp_dir: Path):
         def load_file(self, path: Path) -> bytes:
             return path.read_bytes()
 
-    with pytest.raises(ValueError, match="not in the subpath"):
+    with pytest.raises(ValueError, match="does not start with"):
         EscapingFolder(tmp_dir)
 
 

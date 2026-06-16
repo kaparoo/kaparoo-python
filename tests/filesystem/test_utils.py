@@ -42,7 +42,7 @@ def test_stringify_path_after(dummy_path: Path, tmp_paths: tuple[Path, Path, Pat
     assert stringify_path(tmp_dir, after=tmp_path) == "dir"
     assert stringify_path(tmp_file, after=tmp_path) == "file.txt"
 
-    with pytest.raises(ValueError, match="is not in the subpath of"):
+    with pytest.raises(ValueError, match="does not start with"):
         stringify_path(tmp_dir, after=tmp_file)
 
 
@@ -79,7 +79,7 @@ def test_stringify_paths(
     assert stringify_paths(tmp_files, after=tmp_path) == [p.name for p in tmp_files]
     assert stringify_paths([dummy_path], before="file") == ["path/to"]
 
-    with pytest.raises(ValueError, match="is not in the subpath of"):
+    with pytest.raises(ValueError, match="does not start with"):
         stringify_paths(tmp_paths, after=tmp_file)
     with pytest.raises(ValueError, match="does not end with"):
         stringify_paths([dummy_path], before="ile")

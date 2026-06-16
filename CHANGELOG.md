@@ -249,6 +249,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   equivalent `range(...)` (`Template('v{}', range(0, 10))`), since `range`
   is a valid axis input. `repr` is informational only; equality, hashing,
   and serialization are unchanged.
+- `kaparoo.filesystem.stringify_path` / `stringify_paths` now normalize to
+  POSIX form via `Path.as_posix()` on every platform, replacing the
+  Windows-only backslash substitution. Output is therefore normalized
+  (redundant `/` and `.` segments collapsed), and a path trimmed to nothing
+  stringifies to `"."` consistently. An `after` mismatch now raises a clearer
+  `ValueError` (`"path ... does not start with ..."`) instead of surfacing
+  pathlib's raw `"is not in the subpath of"` message.
 
 ### Fixed
 
