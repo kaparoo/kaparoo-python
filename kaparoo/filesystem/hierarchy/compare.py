@@ -10,10 +10,10 @@ __all__ = (
 )
 
 from dataclasses import dataclass
-from os import PathLike
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
 
+from kaparoo.filesystem.exclude import build_excluder
 from kaparoo.filesystem.hierarchy.conditions import CheckContext
 from kaparoo.filesystem.hierarchy.entry import Directory, Entry, File
 from kaparoo.filesystem.hierarchy.group import (
@@ -22,69 +22,18 @@ from kaparoo.filesystem.hierarchy.group import (
     Together,
     flatten_entries,
 )
-from kaparoo.filters import Filter
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
 
+    from kaparoo.filesystem.exclude import Excluder
     from kaparoo.filesystem.hierarchy.base import Node
     from kaparoo.filesystem.types import StrPath
 
     type ContentChecks = Mapping[str, Callable[[Path], bool]]
 
 
-type Excluder = StrPath | Filter | Callable[[Path], bool]
-
 _NO_CHECKS = CheckContext()
-
-
-# ========================== #
-#          Excluders         #
-# ========================== #
-
-
-def build_excluder(
-    exclude: Excluder | Iterable[Excluder] | None, root: Path
-) -> Callable[[Path], bool] | None:
-    """Normalize `exclude` to one predicate over an absolute candidate path.
-
-    The predicate relativizes the candidate to `root` and tests it against the
-    collected concrete paths (set membership), `Filter`s (matched on the
-    root-relative POSIX string), and callables (each given the root-relative
-    `Path`). Returns `None` when nothing is excluded.
-    """
-    if exclude is None:
-        return None
-
-    relposix: set[str] = set()
-    filters: list[Filter] = []
-    predicates: list[Callable[[Path], bool]] = []
-    for excluder in _iter_excluders(exclude):
-        if isinstance(excluder, Filter):
-            filters.append(excluder)
-        elif isinstance(excluder, str | PathLike):
-            relposix.add(Path(cast("StrPath", excluder)).as_posix())
-        else:
-            predicates.append(excluder)
-
-    def excluded(candidate: Path) -> bool:
-        rel = candidate.relative_to(root)
-        relstr = rel.as_posix()
-        return (
-            relstr in relposix
-            or any(f.matches(relstr) for f in filters)
-            or any(p(rel) for p in predicates)
-        )
-
-    return excluded
-
-
-def _iter_excluders(exclude: Excluder | Iterable[Excluder]) -> Iterator[Excluder]:
-    """Yield each excluder; a lone `str` / `PathLike` / `Filter` / callable is one."""
-    if isinstance(exclude, str | PathLike | Filter) or callable(exclude):
-        yield cast("Excluder", exclude)
-    else:
-        yield from cast("Iterable[Excluder]", exclude)
 
 
 # ========================== #
