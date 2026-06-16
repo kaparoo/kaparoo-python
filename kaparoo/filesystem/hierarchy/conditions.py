@@ -18,7 +18,7 @@ __all__ = (
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, override
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -174,13 +174,15 @@ class Bound(Condition, ABC):
         """The integer being bounded (e.g. byte count, child count)."""
         raise NotImplementedError
 
-    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:  # noqa: ARG002
+    @override
+    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:
         """Whether `_measure(path)` lies within the inclusive `[min, max]` bound."""
         value = self._measure(path)
         return (self.min is None or value >= self.min) and (
             self.max is None or value <= self.max
         )
 
+    @override
     def _payload(self) -> dict[str, Any]:
         payload: dict[str, Any] = {}
         if self.min is not None:
@@ -191,6 +193,7 @@ class Bound(Condition, ABC):
         return payload
 
     @classmethod
+    @override
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         return cls(min=data.get("min"), max=data.get("max"))
 
@@ -200,10 +203,12 @@ class Bound(Condition, ABC):
 class Size(Bound):
     """An inclusive bound, in bytes, on a file's size (`min` / `max`)."""
 
+    @override
     def applies_to(self, kind: EntryKind) -> bool:
         """Applicable to files only."""
         return kind == "file"
 
+    @override
     def _measure(self, path: Path) -> int:
         """Return the file's size in bytes."""
         return path.stat().st_size
@@ -230,10 +235,12 @@ class ChildCount(Bound):
             msg = f"ChildCount `only` must be 'files' or 'dirs', got {self.only!r}."
             raise ValueError(msg)
 
+    @override
     def applies_to(self, kind: EntryKind) -> bool:
         """Applicable to directories only."""
         return kind == "dir"
 
+    @override
     def _measure(self, path: Path) -> int:
         """Count the directory's entries, restricted by `only`."""
         if self.only == "files":
@@ -242,6 +249,7 @@ class ChildCount(Bound):
             return sum(1 for p in path.iterdir() if p.is_dir())
         return sum(1 for _ in path.iterdir())
 
+    @override
     def _payload(self) -> dict[str, Any]:
         payload = super()._payload()
         if self.only is not None:
@@ -249,6 +257,7 @@ class ChildCount(Bound):
         return payload
 
     @classmethod
+    @override
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         return cls(min=data.get("min"), max=data.get("max"), only=data.get("only"))
 
@@ -263,10 +272,12 @@ class TreeSize(Bound):
     and is `Directory`-only. Symlinked directories are not descended.
     """
 
+    @override
     def applies_to(self, kind: EntryKind) -> bool:
         """Applicable to directories only."""
         return kind == "dir"
 
+    @override
     def _measure(self, path: Path) -> int:
         """Sum the sizes of every regular file in the subtree."""
         return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
@@ -277,17 +288,20 @@ class TreeSize(Bound):
 class Empty(Condition):
     """A file with no bytes, or a directory with no entries."""
 
-    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:  # noqa: ARG002
+    @override
+    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:
         """Whether `path` holds no bytes (file) or no entries (directory)."""
         if path.is_dir():
             return not any(path.iterdir())
         return path.stat().st_size == 0
 
+    @override
     def _payload(self) -> dict[str, Any]:
         return {}
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> Self:  # noqa: ARG003
+    @override
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
         return cls()
 
 
@@ -296,17 +310,20 @@ class Empty(Condition):
 class NonEmpty(Condition):
     """A file with at least one byte, or a directory with at least one entry."""
 
-    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:  # noqa: ARG002
+    @override
+    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:
         """Whether `path` holds at least one byte (file) or one entry (directory)."""
         if path.is_dir():
             return any(path.iterdir())
         return path.stat().st_size > 0
 
+    @override
     def _payload(self) -> dict[str, Any]:
         return {}
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> Self:  # noqa: ARG003
+    @override
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
         return cls()
 
 
@@ -331,6 +348,7 @@ class Content(Condition):
 
     name: str
 
+    @override
     def check(self, path: Path, ctx: CheckContext | None = None) -> bool:
         """Run the `name`d check from `ctx`, honoring `on_missing` when absent."""
         if ctx is None:
@@ -345,10 +363,12 @@ class Content(Condition):
 
         return fn(path)
 
+    @override
     def _payload(self) -> dict[str, Any]:
         return {"name": self.name}
 
     @classmethod
+    @override
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         return cls(name=data["name"])
 
@@ -372,14 +392,17 @@ class Variadic(Condition, ABC):
             msg = f"{type(self).__name__} requires at least one condition."
             raise ValueError(msg)
 
+    @override
     def applies_to(self, kind: EntryKind) -> bool:
         """Applicable where every child condition is (their intersection)."""
         return all(condition.applies_to(kind) for condition in self.conditions)
 
+    @override
     def _payload(self) -> dict[str, Any]:
         return {"conditions": [condition.to_dict() for condition in self.conditions]}
 
     @classmethod
+    @override
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         return cls(tuple(Condition.from_dict(c) for c in data["conditions"]))
 
@@ -389,6 +412,7 @@ class Variadic(Condition, ABC):
 class And(Variadic):
     """Satisfied when ALL of `conditions` are (conjunction)."""
 
+    @override
     def check(self, path: Path, ctx: CheckContext | None = None) -> bool:
         """Whether every child condition holds for `path`."""
         return all(condition.check(path, ctx) for condition in self.conditions)
@@ -399,6 +423,7 @@ class And(Variadic):
 class Or(Variadic):
     """Satisfied when AT LEAST ONE of `conditions` is (disjunction)."""
 
+    @override
     def check(self, path: Path, ctx: CheckContext | None = None) -> bool:
         """Whether at least one child condition holds for `path`."""
         return any(condition.check(path, ctx) for condition in self.conditions)
@@ -411,17 +436,21 @@ class Not(Condition):
 
     condition: Condition
 
+    @override
     def applies_to(self, kind: EntryKind) -> bool:
         """Applicable wherever the wrapped condition is."""
         return self.condition.applies_to(kind)
 
+    @override
     def check(self, path: Path, ctx: CheckContext | None = None) -> bool:
         """Whether the wrapped condition does not hold for `path`."""
         return not self.condition.check(path, ctx)
 
+    @override
     def _payload(self) -> dict[str, Any]:
         return {"condition": self.condition.to_dict()}
 
     @classmethod
+    @override
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         return cls(Condition.from_dict(data["condition"]))

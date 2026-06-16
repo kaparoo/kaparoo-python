@@ -3,7 +3,7 @@ from __future__ import annotations
 __all__ = ("Exclusive", "Group", "Together")
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, override
 
 from kaparoo.filesystem.hierarchy.base import Node
 from kaparoo.filesystem.hierarchy.utils import register_node
@@ -179,13 +179,16 @@ class Exclusive(Group):
         return self._on_conflict
 
     @property
+    @override
     def entries(self) -> tuple[Entry, ...]:
         """The leaf entries across every alternative, flattened in order."""
         return flatten_entries(node for alt in self._alternatives for node in alt)
 
+    @override
     def _key(self) -> tuple[object, ...]:
         return (self._alternatives, self._required, self._on_conflict)
 
+    @override
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {
             "node": "exclusive",
@@ -203,6 +206,7 @@ class Exclusive(Group):
         return result
 
     @classmethod
+    @override
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         alternatives = [
             [Node.from_dict(node) for node in alt] for alt in data["alternatives"]
@@ -264,13 +268,16 @@ class Together(Group):
         return self._members
 
     @property
+    @override
     def entries(self) -> tuple[Entry, ...]:
         """The leaf entries across every member, flattened in order."""
         return flatten_entries(self._members)
 
+    @override
     def _key(self) -> tuple[object, ...]:
         return (self._members, self._required)
 
+    @override
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {
             "node": "together",
@@ -281,6 +288,7 @@ class Together(Group):
         return result
 
     @classmethod
+    @override
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         members = [Node.from_dict(member) for member in data["members"]]
         return cls(*members, required=data.get("required", False))

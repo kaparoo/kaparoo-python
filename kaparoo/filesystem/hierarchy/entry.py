@@ -3,7 +3,7 @@ from __future__ import annotations
 __all__ = ("Directory", "Entry", "File")
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from kaparoo.filesystem.hierarchy.base import Node
 from kaparoo.filesystem.hierarchy.conditions import Condition
@@ -220,6 +220,7 @@ class Entry(Node, ABC):
         """Return the identity fields shown in `repr`, excluding `depth`."""
         raise NotImplementedError
 
+    @override
     def _key(self) -> tuple[object, ...]:
         return (*self._fields(), self._depth, self._required, self._condition)
 
@@ -258,13 +259,16 @@ class File(Entry):
 
     _kind = "file"
 
+    @override
     def _fields(self) -> tuple[object, ...]:
         return (self._name,)
 
+    @override
     def to_dict(self) -> dict[str, Any]:
         return {"node": "file", "name": self._name.to_dict(), **self._common_payload()}
 
     @classmethod
+    @override
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         return cls(
             Filter.from_dict(data["name"]),
@@ -307,9 +311,11 @@ class Directory(Entry):
         """The contained nodes, in insertion order."""
         return self._children
 
+    @override
     def _fields(self) -> tuple[object, ...]:
         return (self._name, self._children)
 
+    @override
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"node": "directory", "name": self._name.to_dict()}
         if self._children:
@@ -318,6 +324,7 @@ class Directory(Entry):
         return result
 
     @classmethod
+    @override
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
         children = [Node.from_dict(child) for child in data.get("children", ())]
         return cls(
