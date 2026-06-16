@@ -171,10 +171,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`max_depth=None` is unbounded). `accepts_kind(path)` returns `True` when
   the on-disk kind of `path` matches the entry's own kind (`File` ↔ file,
   `Directory` ↔ directory).
-- `kaparoo.filesystem.hierarchy.group.max_depth_of(nodes)`: returns the
-  deepest level any node in `nodes` requires (once flattened to leaf entries),
-  or `None` if any entry's depth is unbounded. Groups are accepted and
-  flattened transparently, so callers need not pre-flatten.
+- `kaparoo.filesystem.hierarchy.group.flatten_entries(nodes)` /
+  `max_depth_of(nodes)`: both accept a single `Node` **or** an iterable of
+  nodes (`Node | Iterable[Node]`), so callers holding a single node need not
+  wrap it in a list. `flatten_entries` recursively gathers the leaf `Entry`
+  nodes (groups descended, result always a flat tuple). `max_depth_of` returns
+  the deepest level any node requires (once flattened), `None` if any entry's
+  depth is unbounded, and `1` for an empty input.
 - `kaparoo.filesystem.units`: byte-size unit constants -- decimal `KB` / `MB`
   / `GB` / `TB` (powers of 1000) and binary `KIB` / `MIB` / `GIB` / `TIB`
   (powers of 1024). They are plain `int` multipliers for readable file-size

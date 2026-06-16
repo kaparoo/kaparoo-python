@@ -13,7 +13,7 @@ from kaparoo.filesystem.hierarchy import (
     Node,
     Together,
 )
-from kaparoo.filesystem.hierarchy.group import max_depth_of
+from kaparoo.filesystem.hierarchy.group import flatten_entries, max_depth_of
 
 
 class TestExclusive:
@@ -189,8 +189,39 @@ class TestGroup:
                 group._required = True  # noqa: SLF001
 
 
+class TestFlattenEntries:
+    def test_single_entry_node(self) -> None:
+        assert flatten_entries(File("a")) == (File("a"),)
+
+    def test_single_group_node(self) -> None:
+        group = Together(File("a"), File("b"))
+        assert flatten_entries(group) == (File("a"), File("b"))
+
+    def test_iterable_of_entries(self) -> None:
+        assert flatten_entries([File("a"), File("b")]) == (File("a"), File("b"))
+
+    def test_iterable_with_groups_flattened(self) -> None:
+        group = Exclusive(File("a"), File("b"))
+        assert flatten_entries([group, File("c")]) == (File("a"), File("b"), File("c"))
+
+    def test_nested_groups_flattened_recursively(self) -> None:
+        inner = Together(File("a"), File("b"))
+        outer = Exclusive(inner, File("c"))
+        assert flatten_entries(outer) == (File("a"), File("b"), File("c"))
+
+    def test_empty_iterable(self) -> None:
+        assert flatten_entries([]) == ()
+
+
 class TestMaxDepthOf:
-    def test_single_bounded_entry(self) -> None:
+    def test_single_entry_node(self) -> None:
+        assert max_depth_of(File("a", depth=3)) == 3
+
+    def test_single_group_node(self) -> None:
+        group = Together(File("a", depth=3), File("b", depth=2))
+        assert max_depth_of(group) == 3
+
+    def test_iterable_single_bounded_entry(self) -> None:
         assert max_depth_of([File("a", depth=3)]) == 3
 
     def test_returns_the_deepest_of_several_entries(self) -> None:
@@ -199,9 +230,9 @@ class TestMaxDepthOf:
     def test_unbounded_entry_returns_none(self) -> None:
         assert max_depth_of([File("a", depth=2), File("b", depth=None)]) is None
 
-    def test_groups_are_flattened(self) -> None:
+    def test_groups_in_iterable_are_flattened(self) -> None:
         group = Together(File("a", depth=3), File("b", depth=2))
         assert max_depth_of([group]) == 3
 
-    def test_empty_input_returns_one(self) -> None:
+    def test_empty_iterable_returns_one(self) -> None:
         assert max_depth_of([]) == 1
