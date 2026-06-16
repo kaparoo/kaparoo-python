@@ -584,10 +584,10 @@ def conformer(
     within a spec is a separate, future capability.)
     """
     ctx = CheckContext(checks or {}, on_missing)
-    tops = spec.entries if isinstance(spec, Group) else (spec,)
+    tops = flatten_entries(spec)
 
     def check(path: StrPath) -> bool:
-        candidate = Path(path)
-        return any(_validate_at_root(top, candidate, None, ctx).ok for top in tops)
+        root = Path(path)
+        return any(_validate_at_root(top, root, None, ctx).ok for top in tops)
 
     return check
