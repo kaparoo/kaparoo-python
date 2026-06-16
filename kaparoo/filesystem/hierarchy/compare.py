@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
 
 from kaparoo.filesystem.exclude import build_excluder
+from kaparoo.filesystem.hierarchy.base import Node
 from kaparoo.filesystem.hierarchy.conditions import CheckContext
 from kaparoo.filesystem.hierarchy.entry import Directory, Entry, File
 from kaparoo.filesystem.hierarchy.group import (
@@ -28,7 +29,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
 
     from kaparoo.filesystem.exclude import ExcludeRule
-    from kaparoo.filesystem.hierarchy.base import Node
     from kaparoo.filesystem.types import StrPath
 
     type ContentChecks = Mapping[str, Callable[[Path], bool]]
@@ -357,12 +357,14 @@ def validate(
     Raises:
         TypeError: If `at_root` and `tree`'s top is a `Group`.
     """
-    ctx = CheckContext(checks or {}, on_missing)
     root = Path(root)
+
+    ctx = CheckContext(checks or {}, on_missing)
+
     if at_root:
         return _validate_at_root(tree, root, exclude, ctx)
 
-    return _build_report((tree,), root, exclude, ctx)
+    return _validate_under(tree, root, exclude, ctx)
 
 
 def _validate_at_root(
@@ -373,7 +375,7 @@ def _validate_at_root(
 ) -> ValidationReport:
     """Validate `root` as the realized top entry, not as a container.
 
-    The `at_root` form of `_build_report`: a `Directory`'s children are
+    The `at_root` form of `_validate_under`: a `Directory`'s children are
     validated beneath `root` and the top's own `condition` is checked on it.
 
     Args:
@@ -405,7 +407,7 @@ def _validate_at_root(
         return ValidationReport({root: (entry,)}, (), (), (), failed)
 
     directory = cast("Directory", entry)
-    report = _build_report(directory.children, root, exclude, ctx)
+    report = _validate_under(directory.children, root, exclude, ctx)
     return ValidationReport(
         matched={root: (entry,), **report.matched},
         unexpected=report.unexpected,
@@ -415,17 +417,18 @@ def _validate_at_root(
     )
 
 
-def _build_report(
-    tops: tuple[Node, ...],
+def _validate_under(
+    tops: Node | tuple[Node, ...],
     root: Path,
     exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
     ctx: CheckContext = _NO_CHECKS,
 ) -> ValidationReport:
-    """Build a `ValidationReport` for `tops` directly under `root`.
+    """Validate `tops` as entries realized directly under `root`.
 
-    The `exclude` predicate is built once here and threaded into both the
-    locate phase (`_merge_matched`) and the `_unexpected` sweep, rather than
-    rebuilt per top node.
+    The `at_root`-less core of `validate`, also reused by `_validate_at_root`
+    for a directory's children. The `exclude` predicate is built once here and
+    threaded into both the locate phase (`_merge_matched`) and the
+    `_unexpected` sweep, rather than rebuilt per top node.
 
     Args:
         tops: The sibling nodes expected directly under `root`.
@@ -436,6 +439,9 @@ def _build_report(
     Returns:
         The combined report for `tops` under `root`.
     """
+    if isinstance(tops, Node):
+        tops = (tops,)
+
     excluder = build_excluder(exclude, root)
     matched = _merge_matched(tops, root, excluder)
     present: set[Node] = {node for nodes in matched.values() for node in nodes}
@@ -505,9 +511,11 @@ def _merge_matched(
         Each path mapped to the nodes it matched, across all top nodes.
     """
     merged: dict[Path, tuple[Node, ...]] = {}
+
     for node in tops:
         for path, nodes in _locate_map(node, root, excluder).items():
             merged[path] = merged.get(path, ()) + nodes
+
     return merged
 
 
