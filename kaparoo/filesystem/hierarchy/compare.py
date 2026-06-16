@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
 
 from kaparoo.filesystem.exclude import build_excluder
-from kaparoo.filesystem.hierarchy.base import Node
 from kaparoo.filesystem.hierarchy.conditions import CheckContext
 from kaparoo.filesystem.hierarchy.entry import Directory, Entry, File
 from kaparoo.filesystem.hierarchy.group import (
@@ -29,6 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
 
     from kaparoo.filesystem.exclude import ExcludeRule
+    from kaparoo.filesystem.hierarchy.base import Node
     from kaparoo.filesystem.types import StrPath
 
     type ContentChecks = Mapping[str, Callable[[Path], bool]]
@@ -96,7 +96,6 @@ def locate(
     excluder = build_excluder(exclude, root)
     locate_fn = _locate_at_root if at_root else _locate_children
     pairs = locate_fn(tree, root, excluder)
-
     yield from _unique(pairs) if unique else pairs
 
 
@@ -152,10 +151,12 @@ def _locate_at_root(
         raise TypeError(msg)
 
     entry = cast("Entry", top)
+
     if not (entry.name.matches(root.name) and entry.accepts_kind(root)):
         return
 
     yield (root, entry)
+
     if isinstance(entry, Directory):
         yield from _locate_children(entry.children, root, excluder)
 
@@ -171,10 +172,7 @@ def _locate_children(
     matched directory recurses into its own children. Excluded paths are
     dropped (and pruned if directories) during the walk.
     """
-    if isinstance(nodes, Node):
-        nodes = (nodes,)
 
-    nodes = cast("Iterable[Node]", nodes)
     entries = flatten_entries(nodes)
     if not entries:
         return

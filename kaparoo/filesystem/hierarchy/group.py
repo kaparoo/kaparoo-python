@@ -62,9 +62,18 @@ class Group(Node, ABC):
         raise NotImplementedError
 
 
-def flatten_entries(nodes: Iterable[Node]) -> tuple[Entry, ...]:
-    """Recursively gather the leaf `Entry` nodes from `nodes`."""
+def flatten_entries(nodes: Node | Iterable[Node]) -> tuple[Entry, ...]:
+    """Recursively gather the leaf `Entry` nodes from `nodes`.
+
+    Accepts a single `Node` or an iterable of nodes. Groups are descended
+    recursively so the result is always a flat tuple of concrete `Entry` nodes.
+    """
+
     result: list[Entry] = []
+
+    if isinstance(nodes, Node):
+        nodes = (nodes,)
+
     for node in nodes:
         if isinstance(node, Group):
             result.extend(node.entries)
@@ -72,16 +81,19 @@ def flatten_entries(nodes: Iterable[Node]) -> tuple[Entry, ...]:
             # `Node` is the closed `Entry | Group`, so a non-`Group` is an
             # `Entry` (see `Node`); `ty` cannot prove it from the open ABC.
             result.append(cast("Entry", node))
+
     return tuple(result)
 
 
-def max_depth_of(nodes: Iterable[Node]) -> int | None:
+def max_depth_of(nodes: Node | Iterable[Node]) -> int | None:
     """The deepest level any of `nodes` needs once flattened to entries.
 
-    `None` if any entry's depth is unbounded. Accepts raw nodes (groups
-    included), flattening them, so callers need not pre-flatten.
+    Accepts a single `Node` or an iterable of nodes (groups included),
+    flattening them, so callers need not pre-flatten. Returns `None` if any
+    entry's depth is unbounded; returns `1` for an empty input.
     """
     bound = 1
+
     for entry in flatten_entries(nodes):
         if entry.max_depth is None:
             return None
