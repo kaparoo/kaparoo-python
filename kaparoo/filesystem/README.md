@@ -258,5 +258,7 @@ overwrite replace has the brief absent window noted above.
 
 ## See also
 
-- [`search/`](./search/) for filesystem traversal with filters
-- [`kaparoo.utils`](../utils/) for `Timer` and Optional helpers
+- [`search/`](./search/) — filesystem traversal with composable filters
+- [`hierarchy/`](./hierarchy/) — declarative directory-tree specs
+- [`kaparoo.filters`](../filters/) — the filter DSL `search` / `hierarchy`
+  build on

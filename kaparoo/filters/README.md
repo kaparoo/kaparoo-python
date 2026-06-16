@@ -213,4 +213,5 @@ single-character `?` stays single-character).
 
 - [`kaparoo.filesystem.search`](../filesystem/search/) — traversal that
   applies these filters to paths
-- [`kaparoo.filesystem`](../filesystem/) — the surrounding filesystem helpers
+- [`kaparoo.filesystem.hierarchy`](../filesystem/hierarchy/) — uses filters
+  as directory-tree node names

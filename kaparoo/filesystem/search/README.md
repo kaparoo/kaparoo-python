@@ -117,6 +117,8 @@ search_files(
 
 ## See also
 
-- [`kaparoo.filters`](../../filters/) for the filter DSL applied here
-- [`kaparoo.filesystem`](../) for the surrounding filesystem helpers
+- [`kaparoo.filters`](../../filters/) — the filter DSL applied here
+- [`kaparoo.filesystem.hierarchy`](../hierarchy/) — its `conformer` builds a
+  `predicate` for these searches
+- [`kaparoo.filesystem`](../) — the surrounding filesystem helpers
 - [`kaparoo.utils.timer`](../../utils/) for timing filter-heavy walks

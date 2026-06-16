@@ -583,6 +583,6 @@ runs every check but no write, returning the paths that *would* be created.
 
 - [`kaparoo.filters`](../../filters/) — the filter DSL node names are
   drawn from
-- [`kaparoo.filesystem.search`](../search/) — the traversal layer that
-  also builds on `kaparoo.filters`
+- [`kaparoo.filesystem.search`](../search/) — the traversal layer;
+  `conformer` builds a search `predicate` from a spec
 - [`kaparoo.filesystem`](../) — the surrounding filesystem helpers

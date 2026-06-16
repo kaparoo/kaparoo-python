@@ -287,5 +287,5 @@ ensure_in_range(n, lower=0, upper=10, step=2, name="n")        # 0, 2, ..., 10
 
 ## See also
 
-- [`kaparoo.filesystem`](../filesystem/) for filesystem helpers
-- [`kaparoo.filesystem.search`](../filesystem/search/) for traversal
+These are foundational helpers with no single peer module; see the
+[package overview](../../README.md) for where they fit.

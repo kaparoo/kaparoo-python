@@ -295,5 +295,7 @@ list(generate_batches(range(7), size=3, step=3, drop_last=False))
 
 ## See also
 
-- [`kaparoo.filesystem`](../filesystem/) for path helpers and search
-- [`kaparoo.utils`](../utils/) for `Timer` and Optional helpers
+- [`kaparoo.filesystem`](../filesystem/) — path helpers for file-backed
+  sequences
+- [`kaparoo.filesystem.search`](../filesystem/search/) — discover the files a
+  `FileFolderSequence` wraps
