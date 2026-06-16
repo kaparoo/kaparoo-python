@@ -238,6 +238,17 @@ class TestWithout:
             "Without(OneOf(('a', 'b')), Literal('a'))"
         )
 
+    def test_from_dict_rejects_non_expandable_base(self) -> None:
+        # A `Without` whose serialized `base` is open-ended (a glob) cannot
+        # `expand`; `from_dict` must reject it rather than fail later.
+        data = {
+            "kind": "without",
+            "base": {"kind": "glob", "pattern": "*.png"},
+            "excluded": [{"kind": "literal", "name": "x"}],
+        }
+        with pytest.raises(TypeError, match="Expandable"):
+            Without.from_dict(data)
+
 
 class TestFrozen:
     """`Template` / `Without` are non-`@dataclass` `Expandable`s, so guard
@@ -260,15 +271,3 @@ class TestFrozen:
         without = Without(Literal("a"), "b")
         with pytest.raises(FrozenInstanceError):
             without._base = Literal("z")  # noqa: SLF001
-
-
-def test_without_from_dict_rejects_non_expandable_base() -> None:
-    # A `Without` whose serialized `base` is open-ended (a glob) cannot
-    # `expand`; `from_dict` must reject it rather than fail later.
-    data = {
-        "kind": "without",
-        "base": {"kind": "glob", "pattern": "*.png"},
-        "excluded": [{"kind": "literal", "name": "x"}],
-    }
-    with pytest.raises(TypeError, match="Expandable"):
-        Without.from_dict(data)

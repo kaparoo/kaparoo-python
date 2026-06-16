@@ -49,6 +49,11 @@ tracking; a `fail_under` gate is configured in `pyproject.toml`.
   intentional exceptions. Cross-module test helpers live in
   `tests/<pkg>/helpers.py`, shared fixtures in `tests/fixtures/`,
   and per-package pytest configuration in `conftest.py`.
+- **Test layout: flat functions by default, classes to group.** Write
+  tests as module-level `def test_*` functions; reach for a `class TestX:`
+  (plain grouping, no inheritance) only to organize a large or multi-feature
+  surface, as the `kaparoo.filesystem.hierarchy` tests do. Don't mix the two
+  styles within one file.
 - `ty` has no plugin system; rely on standard typing (PEP 681
   `dataclass_transform`, `.pyi` stubs), not type-checker plugins.
 - **Submodule READMEs own the usage examples.** The root `README.md` is
