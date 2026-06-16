@@ -533,6 +533,13 @@ only when that condition also holds. (Checking whether a concrete path or
 sub-spec is *contained* anywhere within a spec is a separate, future
 capability.)
 
+Because the predicate enforces the top node's kind, pair it with the
+matching search: a top `File` with `search_files`, a top `Directory` with
+`search_dirs`. A kind mismatch — a `File` top under `search_dirs` (which
+only offers directories), or a `Directory` top under `search_files` —
+matches nothing rather than raising; a mixed `Group` top keeps only its
+kind-matching members for that search.
+
 ## Scaffolding: `scaffold`
 
 `scaffold(tree, root)` is the **write** counterpart of `locate` / `validate`:

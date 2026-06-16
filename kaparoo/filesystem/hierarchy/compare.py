@@ -574,6 +574,12 @@ def conformer(
     For an `Entry` top this is exactly `validate(spec, path, at_root=True).ok`;
     a `Group` top conforms when any of its leaf entries does.
 
+    Because the predicate enforces the top's kind, pair it with the matching
+    `search`: a `File` top with `search_files`, a `Directory` top with
+    `search_dirs`. A kind mismatch (e.g. a `File` top under `search_dirs`,
+    which only ever offers directories) simply matches nothing -- no error.
+    A mixed `Group` top filters to its kind-matching members per search.
+
     (Checking whether a concrete path or a sub-spec is *contained* anywhere
     within a spec is a separate, future capability.)
     """
