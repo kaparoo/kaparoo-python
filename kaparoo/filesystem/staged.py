@@ -88,7 +88,7 @@ def _fsync_parent(path: Path) -> None:
 
 
 class StagedTarget(ABC):
-    """Abstract base for `StagedFile` and `StagedDirectory`.
+    """A write staged off to the side and moved into place atomically on commit.
 
     Holds the shared commit/abort lifecycle and context-manager protocol: a
     clean `with`-block exit commits, an exception aborts, `abort` is
@@ -96,8 +96,7 @@ class StagedTarget(ABC):
     `weakref` finalizer if the instance is dropped without committing. Not
     thread-safe: do not write, commit, or abort one instance from multiple
     threads at once. Subclasses set `_committed` / `_finalizer` in `__init__`
-    and implement `commit`. Excluded from `__all__` -- use `StagedFile` or
-    `StagedDirectory`.
+    and implement `commit`. Not part of `__all__`.
     """
 
     __slots__ = ("__weakref__", "_committed", "_finalizer", "_overwrite", "_path")

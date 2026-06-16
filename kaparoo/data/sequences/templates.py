@@ -48,7 +48,7 @@ class FileListSequence[T, M = Path](DataSequence[T, M]):
         return tuple(self.get_file(i) for i in range(len(self)))
 
     def get_file(self, index: int) -> Path:
-        """Full Path of the file at `index`."""
+        """Return the full `Path` of the file at `index`."""
         return Path(self._files[index])
 
     @override
@@ -123,7 +123,7 @@ class FileFolderSequence[T, M = Path](FileListSequence[T, M]):
 
     @override
     def get_file(self, index: int) -> Path:
-        """Full Path of the file at `index`."""
+        """Return the full `Path` of the file at `index`, resolved under `root`."""
         return wrap_path(self._files[index], prepend=self._root)
 
     @abstractmethod

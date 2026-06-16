@@ -18,14 +18,10 @@ if TYPE_CHECKING:
 class LogicalFilter(Filter, ABC):
     """Abstract base for composite filters built from other filters.
 
-    Concrete subclasses define their own field shape:
-        - `AndFilter` and `OrFilter` take `children: tuple[Filter, ...]`
-          and combine multiple results (under `NaryLogicalFilter`).
-        - `NotFilter` takes a single `child: Filter` and inverts it.
-
-    Because children are typed as `Filter`, logical filters can nest
-    arbitrarily -- e.g. `AndFilter((f1, NotFilter(OrFilter((f2, f3)))))`.
-    Serialization recurses via each child's `to_dict` / `from_dict`.
+    Subclasses combine one or more child `Filter`s; because the children are
+    themselves `Filter`s, logical filters nest arbitrarily -- e.g.
+    `AndFilter((f1, NotFilter(OrFilter((f2, f3)))))`. Serialization recurses
+    via each child's `to_dict` / `from_dict`.
     """
 
 
