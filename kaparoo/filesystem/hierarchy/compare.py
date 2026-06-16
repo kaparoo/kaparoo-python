@@ -397,8 +397,11 @@ def _validate_at_root(
     if not (entry.name.matches(root.name) and entry.accepts_kind(root)):
         return ValidationReport({}, (), (entry,), (), ())
 
+    failed: tuple[tuple[Path, Node], ...] = ()
+    if not (entry.condition is None or entry.condition.check(root, ctx)):
+        failed = ((root, entry),)
+
     if isinstance(entry, File):
-        failed = _failed_condition(entry, root, ctx)
         return ValidationReport({root: (entry,)}, (), (), (), failed)
 
     directory = cast("Directory", entry)
@@ -408,59 +411,39 @@ def _validate_at_root(
         unexpected=report.unexpected,
         missing=report.missing,
         violations=report.violations,
-        failed=report.failed + _failed_condition(entry, root, ctx),
+        failed=report.failed + failed,
     )
 
 
-def _failed_condition(
-    entry: Entry, path: Path, ctx: CheckContext
-) -> tuple[tuple[Path, Node], ...]:
-    """Check `entry`'s attribute `condition` on `path`.
-
-    Args:
-        entry: The entry whose `condition` is checked.
-        path: The matched path the condition runs against.
-        ctx: The `Content`-check context.
-
-    Returns:
-        The single `(path, entry)` failure pair, or empty when the condition
-        holds (or `entry` has none).
-    """
-    if entry.condition is not None and not entry.condition.check(path, ctx):
-        return ((path, entry),)
-
-    return ()
-
-
 def _build_report(
-    top_nodes: tuple[Node, ...],
+    tops: tuple[Node, ...],
     root: Path,
     exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
     ctx: CheckContext = _NO_CHECKS,
 ) -> ValidationReport:
-    """Build a `ValidationReport` for `top_nodes` directly under `root`.
+    """Build a `ValidationReport` for `tops` directly under `root`.
 
     The `exclude` predicate is built once here and threaded into both the
     locate phase (`_merge_matched`) and the `_unexpected` sweep, rather than
     rebuilt per top node.
 
     Args:
-        top_nodes: The sibling nodes expected directly under `root`.
+        tops: The sibling nodes expected directly under `root`.
         root: The directory validated.
         exclude: Path(s) to drop, as in `locate`.
         ctx: The `Content`-check context.
 
     Returns:
-        The combined report for `top_nodes` under `root`.
+        The combined report for `tops` under `root`.
     """
     excluder = build_excluder(exclude, root)
-    matched = _merge_matched(top_nodes, root, excluder)
+    matched = _merge_matched(tops, root, excluder)
     present: set[Node] = {node for nodes in matched.values() for node in nodes}
 
     missing: list[Node] = []
     violations: list[Violation] = []
     demoted: set[int] = set()
-    for top in top_nodes:
+    for top in tops:
         for node in _walk_nodes(top):
             if id(node) in demoted:
                 continue  # under a priority Exclusive's losing side
@@ -504,7 +487,7 @@ def _build_report(
 
 
 def _merge_matched(
-    top_nodes: tuple[Node, ...],
+    tops: tuple[Node, ...],
     root: Path,
     excluder: Callable[[Path], bool] | None,
 ) -> dict[Path, tuple[Node, ...]]:
@@ -514,7 +497,7 @@ def _merge_matched(
     of rebuilding it per `locate_map` call.
 
     Args:
-        top_nodes: The sibling top nodes to locate under `root`.
+        tops: The sibling top nodes to locate under `root`.
         root: The directory walked for matches.
         excluder: A pre-built drop predicate, or `None` to exclude nothing.
 
@@ -522,7 +505,7 @@ def _merge_matched(
         Each path mapped to the nodes it matched, across all top nodes.
     """
     merged: dict[Path, tuple[Node, ...]] = {}
-    for node in top_nodes:
+    for node in tops:
         for path, nodes in _locate_map(node, root, excluder).items():
             merged[path] = merged.get(path, ()) + nodes
     return merged
@@ -624,16 +607,18 @@ def _walk_nodes(node: Node) -> Iterator[Node]:
         Each node in the subtree, `node` first.
     """
     yield node
-    if isinstance(node, Directory):
-        for child in node.children:
-            yield from _walk_nodes(child)
-    elif isinstance(node, Exclusive):
-        for alternative in node.alternatives:
-            for member in alternative:
+
+    match node:
+        case Directory():
+            for child in node.children:
+                yield from _walk_nodes(child)
+        case Together():
+            for member in node.members:
                 yield from _walk_nodes(member)
-    elif isinstance(node, Together):
-        for member in node.members:
-            yield from _walk_nodes(member)
+        case Exclusive():
+            for alternative in node.alternatives:
+                for member in alternative:
+                    yield from _walk_nodes(member)
 
 
 def _present_leaves(nodes: Iterable[Node], present: set[Node]) -> tuple[Entry, ...]:
