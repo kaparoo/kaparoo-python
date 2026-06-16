@@ -37,18 +37,20 @@ path stringification, and a small exception hierarchy.
 
 ### [`kaparoo.filesystem.search`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/filesystem/search)
 
-Filesystem traversal with composable filters. Includes `search_paths` /
+Filesystem traversal with composable filters: `search_paths` /
 `search_files` / `search_dirs`, wired to the `kaparoo.filters` DSL via
-`part_filter` / `name_filter` / `predicate`, with depth control.
+`part_filter` / `name_filter` / `predicate`, with `min_depth` / `max_depth`
+control and a subtree-pruning `exclude`.
 
 ### [`kaparoo.filesystem.hierarchy`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/filesystem/hierarchy)
 
 A declarative description of a filesystem tree: `File` / `Directory`
-nodes whose names are drawn from the `kaparoo.filters` DSL, so one node
-can stand for many regularly-named siblings. The `Expandable` filters
-(`Literal`, `OneOf`, `Template`) also enumerate their names via `expand`.
-A representation layer (name-level `matches` / `expand`); the disk
-operations it is designed to drive are still to come.
+nodes whose names are drawn from the `kaparoo.filters` DSL (so one node
+can stand for many regularly-named siblings), plus `Exclusive` / `Together`
+constraints and per-node attribute `condition`s. It drives four disk
+operations — `locate` (map on-disk paths to spec nodes), `validate` (check
+a directory against the spec), `conformer` (build a `search` predicate from
+a spec), and `scaffold` (create the tree on disk).
 
 ### [`kaparoo.filters`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/filters)
 
@@ -77,6 +79,8 @@ and `generate_batches`.
 
 ## 🎯 Quick example
 
+Search a tree with composable filters:
+
 ```python
 from kaparoo.filesystem import search_files
 from kaparoo.filters import And, EndsWith, Equals, Not
@@ -86,6 +90,20 @@ py_files = search_files(
     "src",
     name_filter=And((EndsWith(".py"), Not(Equals("__init__.py")))),
 )
+```
+
+…or describe a tree declaratively and check a directory against it:
+
+```python
+from kaparoo.filesystem.hierarchy import Directory, File, validate
+from kaparoo.filters import Glob
+
+spec = Directory("dataset", [
+    File("metadata.json"),
+    Directory("images", [File(Glob("*.png"))]),
+])
+report = validate(spec, "data/dataset", at_root=True)
+assert report.ok  # required entries present, nothing unexpected
 ```
 
 See each submodule's README for more.
