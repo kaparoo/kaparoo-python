@@ -18,7 +18,7 @@ class Node(ABC):
 
     The shared base of `Entry` (named filesystem nodes) and `Group`
     (unnamed constraint nodes). These are the **only** two direct subtrees:
-    `match` / `validate` rely on this closed world to narrow a `Node` that
+    `locate` / `validate` rely on this closed world to narrow a `Node` that
     is not a `Group` to an `Entry` (via `cast`). A third subtree would make
     those casts unsound, so keep new node kinds under `Entry` or `Group`.
     Nodes are immutable value objects: equal when they are the same concrete

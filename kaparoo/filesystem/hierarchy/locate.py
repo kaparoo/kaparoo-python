@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("match", "match_map")
+__all__ = ("locate", "locate_map")
 
 from os import PathLike
 from pathlib import Path
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 type Excluder = StrPath | Callable[[Path], bool]
 
 
-def match(
+def locate(
     tree: Node,
     root: StrPath,
     *,
@@ -36,7 +36,7 @@ def match(
     name are skipped) -- a `(path, node)` pair is yielded. A path matching
     several nodes yields one pair per node.
 
-    `match` reports only what is *present*: missing `required` entries and
+    `locate` reports only what is *present*: missing `required` entries and
     `Exclusive` / `Together` violations are `validate`'s concern, so a
     `Group` here is treated as "any of its entries may appear." A
     nonexistent or non-directory `root` simply yields nothing.
@@ -60,7 +60,7 @@ def match(
     """
     root_path = Path(root)
     excluded = build_excluder(exclude, root_path)
-    pairs = _match_children((tree,), root_path, excluded)
+    pairs = _locate_children((tree,), root_path, excluded)
 
     if not unique:
         yield from pairs
@@ -73,22 +73,22 @@ def match(
             yield pair
 
 
-def match_map(
+def locate_map(
     tree: Node,
     root: StrPath,
     *,
     exclude: Excluder | Iterable[Excluder] | None = None,
 ) -> dict[Path, tuple[Node, ...]]:
-    """Group `match` results into a `path -> matching nodes` mapping.
+    """Group `locate` results into a `path -> matching nodes` mapping.
 
     Each on-disk path maps to the tuple of distinct nodes it matches (in
     spec order), so overlapping nodes for one path are collected rather than
-    yielded separately. Unlike `match`, this materializes the full result
+    yielded separately. Unlike `locate`, this materializes the full result
     before returning. Iterate `.items()` for `(path, nodes)` pairs, or index
-    by path to look a single one up. `exclude` is as in `match`.
+    by path to look a single one up. `exclude` is as in `locate`.
     """
     grouped: dict[Path, list[Node]] = {}
-    for path, node in match(tree, root, unique=True, exclude=exclude):
+    for path, node in locate(tree, root, unique=True, exclude=exclude):
         grouped.setdefault(path, []).append(node)
     return {path: tuple(nodes) for path, nodes in grouped.items()}
 
@@ -129,10 +129,10 @@ def _iter_excluders(exclude: Excluder | Iterable[Excluder]) -> Iterator[Excluder
         yield from cast("Iterable[Excluder]", exclude)
 
 
-def _match_children(
+def _locate_children(
     nodes: Iterable[Node], parent: Path, excluded: Callable[[Path], bool] | None
 ) -> Iterator[tuple[Path, Node]]:
-    """Match the sibling entries of `nodes` against one walk of `parent`.
+    """Locate the sibling entries of `nodes` against one walk of `parent`.
 
     Groups flatten to their leaf entries (matched as siblings). `parent` is
     walked a single time, deep enough for the deepest entry; each discovered
@@ -152,7 +152,7 @@ def _match_children(
             ):
                 yield (candidate, entry)
                 if isinstance(entry, Directory):
-                    yield from _match_children(entry.children, candidate, excluded)
+                    yield from _locate_children(entry.children, candidate, excluded)
 
 
 def _type_ok(entry: Entry, path: Path) -> bool:

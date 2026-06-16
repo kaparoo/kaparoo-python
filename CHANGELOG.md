@@ -73,8 +73,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the filter registry), so specs can be stored as JSON. The package
   depends on `kaparoo.filters` but nothing in `kaparoo.filesystem.search`.
   This first cut is the representation plus name-level semantics and the
-  disk operations `match`, `validate`, `conforms`, and `scaffold` (below).
-- `kaparoo.filesystem.hierarchy.match(tree, root)`: the first operation
+  disk operations `locate`, `validate`, `conforms`, and `scaffold` (below).
+- `kaparoo.filesystem.hierarchy.locate(tree, root)`: the first operation
   that applies a spec to a real filesystem. It maps each on-disk path
   under `root` (the container) to the spec node(s) it matches — by name
   filter, type (`File` ↔ file, `Directory` ↔ directory), and `depth`
@@ -83,9 +83,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Group`s are treated as "any entry may appear," so `Exclusive` /
   `Together` enforcement and missing-`required` reporting are left to
   `validate`. A path may match several nodes (overlapping filters);
-  `match` yields one pair per node (lazily, duplicates kept by default; pass
+  `locate` yields one pair per node (lazily, duplicates kept by default; pass
   `unique=True` to suppress identical pairs), while the companion
-  `match_map(tree, root)` groups the results into a `{path: (node, ...)}`
+  `locate_map(tree, root)` groups the results into a `{path: (node, ...)}`
   mapping (distinct nodes, spec-traversal order). Both take `exclude=` to
   drop paths from the results (e.g. specific cells of a `Template` product):
   an excluder — or an iterable of them, OR-combined — is a concrete
@@ -93,7 +93,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a dropped directory has its whole subtree pruned.
 - `kaparoo.filesystem.hierarchy.validate(tree, root)`: checks a real
   directory against a spec, returning a `ValidationReport` with `matched`
-  (as `match_map`), `unexpected` (paths matching no node — anything not
+  (as `locate_map`), `unexpected` (paths matching no node — anything not
   matched and not an ancestor of a match, so contents of an unspecified
   directory count), `missing` (a `required` entry, or a `required`
   `Exclusive` / `Together` with nothing present), and `violations` (an
@@ -101,7 +101,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Together`). `report.ok` (and its truthiness) is `True` only when the
   last three are empty. A `required` enumerable name (`OneOf` / `Template`)
   is satisfied by at least one present match. `validate` also accepts the
-  same `exclude=` as `match`, so excluded paths are dropped from `matched`
+  same `exclude=` as `locate`, so excluded paths are dropped from `matched`
   and not reported `unexpected`. Also exports the `ValidationReport` and
   `Violation` result types.
 - `kaparoo.filesystem.hierarchy.conforms(spec)`: builds a path predicate (a
@@ -131,7 +131,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   counterpart of `kaparoo.filters`). `File` / `Directory` take a keyword-only
   `condition`; `validate` checks it on each matched path and lists the
   failures in `report.failed` (and `report.ok` requires it empty), while
-  `match` stays purely structural. Conditions: `Size` (a file's bytes),
+  `locate` stays purely structural. Conditions: `Size` (a file's bytes),
   `ChildCount` (a directory's entries -- all, or only files / only
   directories via `only`), and `TreeSize` (a directory's
   recursive content size) -- all inclusive `min` / `max`; polymorphic

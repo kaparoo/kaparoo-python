@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 def scaffold(tree: Node, root: StrPath, *, dry_run: bool = False) -> list[Path]:
     """Create the structure `tree` describes under `root`, returning new paths.
 
-    The write counterpart of `match` / `validate`: `root` is the *container*,
+    The write counterpart of `locate` / `validate`: `root` is the *container*,
     so `tree`'s top node is created directly inside it (a nonexistent `root`
     is created first). Only *enumerable* nodes are materialized -- a node is
     creatable when its `name` is an `Expandable` filter (`Literal`, `OneOf`,

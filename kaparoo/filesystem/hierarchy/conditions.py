@@ -85,7 +85,7 @@ class Condition(ABC):
     or a named content hook. Round-trips through `to_dict` /
     `Condition.from_dict`.
 
-    A condition is a *validation* concern: `match` still maps paths by name /
+    A condition is a *validation* concern: `locate` still maps paths by name /
     type / depth alone, while `validate` checks the matched path's
     conditions and reports the failures.
     """

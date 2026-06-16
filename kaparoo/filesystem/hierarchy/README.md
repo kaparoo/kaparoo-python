@@ -7,7 +7,7 @@ run of regularly-named siblings.
 
 > **Scope.** This package is the *representation* plus name-level semantics
 > (filter `matches` and, where applicable, `expand`) and the disk
-> operations [`match`](#matching-match),
+> operations [`locate`](#locating-locate),
 > [`validate`](#validation-validate), [`conforms`](#filtering-paths-conforms)
 > (read), and [`scaffold`](#scaffolding-scaffold) (write).
 
@@ -91,7 +91,7 @@ Directory("dataset", [
 != Directory("x")`; `depth=3` and `depth=(3, 3)` are equal) and `repr`
 shows it only when non-default, in its most compact form. Because the
 intermediate names are unknown, any depth beyond `1` describes structure
-for *matching* (which [`match`](#matching-match) honors), not for
+for *matching* (which [`locate`](#locating-locate) honors), not for
 scaffolding.
 
 ## Presence: `required`
@@ -134,7 +134,7 @@ Sizes are byte counts; the `kaparoo.filesystem.units` constants — decimal `KB`
 (powers of 1024) — are plain `int` multipliers for readability, e.g.
 `TreeSize(max=2 * GIB)`.
 
-Conditions are a **validation** concern: `match` still maps paths by name /
+Conditions are a **validation** concern: `locate` still maps paths by name /
 type / depth alone, while `validate` checks each matched path's `condition`
 and lists the failures in `report.failed` (`report.ok` requires it empty);
 `conforms` likewise requires the top node's `condition` to hold. The
@@ -347,7 +347,7 @@ subtree comes back as distinct-but-equal nodes (JSON has no aliasing).
 `"node"`-discriminated `Node.from_dict` dispatcher, the same way
 `register_filter` extends the filter DSL.
 
-**Subclass `Entry` or `Group`, never `Node` directly.** `match` and
+**Subclass `Entry` or `Group`, never `Node` directly.** `locate` and
 `validate` rely on the closed `Entry | Group` world: any node that is not
 a `Group` is treated as an `Entry`. A third `Node` subtree makes those
 casts unsound, so a custom kind must extend one of the two known subtrees
@@ -383,40 +383,40 @@ This minimal entry serializes only its `name`; to also carry `depth` /
 and read them back in `from_dict`. Most specs need only the built-in
 nodes — custom kinds are an advanced extension point.
 
-## Matching: `match`
+## Locating: `locate`
 
-`match(tree, root)` maps each path under `root` to the spec node(s) it
+`locate(tree, root)` maps each path under `root` to the spec node(s) it
 corresponds to — by name (the node's filter), type (`File` ↔ file,
 `Directory` ↔ directory), and `depth` (intermediate levels of unknown name
 are skipped). `root` is the *container*, like `search`'s root; a path
 matching several nodes yields one pair per node.
 
 ```python
-from kaparoo.filesystem.hierarchy import Directory, File, match
+from kaparoo.filesystem.hierarchy import Directory, File, locate
 from kaparoo.filters import Glob
 
 spec = Directory("dataset", [
     File("metadata.json"),
     Directory("images", [File(Glob("*.png"))]),
 ])
-for path, node in match(spec, "/data"):   # "/data" contains "dataset"
+for path, node in locate(spec, "/data"):   # "/data" contains "dataset"
     ...   # path -> the spec node it matches
 ```
 
 A path may match several nodes at once (overlapping filters). By default
-`match` yields one pair per node and stays fully lazy; the variants let you
+`locate` yields one pair per node and stays fully lazy; the variants let you
 shape that:
 
 ```python
-from kaparoo.filesystem.hierarchy import match, match_map
+from kaparoo.filesystem.hierarchy import locate, locate_map
 
-match(spec, "/data")                  # (path, node) per match — duplicates kept, lazy
-match(spec, "/data", unique=True)     # same, but identical (path, node) pairs suppressed
-match_map(spec, "/data")              # {path: (node, ...)} — overlapping nodes grouped
-match_map(spec, "/data").items()      # iterate (path, nodes) tuples instead
+locate(spec, "/data")                  # (path, node) per match — duplicates kept, lazy
+locate(spec, "/data", unique=True)     # same, but identical (path, node) pairs suppressed
+locate_map(spec, "/data")              # {path: (node, ...)} — overlapping nodes grouped
+locate_map(spec, "/data").items()      # iterate (path, nodes) tuples instead
 ```
 
-`match` streams; `match_map` materializes the full mapping before
+`locate` streams; `locate_map` materializes the full mapping before
 returning (its nodes are distinct, in spec-traversal order).
 
 `exclude=` drops specific paths from the results — e.g. punching holes in a
@@ -427,12 +427,12 @@ taking the **root-relative** `Path`; a dropped directory has its whole
 subtree pruned:
 
 ```python
-match(spec, "/data", exclude=["cam_01/frame_0003.png"])     # drop one cell
-match(spec, "/data", exclude=lambda p: p.suffix == ".tmp")  # drop by rule
-match(spec, "/data", exclude=["scratch", "cam_02/frame_0010.png"])  # branch + cell
+locate(spec, "/data", exclude=["cam_01/frame_0003.png"])     # drop one cell
+locate(spec, "/data", exclude=lambda p: p.suffix == ".tmp")  # drop by rule
+locate(spec, "/data", exclude=["scratch", "cam_02/frame_0010.png"])  # branch + cell
 ```
 
-`match` reports only what is *present* — a `Group` is treated as "any of
+`locate` reports only what is *present* — a `Group` is treated as "any of
 its entries may appear," so it does not enforce `Exclusive` / `Together`,
 and it does not report missing `required` entries. Those are the job of
 `validate`.
@@ -456,7 +456,7 @@ if not report:                     # truthy only when fully conformant
 
 | Field | Meaning |
 | --- | --- |
-| `matched` | `{path: (node, ...)}`, exactly `match_map` |
+| `matched` | `{path: (node, ...)}`, exactly `locate_map` |
 | `unexpected` | paths matching no node (see below) |
 | `missing` | a `required` entry, or a `required` `Exclusive` / `Together` with nothing present |
 | `violations` | `Exclusive` with more than one side present (unless `on_conflict="priority"` resolves it — losers fall to `unexpected` instead), or `Together` only partly present |
@@ -470,7 +470,7 @@ them out of the report). A `required` entry is satisfied once its name
 matches one present path — for an enumerable name (`OneOf` / `Template`)
 that means *at least one* of the listed names exists, not all. `validate`
 also takes the same
-`exclude=` as `match`; excluded paths are dropped from `matched` and are not
+`exclude=` as `locate`; excluded paths are dropped from `matched` and are not
 reported `unexpected`.
 
 ## Filtering paths: `conforms`
@@ -506,7 +506,7 @@ capability.)
 
 ## Scaffolding: `scaffold`
 
-`scaffold(tree, root)` is the **write** counterpart of `match` / `validate`:
+`scaffold(tree, root)` is the **write** counterpart of `locate` / `validate`:
 it creates on disk the structure the spec describes, under `root` (the
 container, created if absent), and returns the newly created paths:
 

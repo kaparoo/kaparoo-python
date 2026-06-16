@@ -14,13 +14,13 @@ from kaparoo.filesystem.hierarchy.group import (
     Together,
     flatten_entries,
 )
-from kaparoo.filesystem.hierarchy.match import build_excluder, match_map
+from kaparoo.filesystem.hierarchy.locate import build_excluder, locate_map
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
 
     from kaparoo.filesystem.hierarchy.base import Node
-    from kaparoo.filesystem.hierarchy.match import Excluder
+    from kaparoo.filesystem.hierarchy.locate import Excluder
     from kaparoo.filesystem.types import StrPath
 
     type ContentChecks = Mapping[str, Callable[[Path], bool]]
@@ -49,7 +49,7 @@ class ValidationReport:
     """The outcome of checking a real directory against a spec tree.
 
     `matched` maps each on-disk path to the node(s) it matched (exactly
-    `match_map`); `unexpected` are paths matching no node; `missing` are
+    `locate_map`); `unexpected` are paths matching no node; `missing` are
     `required` entries / groups left unsatisfied; `violations` are broken
     `Exclusive` / `Together` constraints; `failed` are `(path, node)` pairs
     where the matched path broke the node's attribute `condition`. `ok` --
@@ -81,12 +81,12 @@ def validate(
 ) -> ValidationReport:
     """Check the directory at `root` against the spec `tree`.
 
-    `root` is the container (as in `match`); returns a `ValidationReport`. A
+    `root` is the container (as in `locate`); returns a `ValidationReport`. A
     path is `unexpected` when it is neither matched nor an ancestor of a
     match, so an unspecified directory's contents count too. A `required`
     entry is satisfied as soon as its name matches one present path -- for an
     enumerable name (`OneOf` / `Template`) that means *at least one* of the
-    listed names exists, not all. `exclude` is as in `match`: excluded paths
+    listed names exists, not all. `exclude` is as in `locate`: excluded paths
     are dropped from `matched` and not reported `unexpected` (a dropped
     directory is pruned).
 
@@ -212,10 +212,10 @@ def _merge_matched(
     root_path: Path,
     exclude: Excluder | Iterable[Excluder] | None,
 ) -> dict[Path, tuple[Node, ...]]:
-    """Union the `match_map` of each top node, by path (spec order kept)."""
+    """Union the `locate_map` of each top node, by path (spec order kept)."""
     merged: dict[Path, tuple[Node, ...]] = {}
     for node in top_nodes:
-        for path, nodes in match_map(node, root_path, exclude=exclude).items():
+        for path, nodes in locate_map(node, root_path, exclude=exclude).items():
             merged[path] = merged.get(path, ()) + nodes
     return merged
 

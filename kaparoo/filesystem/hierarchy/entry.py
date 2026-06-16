@@ -115,7 +115,7 @@ def _condition_arg(data: Mapping[str, Any]) -> Condition | None:
 class Entry(Node, ABC):
     """A named node in a filesystem hierarchy: a `File` or a `Directory`.
 
-    Those are the only two subclasses, which `match` / `validate` rely on to
+    Those are the only two subclasses, which `locate` / `validate` rely on to
     narrow a non-`File` `Entry` to a `Directory`. Every entry carries a
     `name` filter (any `kaparoo.filters.Filter`, so
     the full DSL describes which siblings it matches). As sugar, a bare
@@ -142,7 +142,7 @@ class Entry(Node, ABC):
             `required` ones, so a spec asserts nothing exists until asked.
         condition: An optional `Condition` on the matched path's filesystem
             attributes (size, child count, content hook, ...), checked by
-            `validate` (not by `match`, which stays structural). Must apply
+            `validate` (not by `locate`, which stays structural). Must apply
             to this entry's kind -- a kind-mismatched condition (a
             `ChildCount` on a `File`, a `Size` on a `Directory`, ...) raises
             at construction. Defaults to `None`.

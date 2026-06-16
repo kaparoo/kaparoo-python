@@ -8,8 +8,8 @@ from kaparoo.filesystem.hierarchy import (
     File,
     Node,
     Together,
-    match,
-    match_map,
+    locate,
+    locate_map,
 )
 from kaparoo.filters import Glob, OneOf
 
@@ -27,8 +27,8 @@ def build(root: Path, files: list[str]) -> None:
 
 
 def matched(tree: Node, root: Path) -> set[tuple[str, Node]]:
-    """match() results as `{(relative_posix_path, node)}`."""
-    return {(p.relative_to(root).as_posix(), n) for p, n in match(tree, root)}
+    """locate() results as `{(relative_posix_path, node)}`."""
+    return {(p.relative_to(root).as_posix(), n) for p, n in locate(tree, root)}
 
 
 def rels(pairs: Iterable[tuple[Path, object]], root: Path) -> set[str]:
@@ -36,7 +36,7 @@ def rels(pairs: Iterable[tuple[Path, object]], root: Path) -> set[str]:
     return {p.relative_to(root).as_posix() for p, _ in pairs}
 
 
-class TestMatch:
+class TestLocate:
     def test_direct_children(self, tmp_path: Path) -> None:
         build(tmp_path, ["d/a.txt", "d/b.txt"])
         spec = Directory("d", [File("a.txt"), File("b.txt")])
@@ -49,8 +49,8 @@ class TestMatch:
     def test_type_must_agree(self, tmp_path: Path) -> None:
         (tmp_path / "x").mkdir()  # 'x' is a directory
         (tmp_path / "y").write_text("")  # 'y' is a file
-        assert list(match(File("x"), tmp_path)) == []  # File node vs dir
-        assert list(match(Directory("y"), tmp_path)) == []  # Directory node vs file
+        assert list(locate(File("x"), tmp_path)) == []  # File node vs dir
+        assert list(locate(Directory("y"), tmp_path)) == []  # Directory node vs file
         assert matched(Directory("x"), tmp_path) == {("x", Directory("x"))}
         assert matched(File("y"), tmp_path) == {("y", File("y"))}
 
@@ -98,7 +98,7 @@ class TestMatch:
         assert ("m/weights.index", File("weights.index")) in got
 
     def test_nonexistent_root_yields_nothing(self, tmp_path: Path) -> None:
-        assert list(match(File("x"), tmp_path / "nope")) == []
+        assert list(locate(File("x"), tmp_path / "nope")) == []
 
 
 class TestUnique:
@@ -106,72 +106,74 @@ class TestUnique:
         build(tmp_path, ["d/a.txt"])
         # two equal File nodes both match d/a.txt -> the pair appears twice
         spec = Directory("d", [File("a.txt"), File("a.txt")])
-        pairs = [(p, n) for p, n in match(spec, tmp_path) if n == File("a.txt")]
+        pairs = [(p, n) for p, n in locate(spec, tmp_path) if n == File("a.txt")]
         assert len(pairs) == 2
 
     def test_unique_suppresses_duplicates(self, tmp_path: Path) -> None:
         build(tmp_path, ["d/a.txt"])
         spec = Directory("d", [File("a.txt"), File("a.txt")])
         pairs = [
-            (p, n) for p, n in match(spec, tmp_path, unique=True) if n == File("a.txt")
+            (p, n) for p, n in locate(spec, tmp_path, unique=True) if n == File("a.txt")
         ]
         assert len(pairs) == 1
 
 
-class TestMatchMap:
+class TestLocateMap:
     def test_groups_overlapping_nodes(self, tmp_path: Path) -> None:
         build(tmp_path, ["pkg/__init__.py"])
         spec = Directory("pkg", [File(Glob("*.py")), File("__init__.py")])
-        mapping = match_map(spec, tmp_path)
+        mapping = locate_map(spec, tmp_path)
         init = tmp_path / "pkg" / "__init__.py"
         assert mapping[init] == (File(Glob("*.py")), File("__init__.py"))
 
     def test_single_match_is_one_tuple(self, tmp_path: Path) -> None:
         build(tmp_path, ["d/a.txt"])
         spec = Directory("d", [File("a.txt")])
-        mapping = match_map(spec, tmp_path)
+        mapping = locate_map(spec, tmp_path)
         assert mapping[tmp_path / "d" / "a.txt"] == (File("a.txt"),)
 
     def test_distinct_within_a_path(self, tmp_path: Path) -> None:
         build(tmp_path, ["d/a.txt"])
-        # reused node -> match_map collapses it (built on unique=True)
+        # reused node -> locate_map collapses it (built on unique=True)
         spec = Directory("d", [File("a.txt"), File("a.txt")])
-        assert match_map(spec, tmp_path)[tmp_path / "d" / "a.txt"] == (File("a.txt"),)
+        assert locate_map(spec, tmp_path)[tmp_path / "d" / "a.txt"] == (File("a.txt"),)
 
 
 class TestExclude:
     def test_concrete_cell(self, tmp_path: Path) -> None:
         build(tmp_path, ["d/a.txt", "d/b.txt"])
         spec = Directory("d", [File(Glob("*.txt"))])
-        got = rels(match(spec, tmp_path, exclude=["d/b.txt"]), tmp_path)
+        got = rels(locate(spec, tmp_path, exclude=["d/b.txt"]), tmp_path)
         assert "d/a.txt" in got
         assert "d/b.txt" not in got
 
     def test_callable(self, tmp_path: Path) -> None:
         build(tmp_path, ["d/a.txt", "d/b.txt"])
         spec = Directory("d", [File(Glob("*.txt"))])
-        got = rels(match(spec, tmp_path, exclude=lambda p: p.name == "b.txt"), tmp_path)
+        got = rels(
+            locate(spec, tmp_path, exclude=lambda p: p.name == "b.txt"), tmp_path
+        )
         assert "d/a.txt" in got
         assert "d/b.txt" not in got
 
     def test_single_strpath_is_not_iterated(self, tmp_path: Path) -> None:
         build(tmp_path, ["d/a.txt", "d/b.txt"])
         spec = Directory("d", [File(Glob("*.txt"))])
-        got = rels(match(spec, tmp_path, exclude="d/b.txt"), tmp_path)  # one excluder
+        got = rels(locate(spec, tmp_path, exclude="d/b.txt"), tmp_path)  # one excluder
         assert "d/a.txt" in got
         assert "d/b.txt" not in got
 
     def test_directory_excluder_prunes_subtree(self, tmp_path: Path) -> None:
         build(tmp_path, ["d/keep/x.txt", "d/drop/x.txt"])
         spec = Directory("d", [File("x.txt", depth=None)])
-        got = rels(match(spec, tmp_path, exclude=["d/drop"]), tmp_path)
+        got = rels(locate(spec, tmp_path, exclude=["d/drop"]), tmp_path)
         assert "d/keep/x.txt" in got
         assert "d/drop/x.txt" not in got  # pruned, never descended
 
     def test_directory_excluder_via_callable_prunes(self, tmp_path: Path) -> None:
         build(tmp_path, ["d/keep/x.txt", "d/drop/x.txt"])
         spec = Directory("d", [File("x.txt", depth=None)])
-        got = rels(match(spec, tmp_path, exclude=lambda p: p.name == "drop"), tmp_path)
+        got = rels(locate(spec, tmp_path, exclude=lambda p: p.name == "drop"), tmp_path)
         assert "d/keep/x.txt" in got
         assert "d/drop/x.txt" not in got
 
@@ -179,14 +181,14 @@ class TestExclude:
         build(tmp_path, ["d/a.txt", "d/b.txt", "d/c.txt"])
         spec = Directory("d", [File(Glob("*.txt"))])
         exclude = ["d/a.txt", lambda p: p.name == "c.txt"]
-        got = rels(match(spec, tmp_path, exclude=exclude), tmp_path)
+        got = rels(locate(spec, tmp_path, exclude=exclude), tmp_path)
         assert "d/b.txt" in got
         assert "d/a.txt" not in got
         assert "d/c.txt" not in got
 
-    def test_match_map_exclude(self, tmp_path: Path) -> None:
+    def test_locate_map_exclude(self, tmp_path: Path) -> None:
         build(tmp_path, ["d/a.txt", "d/b.txt"])
         spec = Directory("d", [File(Glob("*.txt"))])
-        mapping = match_map(spec, tmp_path, exclude=["d/b.txt"])
+        mapping = locate_map(spec, tmp_path, exclude=["d/b.txt"])
         assert (tmp_path / "d" / "a.txt") in mapping
         assert (tmp_path / "d" / "b.txt") not in mapping

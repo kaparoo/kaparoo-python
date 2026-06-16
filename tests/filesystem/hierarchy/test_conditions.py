@@ -86,7 +86,11 @@ class TestChildCount:
         assert Condition.from_dict(cc.to_dict()) == cc
         # `only` is serialized only when set (None default is omitted)
         only_files = ChildCount(min=1, only="files")
-        assert only_files.to_dict() == {"kind": "child_count", "min": 1, "only": "files"}
+        assert only_files.to_dict() == {
+            "kind": "child_count",
+            "min": 1,
+            "only": "files",
+        }
         assert Condition.from_dict(only_files.to_dict()) == only_files
 
 

@@ -11,8 +11,8 @@ __all__ = (
     "ValidationReport",
     "Violation",
     "conforms",
-    "match",
-    "match_map",
+    "locate",
+    "locate_map",
     "register_node",
     "scaffold",
     "validate",
@@ -21,7 +21,7 @@ __all__ = (
 from kaparoo.filesystem.hierarchy.base import Node
 from kaparoo.filesystem.hierarchy.entry import Directory, Entry, File
 from kaparoo.filesystem.hierarchy.group import Exclusive, Group, Together
-from kaparoo.filesystem.hierarchy.match import match, match_map
+from kaparoo.filesystem.hierarchy.locate import locate, locate_map
 from kaparoo.filesystem.hierarchy.scaffold import scaffold
 from kaparoo.filesystem.hierarchy.utils import register_node
 from kaparoo.filesystem.hierarchy.validate import (
