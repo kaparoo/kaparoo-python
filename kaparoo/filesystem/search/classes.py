@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Literal
 
-    from kaparoo.filesystem.exclude import Excluder
+    from kaparoo.filesystem.exclude import ExcludeRule
     from kaparoo.filesystem.types import StrPath
     from kaparoo.filters.types import FilterDict
 
@@ -68,7 +68,7 @@ class Search(ABC):
         part_filter: Filter | FilterDict | None = None,
         name_filter: Filter | FilterDict | None = None,
         predicate: Callable[[Path], bool] | None = None,
-        exclude: Excluder | Iterable[Excluder] | None = None,
+        exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
         ordered: bool = True,
@@ -84,7 +84,7 @@ class Search(ABC):
         part_filter: Filter | FilterDict | None = None,
         name_filter: Filter | FilterDict | None = None,
         predicate: Callable[[Path], bool] | None = None,
-        exclude: Excluder | Iterable[Excluder] | None = None,
+        exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
         ordered: bool = True,
@@ -100,7 +100,7 @@ class Search(ABC):
         part_filter: Filter | FilterDict | None = None,
         name_filter: Filter | FilterDict | None = None,
         predicate: Callable[[Path], bool] | None = None,
-        exclude: Excluder | Iterable[Excluder] | None = None,
+        exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
         ordered: bool = True,
@@ -115,7 +115,7 @@ class Search(ABC):
         part_filter: Filter | FilterDict | None = None,
         name_filter: Filter | FilterDict | None = None,
         predicate: Callable[[Path], bool] | None = None,
-        exclude: Excluder | Iterable[Excluder] | None = None,
+        exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
         min_depth: int = 1,
         max_depth: int | None = None,
         ordered: bool = True,

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("Excluder", "build_excluder")
+__all__ = ("ExcludeRule", "build_excluder")
 
 from os import PathLike
 from pathlib import Path
@@ -14,16 +14,16 @@ if TYPE_CHECKING:
     from kaparoo.filesystem.types import StrPath
 
 
-type Excluder = StrPath | Filter | Callable[[Path], bool]
+type ExcludeRule = StrPath | Filter | Callable[[Path], bool]
 
 
 def build_excluder(
-    exclude: Excluder | Iterable[Excluder] | None, root: Path
+    exclude: ExcludeRule | Iterable[ExcludeRule] | None, root: Path
 ) -> Callable[[Path], bool] | None:
     """Normalize `exclude` into a single exclusion predicate.
 
     The returned predicate excludes a candidate path when it matches *any*
-    collected excluder -- a concrete path (exact match on the root-relative
+    collected rule -- a concrete path (exact match on the root-relative
     POSIX string), a `Filter` (matched on that string), or a callable (given
     the root-relative `Path`). A candidate under `root` is stripped to its
     root-relative part; any other relative candidate is taken to already be
@@ -32,11 +32,11 @@ def build_excluder(
     the `kaparoo.filesystem` traversals.
 
     Args:
-        exclude: One excluder, an iterable of them (OR-combined), or `None`. An
-            excluder is a root-relative `StrPath`, a `Filter`, or a callable; a
-            lone `str` / `PathLike` / `Filter` / callable counts as one, while a
-            non-string iterable is several.
-        root: The base directory; every excluder and candidate is interpreted
+        exclude: One `ExcludeRule`, an iterable of them (OR-combined), or
+            `None`. A rule is a root-relative `StrPath`, a `Filter`, or a
+            callable; a lone `str` / `PathLike` / `Filter` / callable counts as
+            one, while a non-string iterable is several.
+        root: The base directory; every rule and candidate is interpreted
             relative to it.
 
     Returns:
@@ -51,14 +51,14 @@ def build_excluder(
     filters: list[Filter] = []
     predicates: list[Callable[[Path], bool]] = []
 
-    for excluder in _iter_excluders(exclude):
-        if isinstance(excluder, str | PathLike):
-            path = Path(cast("StrPath", excluder))
+    for rule in _iter_exclude_rules(exclude):
+        if isinstance(rule, str | PathLike):
+            path = Path(cast("StrPath", rule))
             exact.add(path.as_posix())
-        elif isinstance(excluder, Filter):
-            filters.append(excluder)
+        elif isinstance(rule, Filter):
+            filters.append(rule)
         else:
-            predicates.append(excluder)
+            predicates.append(rule)
 
     if not (exact or filters or predicates):  # Nothing to exclude.
         return None
@@ -86,9 +86,11 @@ def build_excluder(
     return excluder
 
 
-def _iter_excluders(exclude: Excluder | Iterable[Excluder]) -> Iterator[Excluder]:
-    """Yield each excluder; a lone `str` / `PathLike` / `Filter` / callable is one."""
+def _iter_exclude_rules(
+    exclude: ExcludeRule | Iterable[ExcludeRule],
+) -> Iterator[ExcludeRule]:
+    """Yield each rule; a lone `str` / `PathLike` / `Filter` / callable is one."""
     if isinstance(exclude, str | PathLike | Filter) or callable(exclude):
-        yield cast("Excluder", exclude)
+        yield cast("ExcludeRule", exclude)
     else:
-        yield from cast("Iterable[Excluder]", exclude)
+        yield from cast("Iterable[ExcludeRule]", exclude)

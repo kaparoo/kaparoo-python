@@ -26,7 +26,7 @@ from kaparoo.filesystem.hierarchy.group import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
 
-    from kaparoo.filesystem.exclude import Excluder
+    from kaparoo.filesystem.exclude import ExcludeRule
     from kaparoo.filesystem.hierarchy.base import Node
     from kaparoo.filesystem.types import StrPath
 
@@ -46,7 +46,7 @@ def locate(
     root: StrPath,
     *,
     unique: bool = False,
-    exclude: Excluder | Iterable[Excluder] | None = None,
+    exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
     at_root: bool = False,
 ) -> Iterator[tuple[Path, Node]]:
     """Map each path under `root` to the spec `tree` node(s) it matches.
@@ -69,13 +69,13 @@ def locate(
             iteration stays lazy. When `True`, duplicate pairs are
             suppressed (still streamed, backed by a `seen` set).
         exclude: Paths to drop from the results -- e.g. specific cells of a
-            `Template` product. An excluder (or an iterable of them,
+            `Template` product. An exclude rule (or an iterable of them,
             OR-combined) is a `StrPath` (a concrete **root-relative** path), a
             `Filter` (matched on the **root-relative** POSIX string), or a
             `Callable` taking the **root-relative** `Path` and returning
             whether to drop it. A dropped directory has its whole subtree
             pruned. A lone `str` / `PathLike` / `Filter` / callable is one
-            excluder; only a non-string iterable is several.
+            rule; only a non-string iterable is several.
         at_root: When `True`, treat `root` *itself* as the realized top node
             rather than its container -- so you point at the top directly
             (`locate(Directory("dataset", ...), ".../dataset", at_root=True)`).
@@ -142,7 +142,7 @@ def locate_map(
     tree: Node,
     root: StrPath,
     *,
-    exclude: Excluder | Iterable[Excluder] | None = None,
+    exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
 ) -> dict[Path, tuple[Node, ...]]:
     """Group `locate` results into a `path -> matching nodes` mapping.
 
@@ -297,7 +297,7 @@ def validate(
     tree: Node,
     root: StrPath,
     *,
-    exclude: Excluder | Iterable[Excluder] | None = None,
+    exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
     checks: ContentChecks | None = None,
     on_missing: Literal["error", "skip"] = "error",
     at_root: bool = False,
@@ -340,7 +340,7 @@ def validate(
 def _validate_at_root(
     top: Node,
     root_path: Path,
-    exclude: Excluder | Iterable[Excluder] | None,
+    exclude: ExcludeRule | Iterable[ExcludeRule] | None,
     ctx: CheckContext,
 ) -> ValidationReport:
     """Validate `root_path` as the realized top entry, not as a container.
@@ -389,7 +389,7 @@ def _failed_condition(
 def _build_report(
     top_nodes: tuple[Node, ...],
     root_path: Path,
-    exclude: Excluder | Iterable[Excluder] | None = None,
+    exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
     ctx: CheckContext = _NO_CHECKS,
 ) -> ValidationReport:
     """Validate `top_nodes` matched directly under `root_path`.
