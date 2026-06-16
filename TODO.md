@@ -31,11 +31,4 @@ not mechanism (per AGENTS.md).
 
 ---
 
-## 📖 Improve module-level README readability
-
-Tighten each module's `README.md`: clearer public-API presentation,
-idiomatic and copy-pasteable examples, public members over private.
-
----
-
 *Last updated: 2026-06-17*
