@@ -1,46 +1,47 @@
 # TODO
 
-Outstanding work not yet in code or tests, by module. Promote an item to a
-CHANGELOG entry once it lands.
+Outstanding work not yet in code or tests. Promote an item to a CHANGELOG
+entry once it lands.
 
 ---
 
-## 🔍 Review the vibe-coded modules
+## 🔍 Review `hierarchy.compare` — validation part
 
-A rigorous pass over modules first drafted quickly (AI-assisted), checking
-correctness, edge cases, and API shape against the rest of the library:
-
-- `kaparoo.filesystem.hierarchy` (*)
-
-(*) highest priority — the largest or most intricate surface.
+A rigorous correctness / edge-case / API-shape pass over `validate` and its
+helpers (`_validate_at_root`, `_validate_under`, `_check_group`,
+`_unexpected`, `_walk_nodes`, `_present_leaves`). The locate part has already
+been reviewed.
 
 ---
 
-## 📝 Documentation pass (library-wide)
+## 🔨 Rewrite `hierarchy.scaffold` from scratch
 
-A consistency sweep over the prose, independent of the per-module review:
-
-- **Docstrings** — rewrite to consistent Google style; replace
-  mechanism-focused or over-written summaries with intent / contract per the
-  AGENTS.md philosophy (one-line summary, then only what the signature
-  cannot convey).
-- **Comments** — shorten unnecessarily long comments to the load-bearing
-  "why"; drop any that merely restate the code.
-- **README.md** — improve how the public API is presented (description
-  style) and tighten / fix the examples (idiomatic usage, public over
-  private members, copy-pasteable).
+Redesign and reimplement `scaffold` from the ground up rather than patching
+it. Settle the atomicity / rollback contract on conflict as part of the
+rewrite -- a wrong-kind path currently raises mid-run, leaving the
+already-created paths on disk.
 
 ---
 
-## 🗂️ `kaparoo.filesystem.hierarchy` — contract decisions
+## 🏷️ Add `@override` decorators
 
-These need a design call (and possibly a guard), not just a refactor:
+Mark overriding methods with `typing.override`, except where the override is
+self-evident (dunders such as `__repr__` / `__bool__`).
 
-### `scaffold` is not atomic on conflict (`scaffold.py`)
+---
 
-A wrong-kind path raises mid-run, leaving already-created paths on disk (no
-rollback). Either document the no-rollback contract in `scaffold`'s docstring
-and the README's scaffold section, or clean up the paths created so far.
+## 📝 Unify docstrings to a consistent Google style
+
+One style library-wide: imperative title, an optional summary, then `Args` /
+`Returns` / `Yields` / `Raises` sections -- documenting intent and contracts,
+not mechanism (per AGENTS.md).
+
+---
+
+## 📖 Improve module-level README readability
+
+Tighten each module's `README.md`: clearer public-API presentation,
+idiomatic and copy-pasteable examples, public members over private.
 
 ---
 
