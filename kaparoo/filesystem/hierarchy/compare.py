@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Literal, cast
 
 from kaparoo.filesystem.exclude import build_excluder
 from kaparoo.filesystem.hierarchy.base import Node
-from kaparoo.filesystem.hierarchy.conditions import CheckContext
+from kaparoo.filesystem.hierarchy.conditions import HookResolver
 from kaparoo.filesystem.hierarchy.entry import Directory, Entry, File
 from kaparoo.filesystem.hierarchy.group import (
     Exclusive,
@@ -33,10 +33,10 @@ if TYPE_CHECKING:
     from kaparoo.filesystem.exclude import ExcludeRule
     from kaparoo.filesystem.types import StrPath
 
-    type ContentChecks = Mapping[str, Callable[[Path], bool]]
+    type ContentHooks = Mapping[str, Callable[[Path], bool]]
 
 
-_NO_CHECKS = CheckContext()
+_NO_HOOKS = HookResolver()
 
 
 # ========================== #
@@ -329,7 +329,7 @@ def validate(
     root: StrPath,
     *,
     exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
-    checks: ContentChecks | None = None,
+    hooks: ContentHooks | None = None,
     on_missing: Literal["error", "skip"] = "error",
     root_as_top: bool = False,
 ) -> ValidationReport:
@@ -348,7 +348,7 @@ def validate(
         root: The directory checked; the realized top itself when `root_as_top`.
         exclude: Path(s) to drop, as in `locate` (dropped paths are not
             reported `unexpected`).
-        checks: Callables for `Content` conditions, keyed by name.
+        hooks: Callables for `Content` conditions, keyed by name.
         on_missing: What to do when a `Content` name is absent -- `"error"`
             raises, `"skip"` treats it as satisfied.
         root_as_top: Treat `root` *itself* as the realized top rather than its
@@ -362,17 +362,17 @@ def validate(
         TypeError: If `root_as_top` and `tree`'s top is a `Group`.
     """
     root = Path(root)
-    ctx = CheckContext(checks or {}, on_missing)
+    resolver = HookResolver(hooks or {}, on_missing)
     excluder = build_excluder(exclude, root)
     worker = _validate_as_top if root_as_top else _validate_under
-    return worker(tree, root, excluder, ctx)
+    return worker(tree, root, excluder, resolver)
 
 
 def _validate_as_top(
     top: Node,
     root: Path,
     excluder: Callable[[Path], bool] | None,
-    ctx: CheckContext,
+    resolver: HookResolver,
 ) -> ValidationReport:
     """Validate `root` as the realized top entry, not as a container.
 
@@ -383,7 +383,7 @@ def _validate_as_top(
         top: The spec's top node; must be an `Entry`.
         root: The path validated as the realized `top`.
         excluder: A pre-built drop predicate, or `None` to exclude nothing.
-        ctx: The `Content`-check context (`checks` / `on_missing`).
+        resolver: The `Content` hook resolver (`hooks` / `on_missing`).
 
     Returns:
         A `ValidationReport`; when `root` does not realize `top` (leaf name /
@@ -401,14 +401,14 @@ def _validate_as_top(
         return ValidationReport({}, (), (entry,), (), ())
 
     failed: tuple[tuple[Path, Node], ...] = ()
-    if not (entry.condition is None or entry.condition.check(root, ctx)):
+    if not (entry.condition is None or entry.condition.check(root, resolver)):
         failed = ((root, entry),)
 
     if isinstance(entry, File):
         return ValidationReport({root: (entry,)}, (), (), (), failed)
 
     directory = cast("Directory", entry)
-    report = _validate_under(directory.children, root, excluder, ctx)
+    report = _validate_under(directory.children, root, excluder, resolver)
     return ValidationReport(
         matched={root: (entry,), **report.matched},
         unexpected=report.unexpected,
@@ -422,7 +422,7 @@ def _validate_under(
     tops: Node | tuple[Node, ...],
     root: Path,
     excluder: Callable[[Path], bool] | None,
-    ctx: CheckContext = _NO_CHECKS,
+    resolver: HookResolver = _NO_HOOKS,
 ) -> ValidationReport:
     """Validate `tops` as entries realized directly under `root`.
 
@@ -435,7 +435,7 @@ def _validate_under(
         tops: The sibling nodes expected directly under `root`.
         root: The directory validated.
         excluder: A pre-built drop predicate, or `None` to exclude nothing.
-        ctx: The `Content`-check context.
+        resolver: The `Content`-check context.
 
     Returns:
         The combined report for `tops` under `root`.
@@ -480,7 +480,7 @@ def _validate_under(
         for node in nodes
         if isinstance(node, Entry)
         and node.condition is not None
-        and not node.condition.check(path, ctx)
+        and not node.condition.check(path, resolver)
     )
 
     return ValidationReport(
@@ -650,7 +650,7 @@ def _present_leaves(nodes: Iterable[Node], present: set[Node]) -> tuple[Entry, .
 def conformer(
     spec: Node,
     *,
-    checks: ContentChecks | None = None,
+    hooks: ContentHooks | None = None,
     on_missing: Literal["error", "skip"] = "error",
 ) -> Callable[[StrPath], bool]:
     """Build a `search` predicate accepting paths that realize `spec`'s top.
@@ -661,7 +661,7 @@ def conformer(
     as the *top* of `spec`, never an inner node -- so
     `conformer(Directory("dataset", [...]))` accepts a conforming `dataset/`,
     not its contents. For an `Entry` top this is exactly
-    `validate(spec, path, root_as_top=True).ok`. `checks` / `on_missing` supply
+    `validate(spec, path, root_as_top=True).ok`. `hooks` / `on_missing` supply
     `Content` conditions as in `validate`.
 
     Because the predicate enforces the top's kind, pair it with the matching
@@ -670,18 +670,18 @@ def conformer(
 
     Args:
         spec: The spec whose top node the predicate tests.
-        checks: `Content` hooks by name, supplied as in `validate`.
+        hooks: `Content` hooks by name, supplied as in `validate`.
         on_missing: How a missing `Content` name resolves (`"error"` /
             `"skip"`), as in `validate`.
 
     Returns:
         A predicate that is `True` for a path realizing `spec`'s top.
     """
-    ctx = CheckContext(checks or {}, on_missing)
+    resolver = HookResolver(hooks or {}, on_missing)
     tops = flatten_entries(spec)
 
     def check(path: StrPath) -> bool:
         root = Path(path)
-        return any(_validate_as_top(top, root, None, ctx).ok for top in tops)
+        return any(_validate_as_top(top, root, None, resolver).ok for top in tops)
 
     return check

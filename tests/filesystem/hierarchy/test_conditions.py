@@ -7,11 +7,11 @@ import pytest
 
 from kaparoo.filesystem.hierarchy.conditions import (
     And,
-    CheckContext,
     ChildCount,
     Condition,
     Content,
     Empty,
+    HookResolver,
     NonEmpty,
     Not,
     Or,
@@ -176,18 +176,18 @@ class TestEmptiness:
 class TestContent:
     def test_runs_the_supplied_callable(self, tmp_path: Path) -> None:
         f = make_file(tmp_path / "f", size=3)
-        ctx = CheckContext(checks={"big": lambda p: p.stat().st_size > 2})
-        assert Content("big").check(f, ctx)
+        resolver = HookResolver(hooks={"big": lambda p: p.stat().st_size > 2})
+        assert Content("big").check(f, resolver)
         small = make_file(tmp_path / "g", size=1)
-        assert Content("big").check(small, ctx) is False
+        assert Content("big").check(small, resolver) is False
 
     def test_missing_check_errors_by_default(self, tmp_path: Path) -> None:
-        with pytest.raises(ValueError, match="no check supplied"):
-            Content("absent").check(tmp_path)  # default ctx: on_missing="error"
+        with pytest.raises(ValueError, match="no hook supplied"):
+            Content("absent").check(tmp_path)  # default resolver: on_missing="error"
 
     def test_missing_check_skips_when_configured(self, tmp_path: Path) -> None:
-        ctx = CheckContext(on_missing="skip")
-        assert Content("absent").check(tmp_path, ctx) is True
+        resolver = HookResolver(on_missing="skip")
+        assert Content("absent").check(tmp_path, resolver) is True
 
     def test_round_trips(self) -> None:
         content = Content("valid_schema")
@@ -206,12 +206,12 @@ class TestLogical:
         assert Not(Size(min=1)).check(f) is False
 
     def test_threads_context_to_children(self, tmp_path: Path) -> None:
-        # Content resolves only via `ctx`, so reaching it proves threading.
-        ctx = CheckContext(checks={"ok": lambda _: True})
+        # Content resolves only via `resolver`, so reaching it proves threading.
+        resolver = HookResolver(hooks={"ok": lambda _: True})
         empty = make_file(tmp_path / "x", size=0)
-        assert And((Content("ok"), Size(max=0))).check(empty, ctx)
+        assert And((Content("ok"), Size(max=0))).check(empty, resolver)
         nonempty = make_file(tmp_path / "y", size=3)
-        assert And((Content("ok"), Size(max=0))).check(nonempty, ctx) is False
+        assert And((Content("ok"), Size(max=0))).check(nonempty, resolver) is False
 
     def test_empty_conjunction_disjunction_raise(self) -> None:
         with pytest.raises(ValueError, match="And requires"):

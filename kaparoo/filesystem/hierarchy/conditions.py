@@ -4,11 +4,11 @@ from __future__ import annotations
 
 __all__ = (
     "And",
-    "CheckContext",
     "ChildCount",
     "Condition",
     "Content",
     "Empty",
+    "HookResolver",
     "NonEmpty",
     "Not",
     "Or",
@@ -60,21 +60,43 @@ def register_condition[C: Condition](kind: str) -> Callable[[type[C]], type[C]]:
 
 
 @dataclass(frozen=True)
-class CheckContext:
-    """Runtime context threaded through `Condition.check`.
+class HookResolver:
+    """The `Content` hooks supplied at `validate` time, threaded into `check`.
+
+    Resolves a `Content` condition's name to the caller-supplied hook and runs
+    it, applying `on_missing` when no hook is registered for the name.
 
     Attributes:
-        checks: Maps a `Content` name to its callable, supplied at `validate`
+        hooks: Maps a `Content` name to its callable, supplied at `validate`
             time.
-        on_missing: What to do when a `Content` name is absent from `checks`
+        on_missing: What to do when a `Content` name is absent from `hooks`
             -- `"error"` raises, `"skip"` treats it as satisfied.
     """
 
-    checks: Mapping[str, Callable[[Path], bool]] = field(default_factory=dict)
+    hooks: Mapping[str, Callable[[Path], bool]] = field(default_factory=dict)
     on_missing: Literal["error", "skip"] = "error"
 
+    def run(self, name: str, path: Path) -> bool:
+        """Run the hook named `name` on `path`, honoring `on_missing` when absent.
 
-_NO_CHECKS = CheckContext()
+        Returns:
+            The hook's verdict, or `True` when the name is absent and
+            `on_missing` is `"skip"`.
+
+        Raises:
+            ValueError: If `name` has no hook and `on_missing` is `"error"`.
+        """
+        fn = self.hooks.get(name)
+        if fn is None:
+            if self.on_missing == "skip":
+                return True
+            msg = f"no hook supplied for content condition {name!r}"
+            raise ValueError(msg)
+
+        return fn(path)
+
+
+_NO_HOOKS = HookResolver()
 
 
 @dataclass(frozen=True)
@@ -95,8 +117,8 @@ class Condition(ABC):
     _kind: ClassVar[str]
 
     @abstractmethod
-    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:
-        """Whether `path` satisfies this condition (`ctx` carries `Content`)."""
+    def check(self, path: Path, resolver: HookResolver | None = None) -> bool:
+        """Whether `path` satisfies this condition (`resolver` carries `Content`)."""
         raise NotImplementedError
 
     def applies_to(self, kind: EntryKind) -> bool:  # noqa: ARG002
@@ -177,7 +199,7 @@ class Bound(Condition, ABC):
         raise NotImplementedError
 
     @override
-    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:
+    def check(self, path: Path, resolver: HookResolver | None = None) -> bool:
         """Whether `_measure(path)` lies within the inclusive `[min, max]` bound."""
         value = self._measure(path)
         return (self.min is None or value >= self.min) and (
@@ -291,7 +313,7 @@ class Empty(Condition):
     """A file with no bytes, or a directory with no entries."""
 
     @override
-    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:
+    def check(self, path: Path, resolver: HookResolver | None = None) -> bool:
         """Whether `path` holds no bytes (file) or no entries (directory)."""
         if path.is_dir():
             return not any(path.iterdir())
@@ -313,7 +335,7 @@ class NonEmpty(Condition):
     """A file with at least one byte, or a directory with at least one entry."""
 
     @override
-    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:
+    def check(self, path: Path, resolver: HookResolver | None = None) -> bool:
         """Whether `path` holds at least one byte (file) or one entry (directory)."""
         if path.is_dir():
             return any(path.iterdir())
@@ -337,8 +359,8 @@ class Content(Condition):
     Only the `name` is stored (and serialized), so the spec stays
     serializable and value-comparable; the actual callable -- which may
     inspect arbitrary file content -- is supplied to `validate` as
-    `checks={name: callable}`. When `name` is absent from `checks`,
-    `CheckContext.on_missing` decides: `"error"` raises, `"skip"` passes.
+    `hooks={name: callable}`. When `name` is absent from `hooks`,
+    `HookResolver.on_missing` decides: `"error"` raises, `"skip"` passes.
 
     The callable receives the matched *absolute* `Path` (a live filesystem
     handle, not just a name), so it may navigate to siblings and ancestors
@@ -351,19 +373,9 @@ class Content(Condition):
     name: str
 
     @override
-    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:
-        """Run the `name`d check from `ctx`, honoring `on_missing` when absent."""
-        if ctx is None:
-            ctx = _NO_CHECKS
-
-        fn = ctx.checks.get(self.name)
-        if fn is None:
-            if ctx.on_missing == "skip":
-                return True
-            msg = f"no check supplied for content condition {self.name!r}"
-            raise ValueError(msg)
-
-        return fn(path)
+    def check(self, path: Path, resolver: HookResolver | None = None) -> bool:
+        """Resolve the `name`d hook via `resolver` and run it on `path`."""
+        return (resolver or _NO_HOOKS).run(self.name, path)
 
     @override
     def _payload(self) -> dict[str, Any]:
@@ -415,9 +427,9 @@ class And(Variadic):
     """Satisfied when ALL of `conditions` are (conjunction)."""
 
     @override
-    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:
+    def check(self, path: Path, resolver: HookResolver | None = None) -> bool:
         """Whether every child condition holds for `path`."""
-        return all(condition.check(path, ctx) for condition in self.conditions)
+        return all(condition.check(path, resolver) for condition in self.conditions)
 
 
 @register_condition("any")
@@ -426,9 +438,9 @@ class Or(Variadic):
     """Satisfied when AT LEAST ONE of `conditions` is (disjunction)."""
 
     @override
-    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:
+    def check(self, path: Path, resolver: HookResolver | None = None) -> bool:
         """Whether at least one child condition holds for `path`."""
-        return any(condition.check(path, ctx) for condition in self.conditions)
+        return any(condition.check(path, resolver) for condition in self.conditions)
 
 
 @register_condition("not")
@@ -444,9 +456,9 @@ class Not(Condition):
         return self.condition.applies_to(kind)
 
     @override
-    def check(self, path: Path, ctx: CheckContext | None = None) -> bool:
+    def check(self, path: Path, resolver: HookResolver | None = None) -> bool:
         """Whether the wrapped condition does not hold for `path`."""
-        return not self.condition.check(path, ctx)
+        return not self.condition.check(path, resolver)
 
     @override
     def _payload(self) -> dict[str, Any]:

@@ -321,14 +321,14 @@ class TestValidateCondition:
         (tmp_path / "d" / "data.json").write_text("ok")
         spec = Directory("d", [File("data.json", condition=Content("valid"))])
         assert validate(
-            spec, tmp_path, checks={"valid": lambda p: p.read_text() == "ok"}
+            spec, tmp_path, hooks={"valid": lambda p: p.read_text() == "ok"}
         ).ok
-        assert not validate(spec, tmp_path, checks={"valid": lambda _: False}).ok
+        assert not validate(spec, tmp_path, hooks={"valid": lambda _: False}).ok
 
     def test_missing_content_check_errors_or_skips(self, tmp_path: Path) -> None:
         build(tmp_path, ["d/data.json"])
         spec = Directory("d", [File("data.json", condition=Content("absent"))])
-        with pytest.raises(ValueError, match="no check supplied"):
+        with pytest.raises(ValueError, match="no hook supplied"):
             validate(spec, tmp_path)  # on_missing defaults to "error"
         assert validate(spec, tmp_path, on_missing="skip").ok
 
@@ -354,11 +354,11 @@ class TestValidateCondition:
                 Directory("other", [File(Glob("*"))]),  # accept any sibling files
             ],
         )
-        checks = {"match": lines_match_sibling_count}
-        assert validate(spec, tmp_path, checks=checks).ok  # 2 lines == 2 files
+        hooks = {"match": lines_match_sibling_count}
+        assert validate(spec, tmp_path, hooks=hooks).ok  # 2 lines == 2 files
 
         (tmp_path / "d" / "other" / "c").write_text("x")  # now 3 files -> mismatch
-        report = validate(spec, tmp_path, checks=checks)
+        report = validate(spec, tmp_path, hooks=hooks)
         assert report.unexpected == ()  # 'c' is accepted, so only the check fails
         assert (tmp_path / "d" / "manifest.txt", spec.children[0]) in report.failed
 

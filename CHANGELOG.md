@@ -162,7 +162,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   raises at construction. Arbitrary content checks —
   unserializable as callables — are referenced by `Content("name")` (only
   the name is stored) and supplied to `validate` / `conformer` as
-  `checks={name: callable}`; an absent name is governed by
+  `hooks={name: callable}`; an absent name is governed by
   `on_missing="error" | "skip"`. The metadata conditions round-trip through
   `to_dict` / `from_dict`.
 - `Entry.accepts_depth(depth)` / `Entry.accepts_kind(path)`: two predicate

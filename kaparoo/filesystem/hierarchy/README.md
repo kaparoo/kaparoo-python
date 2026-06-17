@@ -178,7 +178,7 @@ supplied at validation time, so the spec stays serializable and
 value-comparable:
 
 ```python
-report = validate(spec, root, checks={"valid_schema": lambda p: ...})
+report = validate(spec, root, hooks={"valid_schema": lambda p: ...})
 ```
 
 The callable receives the matched **absolute path** — a live `pathlib.Path`,
@@ -192,13 +192,13 @@ def lines_match_sibling_count(path: Path) -> bool:
     lines = len(path.read_text().splitlines())
     return lines == sum(1 for _ in (path.parent / "other").iterdir())
 
-validate(spec, root, checks={"lines_match": lines_match_sibling_count})
+validate(spec, root, hooks={"lines_match": lines_match_sibling_count})
 ```
 
 The path is the only argument — navigation is relative to the matched path,
 not to `root` — so anchor cross-references off `path.parent`.
 
-When a `Content` name is absent from `checks`, `on_missing` decides:
+When a `Content` name is absent from `hooks`, `on_missing` decides:
 `"error"` (the default) raises, `"skip"` treats it as satisfied.
 
 ## Mutual exclusion: `Exclusive`
