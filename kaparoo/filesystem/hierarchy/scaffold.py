@@ -65,28 +65,6 @@ def scaffold(tree: Node, root: StrPath, *, dry_run: bool = False) -> list[Path]:
     return worker.created
 
 
-def _creatable(entry: Entry) -> bool:
-    """Whether `entry` has a concrete name and a fixed depth of 1."""
-    return (
-        isinstance(entry.name, Expandable)
-        and entry.min_depth == 1
-        and entry.max_depth == 1
-    )
-
-
-def _node_creatable(node: Node) -> bool:
-    """Whether `node` (an entry or nested group) can be fully materialized."""
-    if isinstance(node, Entry):
-        return _creatable(node)
-    if isinstance(node, Together):
-        return all(_node_creatable(member) for member in node.members)
-    exclusive = cast("Exclusive", node)
-    return any(
-        all(_node_creatable(member) for member in side)
-        for side in exclusive.alternatives
-    )
-
-
 class Scaffolder:
     """A single scaffold run: walks a spec, accumulating the paths it makes.
 
@@ -118,8 +96,28 @@ class Scaffolder:
             )
             raise ValueError(msg)
 
+    def _creatable(self, entry: Entry) -> bool:
+        """Whether `entry` has a concrete name and a fixed depth of 1."""
+        return (
+            isinstance(entry.name, Expandable)
+            and entry.min_depth == 1
+            and entry.max_depth == 1
+        )
+
+    def _node_creatable(self, node: Node) -> bool:
+        """Whether `node` (an entry or nested group) can be fully materialized."""
+        if isinstance(node, Entry):
+            return self._creatable(node)
+        if isinstance(node, Together):
+            return all(self._node_creatable(member) for member in node.members)
+        exclusive = cast("Exclusive", node)
+        return any(
+            all(self._node_creatable(member) for member in side)
+            for side in exclusive.alternatives
+        )
+
     def _file(self, node: File, parent: Path) -> None:
-        if not _creatable(node):
+        if not self._creatable(node):
             self._skip_or_raise(node, required=node.required)
             return
 
@@ -135,7 +133,7 @@ class Scaffolder:
             self.created.append(path)
 
     def _directory(self, node: Directory, parent: Path) -> None:
-        if not _creatable(node):
+        if not self._creatable(node):
             self._skip_or_raise(node, required=node.required)
             return
 
@@ -153,7 +151,7 @@ class Scaffolder:
                 self.visit(child, path)
 
     def _together(self, node: Together, parent: Path) -> None:
-        if not all(_node_creatable(member) for member in node.members):
+        if not all(self._node_creatable(member) for member in node.members):
             # all-or-nothing: a non-creatable member skips the whole set
             self._skip_or_raise(node, required=node.required)
             return
@@ -163,7 +161,7 @@ class Scaffolder:
 
     def _exclusive(self, node: Exclusive, parent: Path) -> None:
         for side in node.alternatives:
-            if all(_node_creatable(member) for member in side):
+            if all(self._node_creatable(member) for member in side):
                 for member in side:
                     self.visit(member, parent)
                 return
