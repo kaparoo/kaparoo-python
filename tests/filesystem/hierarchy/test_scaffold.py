@@ -179,3 +179,56 @@ class TestDryRun:
     def test_still_raises_on_unsatisfiable_required(self, tmp_path: Path) -> None:
         with pytest.raises(ValueError, match="required"):
             scaffold(File(Glob("*.log"), required=True), tmp_path, dry_run=True)
+
+
+class TestScaffoldAtRoot:
+    def test_directory_top_creates_root_and_children(self, tmp_path: Path) -> None:
+        spec = Directory("dataset", [File("meta.json"), Directory("imgs", [])])
+        root = tmp_path / "dataset"
+        created = scaffold(spec, root, root_as_top=True)
+        assert rel(created, tmp_path) == [
+            "dataset",
+            "dataset/meta.json",
+            "dataset/imgs",
+        ]
+        assert (root / "meta.json").is_file()
+        assert (root / "imgs").is_dir()
+
+    def test_file_top_creates_root_itself(self, tmp_path: Path) -> None:
+        root = tmp_path / "model.bin"
+        created = scaffold(File("model.bin"), root, root_as_top=True)
+        assert created == [root]
+        assert root.is_file()
+
+    def test_root_parent_created_when_absent(self, tmp_path: Path) -> None:
+        root = tmp_path / "deep" / "nested" / "dataset"
+        scaffold(Directory("dataset", [File("x")]), root, root_as_top=True)
+        assert (root / "x").is_file()  # intermediate parents made too
+
+    def test_name_mismatch_optional_is_skipped(self, tmp_path: Path) -> None:
+        spec = Directory("dataset", [File("x")])
+        created = scaffold(spec, tmp_path / "other", root_as_top=True)
+        assert created == []
+        assert not (tmp_path / "other").exists()  # nothing created
+
+    def test_name_mismatch_required_raises(self, tmp_path: Path) -> None:
+        spec = File("model.bin", required=True)
+        with pytest.raises(ValueError, match="does not match"):
+            scaffold(spec, tmp_path / "other.bin", root_as_top=True)
+
+    def test_group_top_raises(self, tmp_path: Path) -> None:
+        with pytest.raises(TypeError, match="Entry top node"):
+            scaffold(Exclusive(File("a"), File("b")), tmp_path, root_as_top=True)
+
+    def test_existing_root_is_descended(self, tmp_path: Path) -> None:
+        root = tmp_path / "dataset"
+        root.mkdir()
+        created = scaffold(Directory("dataset", [File("new")]), root, root_as_top=True)
+        assert rel(created, tmp_path) == ["dataset/new"]  # only the new child
+
+    def test_dry_run_plans_without_touching_disk(self, tmp_path: Path) -> None:
+        spec = Directory("dataset", [File("a"), File("b")])
+        root = tmp_path / "dataset"
+        plan = scaffold(spec, root, root_as_top=True, dry_run=True)
+        assert rel(plan, tmp_path) == ["dataset", "dataset/a", "dataset/b"]
+        assert not root.exists()  # disk untouched
