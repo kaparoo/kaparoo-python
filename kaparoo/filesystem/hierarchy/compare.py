@@ -50,7 +50,7 @@ def locate(
     *,
     unique: bool = False,
     exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
-    at_root: bool = False,
+    root_as_top: bool = False,
 ) -> Iterator[tuple[Path, Node]]:
     """Yield each on-disk path under `root` paired with the node it matches.
 
@@ -66,14 +66,14 @@ def locate(
     Args:
         tree: The spec whose top node anchors the match.
         root: The directory walked for matches; the realized top itself when
-            `at_root`.
+            `root_as_top`.
         unique: Suppress duplicate `(path, node)` pairs (a reused subtree
             otherwise repeats once per occurrence); iteration stays lazy.
         exclude: Path(s) to drop -- a `StrPath` (absolute under `root` or
             root-relative), a `Filter` (on the root-relative POSIX path), a
             callable on the candidate's real `Path`, or an iterable of these
             (OR-combined). A dropped directory is pruned whole.
-        at_root: Treat `root` *itself* as the realized top rather than its
+        root_as_top: Treat `root` *itself* as the realized top rather than its
             container; the top must be an `Entry`, realized only when `root`'s
             leaf name and kind match it.
 
@@ -82,11 +82,11 @@ def locate(
         spec order.
 
     Raises:
-        TypeError: If `at_root` and `tree`'s top is a `Group`.
+        TypeError: If `root_as_top` and `tree`'s top is a `Group`.
     """
     root = Path(root)
     excluder = build_excluder(exclude, root)
-    worker = _locate_at_root if at_root else _locate_under
+    worker = _locate_root_as_top if root_as_top else _locate_under
     pairs = worker(tree, root, excluder)
     yield from _unique(pairs) if unique else pairs
 
@@ -139,7 +139,7 @@ def _locate_map(
     return {path: tuple(nodes) for path, nodes in grouped.items()}
 
 
-def _locate_at_root(
+def _locate_root_as_top(
     top: Node, root: Path, excluder: Callable[[Path], bool] | None
 ) -> Iterator[tuple[Path, Node]]:
     """Match `top` as `root` itself rather than a child of a container.
@@ -157,7 +157,7 @@ def _locate_at_root(
         TypeError: If `top` is a `Group` (it has no single name to anchor).
     """
     if isinstance(top, Group):
-        msg = "at_root requires an Entry top node, not a Group"
+        msg = "root_as_top requires an Entry top node, not a Group"
         raise TypeError(msg)
 
     entry = cast("Entry", top)
@@ -331,7 +331,7 @@ def validate(
     exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
     checks: ContentChecks | None = None,
     on_missing: Literal["error", "skip"] = "error",
-    at_root: bool = False,
+    root_as_top: bool = False,
 ) -> ValidationReport:
     """Check the directory at `root` against the spec `tree`.
 
@@ -345,13 +345,13 @@ def validate(
 
     Args:
         tree: The spec to check the directory against.
-        root: The directory checked; the realized top itself when `at_root`.
+        root: The directory checked; the realized top itself when `root_as_top`.
         exclude: Path(s) to drop, as in `locate` (dropped paths are not
             reported `unexpected`).
         checks: Callables for `Content` conditions, keyed by name.
         on_missing: What to do when a `Content` name is absent -- `"error"`
             raises, `"skip"` treats it as satisfied.
-        at_root: Treat `root` *itself* as the realized top rather than its
+        root_as_top: Treat `root` *itself* as the realized top rather than its
             container; the top must be an `Entry`, and a leaf name / kind
             mismatch reports the top as `missing` without descending.
 
@@ -359,16 +359,16 @@ def validate(
         A `ValidationReport` whose `ok` is `True` when nothing is wrong.
 
     Raises:
-        TypeError: If `at_root` and `tree`'s top is a `Group`.
+        TypeError: If `root_as_top` and `tree`'s top is a `Group`.
     """
     root = Path(root)
     ctx = CheckContext(checks or {}, on_missing)
     excluder = build_excluder(exclude, root)
-    worker = _validate_at_root if at_root else _validate_under
+    worker = _validate_root_as_top if root_as_top else _validate_under
     return worker(tree, root, excluder, ctx)
 
 
-def _validate_at_root(
+def _validate_root_as_top(
     top: Node,
     root: Path,
     excluder: Callable[[Path], bool] | None,
@@ -376,7 +376,7 @@ def _validate_at_root(
 ) -> ValidationReport:
     """Validate `root` as the realized top entry, not as a container.
 
-    The `at_root` form of `_validate_under`: a `Directory`'s children are
+    The `root_as_top` form of `_validate_under`: a `Directory`'s children are
     validated beneath `root` and the top's own `condition` is checked on it.
 
     Args:
@@ -393,7 +393,7 @@ def _validate_at_root(
         TypeError: If `top` is a `Group` (it has no single name to anchor).
     """
     if isinstance(top, Group):
-        msg = "at_root requires an Entry top node, not a Group"
+        msg = "root_as_top requires an Entry top node, not a Group"
         raise TypeError(msg)
 
     entry = cast("Entry", top)
@@ -426,7 +426,7 @@ def _validate_under(
 ) -> ValidationReport:
     """Validate `tops` as entries realized directly under `root`.
 
-    The `at_root`-less core of `validate`, also reused by `_validate_at_root`
+    The `root_as_top`-less core of `validate`, also reused by `_validate_root_as_top`
     for a directory's children. The `exclude` predicate is built once here and
     threaded into both the locate phase (`_merge_matched`) and the
     `_unexpected` sweep, rather than rebuilt per top node.
@@ -661,7 +661,7 @@ def conformer(
     as the *top* of `spec`, never an inner node -- so
     `conformer(Directory("dataset", [...]))` accepts a conforming `dataset/`,
     not its contents. For an `Entry` top this is exactly
-    `validate(spec, path, at_root=True).ok`. `checks` / `on_missing` supply
+    `validate(spec, path, root_as_top=True).ok`. `checks` / `on_missing` supply
     `Content` conditions as in `validate`.
 
     Because the predicate enforces the top's kind, pair it with the matching
@@ -682,6 +682,6 @@ def conformer(
 
     def check(path: StrPath) -> bool:
         root = Path(path)
-        return any(_validate_at_root(top, root, None, ctx).ok for top in tops)
+        return any(_validate_root_as_top(top, root, None, ctx).ok for top in tops)
 
     return check

@@ -102,7 +102,7 @@ spec = Directory("dataset", [
     File("metadata.json"),
     Directory("images", [File(Glob("*.png"))]),
 ])
-report = validate(spec, "data/dataset", at_root=True)
+report = validate(spec, "data/dataset", root_as_top=True)
 assert report.ok  # required entries present, nothing unexpected
 ```
 

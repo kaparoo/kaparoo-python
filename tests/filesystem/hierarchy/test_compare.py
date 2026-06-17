@@ -390,21 +390,21 @@ class TestValidateAtRoot:
     def test_validates_subtree_at_its_own_path(self, tmp_path: Path) -> None:
         build(tmp_path, ["dataset/metadata.json", "dataset/images/cat.png"])
         ds = tmp_path / "dataset"
-        report = validate(dataset_spec(), ds, at_root=True)
+        report = validate(dataset_spec(), ds, root_as_top=True)
         assert report.ok
         assert report.matched[ds] == (dataset_spec(),)
 
     def test_required_child_missing(self, tmp_path: Path) -> None:
         (tmp_path / "dataset").mkdir()  # an empty dataset directory
         spec = Directory("dataset", [File("metadata.json", required=True)])
-        report = validate(spec, tmp_path / "dataset", at_root=True)
+        report = validate(spec, tmp_path / "dataset", root_as_top=True)
         assert not report.ok
         assert report.missing == (File("metadata.json", required=True),)
 
     def test_name_mismatch_reports_top_missing(self, tmp_path: Path) -> None:
         (tmp_path / "myrun").mkdir()
         spec = dataset_spec()
-        report = validate(spec, tmp_path / "myrun", at_root=True)
+        report = validate(spec, tmp_path / "myrun", root_as_top=True)
         assert not report.ok
         assert report.missing == (spec,)
         assert report.matched == {}  # did not descend
@@ -415,7 +415,7 @@ class TestValidateAtRoot:
             tmp_path, ["dataset/metadata.json", "dataset/images/x.png", "dataset/junk"]
         )
         ds = tmp_path / "dataset"
-        report = validate(dataset_spec(), ds, at_root=True)
+        report = validate(dataset_spec(), ds, root_as_top=True)
         assert not report.ok
         assert (ds / "junk") in report.unexpected
 
@@ -423,26 +423,26 @@ class TestValidateAtRoot:
         empty = tmp_path / "model.bin"
         empty.write_bytes(b"")
         spec = File("model.bin", condition=Size(min=1))
-        report = validate(spec, empty, at_root=True)
+        report = validate(spec, empty, root_as_top=True)
         assert not report.ok
         assert report.failed == ((empty, spec),)
 
         full = tmp_path / "good.bin"
         full.write_bytes(b"x")
         ok_spec = File("good.bin", condition=Size(min=1))
-        assert validate(ok_spec, full, at_root=True).ok
+        assert validate(ok_spec, full, root_as_top=True).ok
 
     def test_file_top_name_mismatch_reports_missing(self, tmp_path: Path) -> None:
         (tmp_path / "other.bin").write_bytes(b"x")  # wrong name for the top File
         spec = File("model.bin")
-        report = validate(spec, tmp_path / "other.bin", at_root=True)
+        report = validate(spec, tmp_path / "other.bin", root_as_top=True)
         assert not report.ok
         assert report.missing == (spec,)
 
     def test_group_top_raises(self, tmp_path: Path) -> None:
         spec = Exclusive(File("a"), File("b"))
         with pytest.raises(TypeError, match="Entry top node"):
-            validate(spec, tmp_path, at_root=True)
+            validate(spec, tmp_path, root_as_top=True)
 
 
 class TestLocate:
@@ -634,7 +634,7 @@ class TestLocateAtRoot:
         spec = Directory("dataset", [meta, images])
         ds = tmp_path / "dataset"
 
-        pairs = set(locate(spec, ds, at_root=True))
+        pairs = set(locate(spec, ds, root_as_top=True))
         assert (ds, spec) in pairs
         assert (ds / "metadata.json", meta) in pairs
         assert (ds / "images", images) in pairs
@@ -645,7 +645,7 @@ class TestLocateAtRoot:
     def test_file_top(self, tmp_path: Path) -> None:
         build(tmp_path, ["dataset/metadata.json"])
         f = tmp_path / "dataset" / "metadata.json"
-        assert set(locate(File("metadata.json"), f, at_root=True)) == {
+        assert set(locate(File("metadata.json"), f, root_as_top=True)) == {
             (f, File("metadata.json"))
         }
 
@@ -653,21 +653,21 @@ class TestLocateAtRoot:
         build(tmp_path, ["releases/v3/data.bin"])
         spec = Directory(Glob("v*"), [File("data.bin")])
         v3 = tmp_path / "releases" / "v3"
-        pairs = set(locate(spec, v3, at_root=True))
+        pairs = set(locate(spec, v3, root_as_top=True))
         assert (v3, spec) in pairs
         assert (v3 / "data.bin", File("data.bin")) in pairs
 
     def test_name_mismatch_yields_nothing(self, tmp_path: Path) -> None:
         (tmp_path / "myrun").mkdir()
         spec = Directory("dataset", [File("metadata.json")])
-        assert list(locate(spec, tmp_path / "myrun", at_root=True)) == []
+        assert list(locate(spec, tmp_path / "myrun", root_as_top=True)) == []
 
     def test_type_mismatch_yields_nothing(self, tmp_path: Path) -> None:
         (tmp_path / "dataset").write_text("x")  # a file, but the top is a Directory
         spec = Directory("dataset", [File("a")])
-        assert list(locate(spec, tmp_path / "dataset", at_root=True)) == []
+        assert list(locate(spec, tmp_path / "dataset", root_as_top=True)) == []
 
     def test_group_top_raises(self, tmp_path: Path) -> None:
         spec = Exclusive(File("a"), File("b"))
         with pytest.raises(TypeError, match="Entry top node"):
-            list(locate(spec, tmp_path, at_root=True))
+            list(locate(spec, tmp_path, root_as_top=True))

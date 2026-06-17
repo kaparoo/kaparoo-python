@@ -103,7 +103,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   matched on the root-relative POSIX string (the serializable counterpart of
   a callable), or a callable taking the candidate's own `Path` (the real,
   filesystem-valid path, so it may inspect the file), and a dropped directory
-  has its whole subtree pruned. Pass `at_root=True` to
+  has its whole subtree pruned. Pass `root_as_top=True` to
   treat `root` as the realized top node itself (you point at the top
   directly) rather than its container; the top must be an `Entry` (a `Group`
   raises `TypeError`) and `root` realizes it only when its leaf name / kind
@@ -119,7 +119,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   last three are empty. A `required` enumerable name (`OneOf` / `Template`)
   is satisfied by at least one present match. `validate` also accepts the
   same `exclude=` as `locate`, so excluded paths are dropped from `matched`
-  and not reported `unexpected`. It also takes the same `at_root=True` to
+  and not reported `unexpected`. It also takes the same `root_as_top=True` to
   validate `root` as the realized top entry itself (a `Group` top raises
   `TypeError`); a leaf name / kind mismatch reports the top as `missing`
   without descending. Also exports the `ValidationReport` and `Violation`

@@ -26,7 +26,7 @@ run of regularly-named siblings.
 - [Serialization](#serialization)
 - [Custom nodes](#custom-nodes)
 - [Locating: `locate`](#locating-locate)
-  - [Pointing at the top directly: `at_root`](#pointing-at-the-top-directly-at_root)
+  - [Pointing at the top directly: `root_as_top`](#pointing-at-the-top-directly-root_as_top)
 - [Validation: `validate`](#validation-validate)
 - [Filtering paths: `conformer`](#filtering-paths-conformer)
 - [Scaffolding: `scaffold`](#scaffolding-scaffold)
@@ -466,17 +466,17 @@ its entries may appear," so it does not enforce `Exclusive` / `Together`,
 and it does not report missing `required` entries. Those are the job of
 `validate`.
 
-### Pointing at the top directly: `at_root`
+### Pointing at the top directly: `root_as_top`
 
 By default `root` is the **container** of the spec's top node, so you pass
 the parent (`locate(Directory("dataset", ...), "/data")` looks for
-`/data/dataset`). Pass `at_root=True` to treat `root` as the top node
+`/data/dataset`). Pass `root_as_top=True` to treat `root` as the top node
 *itself* — convenient when you already hold the directory you want to check.
 Both `locate` and `validate` take it:
 
 ```python
-locate(Directory("dataset", [...]),   "/data/dataset", at_root=True)
-validate(Directory("dataset", [...]), "/data/dataset", at_root=True)
+locate(Directory("dataset", [...]),   "/data/dataset", root_as_top=True)
+validate(Directory("dataset", [...]), "/data/dataset", root_as_top=True)
 ```
 
 The top must be an `Entry` (a `Group` raises `TypeError`). `root` realizes

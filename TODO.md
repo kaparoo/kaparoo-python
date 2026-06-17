@@ -8,7 +8,7 @@ entry once it lands.
 ## 🔍 Review `hierarchy.compare` — validation part
 
 A rigorous correctness / edge-case / API-shape pass over `validate` and its
-helpers (`_validate_at_root`, `_validate_under`, `_check_group`,
+helpers (`_validate_root_as_top`, `_validate_under`, `_check_group`,
 `_unexpected`, `_walk_nodes`, `_present_leaves`). The locate part has already
 been reviewed.
 
