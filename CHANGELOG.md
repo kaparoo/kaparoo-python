@@ -271,6 +271,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   stringifies to `"."` consistently. An `after` mismatch now raises a clearer
   `ValueError` (`"path ... does not start with ..."`) instead of surfacing
   pathlib's raw `"is not in the subpath of"` message.
+- `kaparoo.filesystem` bulk helpers now annotate their return as the concrete
+  `list[...]` they already build, rather than the abstract `Sequence[...]`:
+  `stringify_paths` / `wrap_paths` / `reserve_paths`, `make_dirs`,
+  `ensure_files_exist` / `ensure_dirs_exist`, and `Search.run` / `search_paths`
+  / `search_files` / `search_dirs`. Each returns an eager, caller-owned list,
+  so the `Sequence` abstraction bought a backing-type freedom these builders
+  never exercise. Narrowing `Sequence` -> `list` is non-breaking (callers typed
+  against the wider `Sequence` are unaffected); genuinely lazy results stay
+  `Iterator` (`hierarchy.locate`) and immutable views stay `tuple`.
 
 ### Removed
 

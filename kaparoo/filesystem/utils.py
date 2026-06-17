@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, overload
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Iterable
     from typing import Literal
 
     from kaparoo.filesystem.types import StrPath, StrPaths
@@ -78,7 +78,7 @@ def stringify_path(
 
 def stringify_paths(
     paths: StrPaths, after: StrPath | None = None, before: StrPath | None = None
-) -> Sequence[str]:
+) -> list[str]:
     """Convert a sequence of paths to strings and optionally trim shared parts.
 
     Each result is normalized to POSIX form (`/` separators) on every platform;
@@ -175,7 +175,7 @@ def wrap_paths(
     prepend: StrPath | None = None,
     append: StrPath | None = None,
     stringify: Literal[False] = False,
-) -> Sequence[Path]: ...
+) -> list[Path]: ...
 
 
 @overload
@@ -185,7 +185,7 @@ def wrap_paths(
     prepend: StrPath | None = None,
     append: StrPath | None = None,
     stringify: Literal[True],
-) -> Sequence[str]: ...
+) -> list[str]: ...
 
 
 @overload
@@ -195,7 +195,7 @@ def wrap_paths(
     prepend: StrPath | None = None,
     append: StrPath | None = None,
     stringify: bool,
-) -> Sequence[Path] | Sequence[str]: ...
+) -> list[Path] | list[str]: ...
 
 
 def wrap_paths(
@@ -204,7 +204,7 @@ def wrap_paths(
     prepend: StrPath | None = None,
     append: StrPath | None = None,
     stringify: bool = False,
-) -> Sequence[Path] | Sequence[str]:
+) -> list[Path] | list[str]:
     """Wrap a sequence of paths with an optional leading and/or trailing path.
 
     Args:
@@ -317,7 +317,7 @@ def reserve_paths(
     exist_ok: bool = False,
     make_parents: bool = False,
     stringify: Literal[False] = False,
-) -> Sequence[Path]: ...
+) -> list[Path]: ...
 
 
 @overload
@@ -327,7 +327,7 @@ def reserve_paths(
     exist_ok: bool = False,
     make_parents: bool = False,
     stringify: Literal[True],
-) -> Sequence[str]: ...
+) -> list[str]: ...
 
 
 @overload
@@ -337,7 +337,7 @@ def reserve_paths(
     exist_ok: bool = False,
     make_parents: bool = False,
     stringify: bool,
-) -> Sequence[Path] | Sequence[str]: ...
+) -> list[Path] | list[str]: ...
 
 
 def reserve_paths(
@@ -346,7 +346,7 @@ def reserve_paths(
     exist_ok: bool = False,
     make_parents: bool = False,
     stringify: bool = False,
-) -> Sequence[Path] | Sequence[str]:
+) -> list[Path] | list[str]:
     """Reserve multiple paths for creation; the bulk form of `reserve_path`.
 
     Each path is checked with the same `exist_ok` / `make_parents` policy.

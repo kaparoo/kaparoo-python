@@ -13,7 +13,7 @@ from kaparoo.filesystem.utils import stringify_path, stringify_paths
 from kaparoo.filters import Filter
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Sequence
+    from collections.abc import Callable, Iterable
     from pathlib import Path
     from typing import Literal
 
@@ -75,7 +75,7 @@ class Search(ABC):
         max_depth: int | None = None,
         ordered: bool = True,
         stringify: Literal[False] = False,
-    ) -> Sequence[Path]: ...
+    ) -> list[Path]: ...
 
     @overload
     @classmethod
@@ -91,7 +91,7 @@ class Search(ABC):
         max_depth: int | None = None,
         ordered: bool = True,
         stringify: Literal[True],
-    ) -> Sequence[str]: ...
+    ) -> list[str]: ...
 
     @overload
     @classmethod
@@ -107,7 +107,7 @@ class Search(ABC):
         max_depth: int | None = None,
         ordered: bool = True,
         stringify: bool,
-    ) -> Sequence[Path] | Sequence[str]: ...
+    ) -> list[Path] | list[str]: ...
 
     @classmethod
     def run(
@@ -122,7 +122,7 @@ class Search(ABC):
         max_depth: int | None = None,
         ordered: bool = True,
         stringify: bool = False,
-    ) -> Sequence[Path] | Sequence[str]:
+    ) -> list[Path] | list[str]:
         """Walk `root` and return the entries matching the configured filters.
 
         The shared engine behind `search_paths` / `search_files` /

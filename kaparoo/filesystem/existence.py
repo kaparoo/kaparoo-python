@@ -25,7 +25,6 @@ from kaparoo.filesystem.exceptions import DirectoryNotFoundError, NotAFileError
 from kaparoo.filesystem.utils import stringify_path, stringify_paths, wrap_paths
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
     from typing import Literal
 
     from kaparoo.filesystem.types import StrPath, StrPaths
@@ -252,24 +251,24 @@ def dirs_exist(paths: StrPaths, *, root: StrPath | None = None) -> bool:
 @overload
 def ensure_paths_exist(
     paths: StrPaths, *, root: StrPath | None = None, stringify: Literal[False] = False
-) -> Sequence[Path]: ...
+) -> list[Path]: ...
 
 
 @overload
 def ensure_paths_exist(
     paths: StrPaths, *, root: StrPath | None = None, stringify: Literal[True]
-) -> Sequence[str]: ...
+) -> list[str]: ...
 
 
 @overload
 def ensure_paths_exist(
     paths: StrPaths, *, root: StrPath | None = None, stringify: bool
-) -> Sequence[Path] | Sequence[str]: ...
+) -> list[Path] | list[str]: ...
 
 
 def ensure_paths_exist(
     paths: StrPaths, *, root: StrPath | None = None, stringify: bool = False
-) -> Sequence[Path] | Sequence[str]:
+) -> list[Path] | list[str]:
     """Check if all of the given paths exist and return them.
 
     Args:
@@ -294,24 +293,24 @@ def ensure_paths_exist(
 @overload
 def ensure_files_exist(
     paths: StrPaths, *, root: StrPath | None = None, stringify: Literal[False] = False
-) -> Sequence[Path]: ...
+) -> list[Path]: ...
 
 
 @overload
 def ensure_files_exist(
     paths: StrPaths, *, root: StrPath | None = None, stringify: Literal[True]
-) -> Sequence[str]: ...
+) -> list[str]: ...
 
 
 @overload
 def ensure_files_exist(
     paths: StrPaths, *, root: StrPath | None = None, stringify: bool
-) -> Sequence[Path] | Sequence[str]: ...
+) -> list[Path] | list[str]: ...
 
 
 def ensure_files_exist(
     paths: StrPaths, *, root: StrPath | None = None, stringify: bool = False
-) -> Sequence[Path] | Sequence[str]:
+) -> list[Path] | list[str]:
     """Check if all of the given paths exist and are files, and return them.
 
     Args:
@@ -341,7 +340,7 @@ def ensure_dirs_exist(
     root: StrPath | None = None,
     make: bool | int = False,
     stringify: Literal[False] = False,
-) -> Sequence[Path]: ...
+) -> list[Path]: ...
 
 
 @overload
@@ -351,7 +350,7 @@ def ensure_dirs_exist(
     root: StrPath | None = None,
     make: bool | int = False,
     stringify: Literal[True],
-) -> Sequence[str]: ...
+) -> list[str]: ...
 
 
 @overload
@@ -361,7 +360,7 @@ def ensure_dirs_exist(
     root: StrPath | None = None,
     make: bool | int = False,
     stringify: bool,
-) -> Sequence[Path] | Sequence[str]: ...
+) -> list[Path] | list[str]: ...
 
 
 def ensure_dirs_exist(
@@ -370,7 +369,7 @@ def ensure_dirs_exist(
     root: StrPath | None = None,
     make: bool | int = False,
     stringify: bool = False,
-) -> Sequence[Path] | Sequence[str]:
+) -> list[Path] | list[str]:
     """Check if all of the given paths exist and are directories, and return them.
 
     Args:

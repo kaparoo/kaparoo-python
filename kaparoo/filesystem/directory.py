@@ -29,7 +29,6 @@ from kaparoo.filesystem.existence import (
 from kaparoo.filesystem.utils import stringify_path, stringify_paths
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
     from typing import Literal
 
     from kaparoo.filesystem.types import StrPath, StrPaths
@@ -152,7 +151,7 @@ def make_dirs(
     exist_ok: bool = False,
     clean: bool = False,
     stringify: Literal[False] = False,
-) -> Sequence[Path]: ...
+) -> list[Path]: ...
 
 
 @overload
@@ -164,7 +163,7 @@ def make_dirs(
     exist_ok: bool = False,
     clean: bool = False,
     stringify: Literal[True],
-) -> Sequence[str]: ...
+) -> list[str]: ...
 
 
 @overload
@@ -176,7 +175,7 @@ def make_dirs(
     exist_ok: bool = False,
     clean: bool = False,
     stringify: bool,
-) -> Sequence[Path] | Sequence[str]: ...
+) -> list[Path] | list[str]: ...
 
 
 def make_dirs(
@@ -187,7 +186,7 @@ def make_dirs(
     exist_ok: bool = False,
     clean: bool = False,
     stringify: bool = False,
-) -> Sequence[Path] | Sequence[str]:
+) -> list[Path] | list[str]:
     """Recursively create directories.
 
     Args:

@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, overload
 from kaparoo.filesystem.search.classes import DirSearch, FileSearch, PathSearch
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Sequence
+    from collections.abc import Callable, Iterable
     from pathlib import Path
     from typing import Literal
 
@@ -31,7 +31,7 @@ def search_paths(
     max_depth: int | None = None,
     ordered: bool = True,
     stringify: Literal[False] = False,
-) -> Sequence[Path]: ...
+) -> list[Path]: ...
 
 
 @overload
@@ -46,7 +46,7 @@ def search_paths(
     max_depth: int | None = None,
     ordered: bool = True,
     stringify: Literal[True],
-) -> Sequence[str]: ...
+) -> list[str]: ...
 
 
 @overload
@@ -61,7 +61,7 @@ def search_paths(
     max_depth: int | None = None,
     ordered: bool = True,
     stringify: bool,
-) -> Sequence[Path] | Sequence[str]: ...
+) -> list[Path] | list[str]: ...
 
 
 def search_paths(
@@ -75,7 +75,7 @@ def search_paths(
     max_depth: int | None = None,
     ordered: bool = True,
     stringify: bool = False,
-) -> Sequence[Path] | Sequence[str]:
+) -> list[Path] | list[str]:
     """Walk `root` and return file and directory paths that match.
 
     Entries (files and sub-directories) are returned if they pass
@@ -142,7 +142,7 @@ def search_files(
     max_depth: int | None = None,
     ordered: bool = True,
     stringify: Literal[False] = False,
-) -> Sequence[Path]: ...
+) -> list[Path]: ...
 
 
 @overload
@@ -157,7 +157,7 @@ def search_files(
     max_depth: int | None = None,
     ordered: bool = True,
     stringify: Literal[True],
-) -> Sequence[str]: ...
+) -> list[str]: ...
 
 
 @overload
@@ -172,7 +172,7 @@ def search_files(
     max_depth: int | None = None,
     ordered: bool = True,
     stringify: bool,
-) -> Sequence[Path] | Sequence[str]: ...
+) -> list[Path] | list[str]: ...
 
 
 def search_files(
@@ -186,7 +186,7 @@ def search_files(
     max_depth: int | None = None,
     ordered: bool = True,
     stringify: bool = False,
-) -> Sequence[Path] | Sequence[str]:
+) -> list[Path] | list[str]:
     """Walk `root` and return file paths that match.
 
     Files are returned if they pass `part_filter` (on the visited
@@ -254,7 +254,7 @@ def search_dirs(
     max_depth: int | None = None,
     ordered: bool = True,
     stringify: Literal[False] = False,
-) -> Sequence[Path]: ...
+) -> list[Path]: ...
 
 
 @overload
@@ -269,7 +269,7 @@ def search_dirs(
     max_depth: int | None = None,
     ordered: bool = True,
     stringify: Literal[True],
-) -> Sequence[str]: ...
+) -> list[str]: ...
 
 
 @overload
@@ -284,7 +284,7 @@ def search_dirs(
     max_depth: int | None = None,
     ordered: bool = True,
     stringify: bool,
-) -> Sequence[Path] | Sequence[str]: ...
+) -> list[Path] | list[str]: ...
 
 
 def search_dirs(
@@ -298,7 +298,7 @@ def search_dirs(
     max_depth: int | None = None,
     ordered: bool = True,
     stringify: bool = False,
-) -> Sequence[Path] | Sequence[str]:
+) -> list[Path] | list[str]:
     """Walk `root` and return directory paths that match.
 
     Sub-directories are returned if they pass `part_filter` (on the visited
