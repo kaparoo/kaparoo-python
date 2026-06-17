@@ -86,7 +86,7 @@ def locate(
     """
     root = Path(root)
     excluder = build_excluder(exclude, root)
-    worker = _locate_root_as_top if root_as_top else _locate_under
+    worker = _locate_as_top if root_as_top else _locate_under
     pairs = worker(tree, root, excluder)
     yield from _unique(pairs) if unique else pairs
 
@@ -139,7 +139,7 @@ def _locate_map(
     return {path: tuple(nodes) for path, nodes in grouped.items()}
 
 
-def _locate_root_as_top(
+def _locate_as_top(
     top: Node, root: Path, excluder: Callable[[Path], bool] | None
 ) -> Iterator[tuple[Path, Node]]:
     """Match `top` as `root` itself rather than a child of a container.
@@ -364,11 +364,11 @@ def validate(
     root = Path(root)
     ctx = CheckContext(checks or {}, on_missing)
     excluder = build_excluder(exclude, root)
-    worker = _validate_root_as_top if root_as_top else _validate_under
+    worker = _validate_as_top if root_as_top else _validate_under
     return worker(tree, root, excluder, ctx)
 
 
-def _validate_root_as_top(
+def _validate_as_top(
     top: Node,
     root: Path,
     excluder: Callable[[Path], bool] | None,
@@ -426,7 +426,7 @@ def _validate_under(
 ) -> ValidationReport:
     """Validate `tops` as entries realized directly under `root`.
 
-    The `root_as_top`-less core of `validate`, also reused by `_validate_root_as_top`
+    The `root_as_top`-less core of `validate`, also reused by `_validate_as_top`
     for a directory's children. The `exclude` predicate is built once here and
     threaded into both the locate phase (`_merge_matched`) and the
     `_unexpected` sweep, rather than rebuilt per top node.
@@ -682,6 +682,6 @@ def conformer(
 
     def check(path: StrPath) -> bool:
         root = Path(path)
-        return any(_validate_root_as_top(top, root, None, ctx).ok for top in tops)
+        return any(_validate_as_top(top, root, None, ctx).ok for top in tops)
 
     return check

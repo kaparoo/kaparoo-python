@@ -93,12 +93,12 @@ class Scaffolder:
         touching the disk.
         """
         if root_as_top:
-            self._root_as_top(tree, root)
+            self._as_top(tree, root)
         else:
             self._ensure_dir(root)
             self._dispatch(tree, root)
 
-    def _root_as_top(self, tree: Node, root: Path) -> None:
+    def _as_top(self, tree: Node, root: Path) -> None:
         """Realize `tree`'s top as `root` itself rather than a child of it."""
         if isinstance(tree, Group):
             msg = "root_as_top requires an Entry top node, not a Group"
