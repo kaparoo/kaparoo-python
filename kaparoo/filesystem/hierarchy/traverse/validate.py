@@ -4,14 +4,14 @@ from __future__ import annotations
 
 __all__ = ("ValidationReport", "Violation", "conformer", "validate")
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
 
 from kaparoo.filesystem.exclude import build_excluder
 from kaparoo.filesystem.hierarchy.base import Node
 from kaparoo.filesystem.hierarchy.conditions import HookResolver
-from kaparoo.filesystem.hierarchy.entry import Directory, Entry, File
+from kaparoo.filesystem.hierarchy.entry import Directory, Entry
 from kaparoo.filesystem.hierarchy.group import (
     Exclusive,
     Group,
@@ -42,16 +42,21 @@ class Violation:
     """A constraint that a matched tree breaks.
 
     Attributes:
-        kind: The offending group's type (`"exclusive"` / `"together"`).
         node: The offending `Exclusive` / `Together`.
         present: The leaf entries found present -- for `exclusive`, those
             across the multiple coexisting sides; for `together`, the members
             present while others are absent.
+        kind: The offending group's type (`"exclusive"` / `"together"`),
+            derived from `node` so the two cannot disagree.
     """
 
-    kind: Literal["exclusive", "together"]
     node: Group
     present: tuple[Entry, ...]
+    kind: Literal["exclusive", "together"] = field(init=False)
+
+    def __post_init__(self) -> None:
+        kind = "exclusive" if isinstance(self.node, Exclusive) else "together"
+        object.__setattr__(self, "kind", kind)
 
 
 @dataclass(frozen=True)
@@ -188,21 +193,14 @@ def _validate_as_top(
         return ValidationReport({}, (), (entry,), (), ())
 
     failed: tuple[tuple[Path, Node], ...] = ()
-    if not (entry.condition is None or entry.condition.check(root, resolver)):
+    if not entry.accepts_condition(root, resolver):
         failed = ((root, entry),)
 
-    if isinstance(entry, File):
-        return ValidationReport({root: (entry,)}, (), (), (), failed)
+    report = ValidationReport({root: (entry,)}, (), (), (), failed)
+    if isinstance(entry, Directory):
+        report += _validate_under(entry.children, root, excluder, resolver)
 
-    directory = cast("Directory", entry)
-    report = _validate_under(directory.children, root, excluder, resolver)
-    return ValidationReport(
-        matched={root: (entry,), **report.matched},
-        unexpected=report.unexpected,
-        missing=report.missing,
-        violations=report.violations,
-        failed=report.failed + failed,
-    )
+    return report
 
 
 def _validate_under(
@@ -239,42 +237,47 @@ def _validate_under(
         for node in _walk_nodes(top):
             if id(node) in demoted:
                 continue  # under a priority Exclusive's losing side
+
             if isinstance(node, Entry):
                 if node.required and node not in present:
                     missing.append(node)
-            else:
-                group = cast("Group", node)
-                violation, group_missing, group_demoted = _check_group(group, present)
-                if violation is not None:
-                    violations.append(violation)
-                if group_missing:
-                    missing.append(group)
-                demoted.update(id(n) for n in group_demoted)
+                continue
 
-    if demoted:
-        # Drop the resolved-away nodes so their paths fall through to
-        # `unexpected`; identity-keyed, as nodes compare by value.
-        matched = {
-            path: kept
-            for path, nodes in matched.items()
-            if (kept := tuple(n for n in nodes if id(n) not in demoted))
-        }
+            group = cast("Group", node)
+            violation, group_missing, group_demoted = _check_group(group, present)
 
-    failed = tuple(
-        (path, node)
-        for path, nodes in matched.items()
-        for node in nodes
-        if isinstance(node, Entry)
-        and node.condition is not None
-        and not node.condition.check(path, resolver)
-    )
+            if violation is not None:
+                violations.append(violation)
+
+            if group_missing:
+                missing.append(group)
+
+            demoted.update(id(n) for n in group_demoted)
+
+    pruned: dict[Path, tuple[Node, ...]] = {}
+    failed: list[tuple[Path, Node]] = []
+
+    def list_failed(path: Path, nodes: tuple[Node, ...]) -> Iterator[tuple[Path, Node]]:
+        for node in nodes:
+            if isinstance(node, Entry) and not node.accepts_condition(path, resolver):
+                yield (path, node)
+
+    for path, nodes in matched.items():
+        if demoted:
+            nodes = tuple(node for node in nodes if id(node) not in demoted)
+
+        if not nodes:
+            continue
+
+        pruned[path] = nodes
+        failed.extend(list_failed(path, nodes))
 
     return ValidationReport(
-        matched=matched,
-        unexpected=tuple(_classify_unexpected(seen, matched)),
+        matched=pruned,
+        unexpected=_build_unexpected(seen, pruned),
         missing=tuple(missing),
         violations=tuple(violations),
-        failed=failed,
+        failed=tuple(failed),
     )
 
 
@@ -336,13 +339,8 @@ def _scan_entries(
             if _entry_accepts(entry, candidate, depth):
                 pairs.append((candidate, entry))
                 if isinstance(entry, Directory):
-                    _scan_entries(
-                        flatten_entries(entry.children),
-                        candidate,
-                        excluder,
-                        pairs,
-                        seen,
-                    )
+                    child_entries = flatten_entries(entry.children)
+                    _scan_entries(child_entries, candidate, excluder, pairs, seen)
 
 
 def _check_group(
@@ -361,36 +359,40 @@ def _check_group(
         drops from `matched` (so they surface as `unexpected`) and skips in
         the spec walk.
     """
-    if isinstance(group, Exclusive):
-        present_sides = [
-            side for side in group.alternatives if _present_leaves(side, present)
-        ]
-        if len(present_sides) > 1:
-            if group.on_conflict == "priority":
-                demoted = tuple(
-                    descendant
-                    for side in present_sides[1:]
-                    for node in side
-                    for descendant in _walk_nodes(node)
-                )
-                return None, False, demoted
-            leaves = _present_leaves(group.entries, present)
-            return Violation("exclusive", group, leaves), False, ()
-        return None, group.required and not present_sides, ()
 
-    together = cast("Together", group)
-    present_members = [
-        member for member in together.members if _present_leaves(member, present)
-    ]
-    if 0 < len(present_members) < len(together.members):
-        leaves = _present_leaves(together.entries, present)
-        return Violation("together", together, leaves), False, ()
-    return None, together.required and not present_members, ()
+    match group:
+        case Together():
+            present_members = [
+                member for member in group.members if _present_leaves(member, present)
+            ]
+            num_presents = len(present_members)
+            has_violation = 0 < num_presents < len(group.members)
+
+        case Exclusive():
+            present_sides = [
+                side for side in group.alternatives if _present_leaves(side, present)
+            ]
+            num_presents = len(present_sides)
+            has_violation = num_presents > 1
+
+            if has_violation and group.on_conflict == "priority":
+                # Demote every node beneath the lower-priority present sides.
+                demoted: list[Node] = []
+                for side in present_sides[1:]:
+                    for node in side:
+                        demoted.extend(_walk_nodes(node))
+                return None, False, tuple(demoted)
+
+    if has_violation:
+        leaves = _present_leaves(group.entries, present)
+        return Violation(group, leaves), False, ()
+
+    return None, group.required and num_presents == 0, ()  # default return
 
 
-def _classify_unexpected(
+def _build_unexpected(
     seen: set[Path], matched: dict[Path, tuple[Node, ...]]
-) -> list[Path]:
+) -> tuple[Path, ...]:
     """Derive the unexpected paths from `seen` and the final `matched` map.
 
     A seen path is unexpected unless it is matched or an ancestor of a match;
@@ -405,43 +407,36 @@ def _classify_unexpected(
     Returns:
         The unexpected paths, ancestor before descendant.
     """
-    # `allowed` = the matches and every ancestor of one. Climb from each match,
-    # stopping as soon as an already-known ancestor is reached, so a shared
-    # ancestor chain is walked once instead of once per match. The set stays
-    # ancestor-closed, which the collapse loop below relies on.
-    allowed: set[Path] = set(matched)
-    for path in matched:
+
+    def iter_ancestors(path: Path, allowed: set[Path]) -> Iterator[Path]:
         parent = path.parent
         while parent not in allowed:
-            allowed.add(parent)
+            yield parent
             if (grandparent := parent.parent) == parent:
                 break  # reached the anchor
             parent = grandparent
 
+    allowed: set[Path] = set(matched)
+
+    for path in matched:
+        for ancestor in iter_ancestors(path, allowed):
+            allowed.add(ancestor)
+
     result: list[Path] = []
     reported: set[Path] = set()
+
     for path in sorted(seen):
         if path in allowed:
             continue
-        # Collapse under an already-reported unexpected directory. Climb only
-        # the unexpected region: once an `allowed` ancestor is hit, every higher
-        # ancestor is allowed too (so none is `reported`), so stop there.
-        parent = path.parent
-        collapsed = False
-        while parent not in allowed:
-            if parent in reported:
-                collapsed = True
-                break
-            if (grandparent := parent.parent) == parent:
-                break
-            parent = grandparent
-        if collapsed:
-            continue
 
-        result.append(path)
-        reported.add(path)
+        for ancestor in iter_ancestors(path, allowed):
+            if ancestor in reported:
+                break
+        else:
+            result.append(path)
+            reported.add(path)
 
-    return result
+    return tuple(result)
 
 
 def _walk_nodes(node: Node) -> Iterator[Node]:

@@ -123,7 +123,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   validate `root` as the realized top entry itself (a `Group` top raises
   `TypeError`); a leaf name / kind mismatch reports the top as `missing`
   without descending. Also exports the `ValidationReport` and `Violation`
-  result types.
+  result types. Two reports combine with `+` (problem lists concatenate and
+  `matched` merges, so the result is `ok` only when both are) for accumulating
+  independent validations.
 - `kaparoo.filesystem.hierarchy.conformer(spec)`: builds a path predicate (a
   `search` predicate) that accepts a path realizing `spec`'s *top* node — a
   file matching a top `File`'s name, or a directory matching a top
@@ -173,6 +175,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Directory` ↔ directory). `matches(path)` combines the name filter with
   `accepts_kind` -- `True` when `path`'s leaf name and on-disk kind both fit
   the entry (depth, a positional concern, is left to `accepts_depth`).
+  `accepts_condition(path, resolver)` is `True` when the entry's attribute
+  `condition` is absent or holds for `path` (the resolver supplies `Content`
+  hooks).
 - `kaparoo.filesystem.hierarchy.group.flatten_entries(nodes)` /
   `max_depth_of(nodes)`: both accept a single `Node` **or** an iterable of
   nodes (`Node | Iterable[Node]`), so callers holding a single node need not
