@@ -165,7 +165,7 @@ def validate(
     resolver = HookResolver(hooks or {}, on_missing)
 
     worker = _validate_as_top if root_as_top else _validate_under
-    return worker(tree, root, excluder, resolver, level=allow_extra)
+    return worker(tree, root, excluder, resolver, extra_level=allow_extra)
 
 
 def _validate_as_top(
@@ -174,7 +174,7 @@ def _validate_as_top(
     excluder: Callable[[Path], bool] | None,
     resolver: HookResolver,
     *,
-    level: bool | Filter = False,
+    extra_level: bool | Filter = False,
 ) -> ValidationReport:
     """Validate `root` as the realized top entry, not as a container.
 
@@ -214,7 +214,7 @@ def _validate_as_top(
             excluder,
             resolver,
             allow_extra=entry.allow_extra,
-            level=level,
+            extra_level=extra_level,
         )
 
     return report
@@ -227,7 +227,7 @@ def _validate_under(
     resolver: HookResolver = _NO_HOOKS,
     *,
     allow_extra: bool | Filter = False,
-    level: bool | Filter = False,
+    extra_level: bool | Filter = False,
 ) -> ValidationReport:
     """Validate `tops` as entries realized directly under `root`.
 
@@ -241,7 +241,7 @@ def _validate_under(
         resolver: The `Content` hook resolver.
         allow_extra: Ignore `root`'s contents matching no entry in `tops`,
             rather than reporting them `unexpected`.
-        level: Blanket `allow_extra` threaded to every nested directory.
+        extra_level: Blanket `allow_extra` threaded to every nested directory.
 
     Returns:
         The combined report for `tops` under `root`.
@@ -250,7 +250,7 @@ def _validate_under(
         tops = (tops,)
 
     matched, seen = _scan_under(
-        tops, root, excluder, allow_extra=allow_extra, level=level
+        tops, root, excluder, allow_extra=allow_extra, extra_level=extra_level
     )
     present: set[Node] = {node for nodes in matched.values() for node in nodes}
 
@@ -312,7 +312,7 @@ def _scan_under(
     excluder: Callable[[Path], bool] | None,
     *,
     allow_extra: bool | Filter = False,
-    level: bool | Filter = False,
+    extra_level: bool | Filter = False,
 ) -> tuple[dict[Path, tuple[Node, ...]], set[Path]]:
     """Locate `tops` under `root`, returning the matches and every path seen.
 
@@ -324,7 +324,7 @@ def _scan_under(
         root: The directory walked.
         excluder: A pre-built drop predicate, or `None` to exclude nothing.
         allow_extra: Keep `root`'s contents matching no top out of `seen`.
-        level: Blanket `allow_extra` threaded to every nested directory.
+        extra_level: Blanket `allow_extra` threaded to every nested directory.
 
     Returns:
         `(matched, seen)` -- each matched path mapped to its distinct nodes,
@@ -335,7 +335,13 @@ def _scan_under(
 
     entries = flatten_entries(tops)
     _scan_entries(
-        entries, root, excluder, pairs, seen, allow_extra=allow_extra, level=level
+        entries,
+        root,
+        excluder,
+        pairs,
+        seen,
+        allow_extra=allow_extra,
+        extra_level=extra_level,
     )
 
     matched: dict[Path, list[Node]] = {}
@@ -346,14 +352,14 @@ def _scan_under(
 
 
 def _ignores_extra(
-    name: str, *, allow_extra: bool | Filter, level: bool | Filter
+    name: str, *, allow_extra: bool | Filter, extra_level: bool | Filter
 ) -> bool:
-    """Whether the directory's `allow_extra` or the blanket `level` ignores `name`.
+    """Whether the directory's `allow_extra` or the blanket `extra_level` ignores `name`.
 
     For each setting, `True` / `False` ignore all / none and a `Filter` ignores
     only matching names; the two are combined with OR.
     """
-    for setting in (allow_extra, level):
+    for setting in (allow_extra, extra_level):
         if isinstance(setting, bool):
             if setting:
                 return True
@@ -370,17 +376,17 @@ def _scan_entries(
     seen: set[Path],
     *,
     allow_extra: bool | Filter = False,
-    level: bool | Filter = False,
+    extra_level: bool | Filter = False,
 ) -> None:
     """Match `parent`'s descendants against `entries`, recording every path seen.
 
     A matched `Directory` is descended even when its child spec is empty, so
     strays inside an otherwise-unconstrained matched directory still surface as
-    `unexpected`. When `allow_extra` (this frame) or `level` (the blanket
+    `unexpected`. When `allow_extra` (this frame) or `extra_level` (the blanket
     setting) ignores a candidate matching no entry, it is kept out of `seen`,
     so it (and its subtree) is ignored rather than reported `unexpected`; each
     matched `Directory` is descended with its own `allow_extra` but the same
-    `level`, so a strict subdirectory stays strict unless `level` overrides it.
+    `extra_level`, so a strict subdirectory stays strict unless `extra_level` overrides it.
 
     Args:
         entries: The leaf entries expected at or below `parent` (flattened).
@@ -390,7 +396,7 @@ def _scan_entries(
         seen: Accumulator for every non-excluded path visited.
         allow_extra: Ignore (do not record) candidates matching no entry --
             `True` ignores all, a `Filter` only those whose name it matches.
-        level: The blanket `allow_extra`, OR-combined with this frame's.
+        extra_level: The blanket `allow_extra`, OR-combined with this frame's.
     """
     max_depth = max_depth_of(entries) if entries else 1
 
@@ -408,12 +414,14 @@ def _scan_entries(
                         pairs,
                         seen,
                         allow_extra=entry.allow_extra,
-                        level=level,
+                        extra_level=extra_level,
                     )
 
-        # An unmatched candidate the frame or the blanket `level` ignores is
+        # An unmatched candidate the frame or the blanket `extra_level` ignores is
         # kept out of `seen` so it never surfaces as `unexpected`.
-        ignored = _ignores_extra(candidate.name, allow_extra=allow_extra, level=level)
+        ignored = _ignores_extra(
+            candidate.name, allow_extra=allow_extra, extra_level=extra_level
+        )
         if matched_here or not ignored:
             seen.add(candidate)
 
@@ -594,7 +602,7 @@ def conformer(
     def check(path: StrPath) -> bool:
         root = Path(path)
         return any(
-            _validate_as_top(top, root, excluder, resolver, level=allow_extra).ok
+            _validate_as_top(top, root, excluder, resolver, extra_level=allow_extra).ok
             for top in tops
         )
 
