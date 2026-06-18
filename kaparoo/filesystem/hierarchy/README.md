@@ -584,6 +584,10 @@ only when that condition also holds. (Checking whether a concrete path or
 sub-spec is *contained* anywhere within a spec is a separate, future
 capability.)
 
+Like `validate`, `conformer` takes `allow_extra` (`bool | Filter`) to relax a
+`Directory` top's subtree: `conformer(spec, allow_extra=True)` accepts a top
+that conforms apart from extra, unspecified contents.
+
 Because the predicate enforces the top node's kind, pair it with the
 matching search: a top `File` with `search_files`, a top `Directory` with
 `search_dirs`. A kind mismatch — a `File` top under `search_dirs` (which
