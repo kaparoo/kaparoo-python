@@ -4,6 +4,9 @@ from __future__ import annotations
 
 __all__ = (
     "ensure_file_extension",
+    "file_extension",
+    "normalize_extension",
+    "normalize_extensions",
     "reserve_path",
     "reserve_paths",
     "stringify_path",
@@ -379,6 +382,32 @@ def reserve_paths(
 # ========================== #
 
 
+def normalize_extension(ext: str) -> str:
+    """Strip surrounding whitespace and leading dots from an extension string."""
+    return ext.strip().lstrip(".")
+
+
+def normalize_extensions(exts: Iterable[str]) -> list[str]:
+    """`normalize_extension` over `exts` (keeping any empties and duplicates)."""
+    return [normalize_extension(ext) for ext in exts]
+
+
+def file_extension(path: StrPath, *, level: int = 1, lowercase: bool = True) -> str:
+    """The last (up to) `level` suffix(es) of `path`, dot-joined and normalized.
+
+    `level=2` turns `data.tar.gz` into `"tar.gz"`; `lowercase=False` keeps the
+    original case. Returns `""` when `path` has no suffix.
+
+    Raises:
+        ValueError: If `level` is less than 1.
+    """
+    if level < 1:
+        msg = f"level must be >= 1, got {level}"
+        raise ValueError(msg)
+    ext = normalize_extension("".join(Path(path).suffixes[-level:]))
+    return ext.casefold() if lowercase else ext
+
+
 def ensure_file_extension(
     path: StrPath, ext: str | Iterable[str], *, add: bool = False
 ) -> Path:
@@ -411,8 +440,7 @@ def ensure_file_extension(
             accepted extensions -- except the no-suffix case resolved by
             `add=True`.
     """
-    exts = [ext] if isinstance(ext, str) else list(ext)
-    exts = [e.removeprefix(".") for e in exts]
+    exts = normalize_extensions([ext] if isinstance(ext, str) else ext)
 
     if not exts:
         msg = "ext must name at least one extension"
@@ -422,7 +450,7 @@ def ensure_file_extension(
     if add and not path.suffix:
         return path.with_suffix(f".{exts[0]}")
 
-    if path.suffix.lower() not in {f".{e.lower()}" for e in exts}:
+    if file_extension(path) not in {e.casefold() for e in exts}:
         wanted = " / ".join(f".{e}" for e in exts)
         msg = f"{path.name} must have a {wanted} extension (got {path.suffix!r})"
         raise ValueError(msg)

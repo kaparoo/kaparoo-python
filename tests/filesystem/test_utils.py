@@ -7,6 +7,9 @@ import pytest
 
 from kaparoo.filesystem.utils import (
     ensure_file_extension,
+    file_extension,
+    normalize_extension,
+    normalize_extensions,
     reserve_path,
     reserve_paths,
     stringify_path,
@@ -317,3 +320,47 @@ def test_ensure_file_extension_add_still_rejects_wrong_suffix():
     # `add` only resolves the missing-suffix case; a wrong suffix still raises.
     with pytest.raises(ValueError, match=r"must have a \.bin extension"):
         ensure_file_extension("out/x.txt", "bin", add=True)
+
+
+# --- normalize_extension / normalize_extensions ----------------------------
+
+
+def test_normalize_extension_strips_whitespace_and_leading_dots():
+    assert normalize_extension(" .BIN ") == "BIN"  # whitespace + dot, case kept
+    assert normalize_extension("bin") == "bin"
+    assert normalize_extension("..tar") == "tar"  # every leading dot
+    assert normalize_extension("tar.gz") == "tar.gz"  # internal dot kept
+    assert normalize_extension("") == ""
+
+
+def test_normalize_extensions_maps_keeping_empties_and_duplicates():
+    # Pure map: empties (from ".") and duplicates are deliberately kept.
+    assert normalize_extensions([".bin", "TXT", ".bin", "."]) == [
+        "bin",
+        "TXT",
+        "bin",
+        "",
+    ]
+
+
+# --- file_extension --------------------------------------------------------
+
+
+def test_file_extension_last_suffix_lower_cased():
+    assert file_extension("out/DATA.BIN") == "bin"
+    assert file_extension("out/data.tar.gz") == "gz"  # only the last by default
+
+
+def test_file_extension_level_and_lowercase():
+    assert file_extension("a.tar.gz", level=2) == "tar.gz"
+    assert file_extension("a.TAR.GZ", level=2, lowercase=False) == "TAR.GZ"
+    assert file_extension("a.npy", level=5) == "npy"  # up to: fewer suffixes present
+
+
+def test_file_extension_no_suffix_is_empty():
+    assert file_extension("README") == ""
+
+
+def test_file_extension_rejects_non_positive_level():
+    with pytest.raises(ValueError, match="level must be >= 1"):
+        file_extension("a.bin", level=0)

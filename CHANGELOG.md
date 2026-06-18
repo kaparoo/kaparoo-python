@@ -8,6 +8,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `kaparoo.filesystem.utils.normalize_extension` / `normalize_extensions` /
+  `file_extension`: extension-string helpers. `normalize_extension` strips
+  surrounding whitespace and leading dots (`" .BIN " -> "BIN"`, case kept);
+  `normalize_extensions` maps it over an iterable (empties and duplicates
+  deliberately kept -- that policy is the caller's). `file_extension(path)`
+  returns the path's last (up to) `level` suffix(es), dot-joined and
+  normalized -- `level=2` yields `"tar.gz"` from `data.tar.gz`,
+  `lowercase=False` keeps case, no suffix gives `""`. `ensure_file_extension`
+  now builds on these.
+
 ## [0.8.0] - 2026-06-19
 
 ### Added
