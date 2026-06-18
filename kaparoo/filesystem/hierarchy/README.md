@@ -523,6 +523,11 @@ also takes the same
 `exclude=` as `locate`; excluded paths are dropped from `matched` and are not
 reported `unexpected`.
 
+Reports from independent validations combine with `+`: the problem lists
+concatenate and `matched` merges, so `a + b` is `ok` only when both are. This
+is meant for *disjoint* roots (e.g. validating several datasets and reporting
+once), not overlapping trees.
+
 ## Filtering paths: `conformer`
 
 `conformer(spec)` builds a path predicate (a `search` predicate) that
