@@ -14,12 +14,15 @@ been reviewed.
 
 ---
 
-## 🔨 Rewrite `hierarchy.scaffold` from scratch
+## 🐛 Settle `hierarchy.scaffold`'s atomicity / rollback contract
 
-Redesign and reimplement `scaffold` from the ground up rather than patching
-it. Settle the atomicity / rollback contract on conflict as part of the
-rewrite -- a wrong-kind path currently raises mid-run, leaving the
-already-created paths on disk.
+The structural rework is done -- helpers are `Scaffolder` methods, `visit`
+owns root creation, and `root_as_top` is supported -- so a from-scratch
+rewrite is no longer the plan. What remains is the **failure contract**: a
+wrong-kind path (a file where a directory is described, or vice versa) raises
+mid-run, leaving the paths already created on disk. Decide and implement the
+contract -- best-effort (current, document it), pre-flight validation before
+any write, or rollback of what this run created -- and cover it with tests.
 
 ---
 
@@ -31,4 +34,4 @@ not mechanism (per AGENTS.md).
 
 ---
 
-*Last updated: 2026-06-17*
+*Last updated: 2026-06-18*
