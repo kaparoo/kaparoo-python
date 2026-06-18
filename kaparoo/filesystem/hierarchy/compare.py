@@ -554,7 +554,7 @@ def _check_group(
 
     together = cast("Together", group)
     present_members = [
-        member for member in together.members if _present_leaves((member,), present)
+        member for member in together.members if _present_leaves(member, present)
     ]
     if 0 < len(present_members) < len(together.members):
         leaves = _present_leaves(together.entries, present)
@@ -629,7 +629,9 @@ def _walk_nodes(node: Node) -> Iterator[Node]:
                     yield from _walk_nodes(member)
 
 
-def _present_leaves(nodes: Iterable[Node], present: set[Node]) -> tuple[Entry, ...]:
+def _present_leaves(
+    nodes: Node | Iterable[Node], present: set[Node]
+) -> tuple[Entry, ...]:
     """Filter `nodes`' leaf entries to those present on disk.
 
     Args:
