@@ -5,12 +5,16 @@ entry once it lands.
 
 ---
 
-## 🔍 Review `hierarchy.traverse.validate`
+## 📝 Make `required` on open names ("at least one match") explicit
 
-A rigorous correctness / edge-case / API-shape pass over `validate` and its
-helpers (`_validate_as_top`, `_validate_under`, `_scan_under`, `_scan_frame`,
-`_check_group`, `_classify_unexpected`, `_walk_nodes`, `_present_leaves`). The
-locate part (`hierarchy.traverse.locate`) has already been reviewed.
+`validate` already treats a `required` open-ended name (`Glob`, `Regex`, ...)
+as "at least one matching path must exist": the node enters `present` the
+moment it matches any path, so zero matches make it `missing` (confirmed by
+hand, but undocumented and untested). Confirm this is the intended contract,
+then document it -- the `validate` docstring / README currently spell out only
+the enumerable `OneOf` / `Template` case -- and add a test. Note the asymmetry
+with `scaffold`, which instead *raises* on an open-named `required` entry
+because it cannot create one.
 
 ---
 
@@ -34,4 +38,4 @@ not mechanism (per AGENTS.md).
 
 ---
 
-*Last updated: 2026-06-18*
+*Last updated: 2026-06-19*
