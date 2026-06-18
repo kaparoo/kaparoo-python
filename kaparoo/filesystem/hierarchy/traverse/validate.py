@@ -85,6 +85,30 @@ class ValidationReport:
     def __bool__(self) -> bool:
         return self.ok
 
+    def __add__(self, other: object) -> ValidationReport:
+        """Combine two reports from independent validations into one.
+
+        Problem lists concatenate and `matched` merges -- a path matched in
+        both keeps the union of its nodes -- so the result is `ok` only when
+        both operands are. Intended for *disjoint* roots: the cross-report
+        shape of `unexpected` (ancestor allowance, descendant collapse) is not
+        recomputed, so overlapping trees may double-report.
+        """
+        if not isinstance(other, ValidationReport):
+            return NotImplemented
+
+        matched = dict(self.matched)
+        for path, nodes in other.matched.items():
+            matched[path] = matched.get(path, ()) + nodes
+
+        return ValidationReport(
+            matched=matched,
+            unexpected=self.unexpected + other.unexpected,
+            missing=self.missing + other.missing,
+            violations=self.violations + other.violations,
+            failed=self.failed + other.failed,
+        )
+
 
 def validate(
     tree: Node,

@@ -9,6 +9,7 @@ from kaparoo.filesystem.hierarchy import (
     Exclusive,
     File,
     Together,
+    ValidationReport,
     conformer,
     validate,
 )
@@ -341,6 +342,37 @@ class TestValidateCondition:
         report = validate(spec, tmp_path, hooks=hooks)
         assert report.unexpected == ()  # 'c' is accepted, so only the check fails
         assert (tmp_path / "d" / "manifest.txt", spec.children[0]) in report.failed
+
+
+class TestValidationReportAdd:
+    def test_combines_disjoint_reports(self, tmp_path: Path) -> None:
+        a_node, b_node = File("a"), File("b")
+        pa, pb = tmp_path / "a", tmp_path / "b"
+        a = ValidationReport({pa: (a_node,)}, (pa,), (a_node,), (), ((pa, a_node),))
+        b = ValidationReport({pb: (b_node,)}, (pb,), (b_node,), (), ((pb, b_node),))
+
+        combined = a + b
+
+        assert combined.matched == {pa: (a_node,), pb: (b_node,)}
+        assert combined.unexpected == (pa, pb)
+        assert combined.missing == (a_node, b_node)
+        assert combined.failed == ((pa, a_node), (pb, b_node))
+        assert not combined.ok
+
+    def test_two_clean_reports_stay_ok(self) -> None:
+        empty = ValidationReport({}, (), (), (), ())
+        assert (empty + empty).ok
+
+    def test_shared_path_unions_its_nodes(self, tmp_path: Path) -> None:
+        a_node, b_node = File("a"), File("b")
+        p = tmp_path / "x"
+        a = ValidationReport({p: (a_node,)}, (), (), (), ())
+        b = ValidationReport({p: (b_node,)}, (), (), (), ())
+
+        assert (a + b).matched == {p: (a_node, b_node)}
+
+    def test_non_report_operand_is_not_implemented(self) -> None:
+        assert ValidationReport({}, (), (), (), ()).__add__(5) is NotImplemented
 
 
 class TestValidateExclude:
