@@ -378,17 +378,39 @@ def _classify_unexpected(
     Returns:
         The unexpected paths, ancestor before descendant.
     """
+    # `allowed` = the matches and every ancestor of one. Climb from each match,
+    # stopping as soon as an already-known ancestor is reached, so a shared
+    # ancestor chain is walked once instead of once per match. The set stays
+    # ancestor-closed, which the collapse loop below relies on.
     allowed: set[Path] = set(matched)
     for path in matched:
-        allowed.update(path.parents)
+        parent = path.parent
+        while parent not in allowed:
+            allowed.add(parent)
+            if (grandparent := parent.parent) == parent:
+                break  # reached the anchor
+            parent = grandparent
 
     result: list[Path] = []
     reported: set[Path] = set()
     for path in sorted(seen):
         if path in allowed:
             continue
-        if any(parent in reported for parent in path.parents):
-            continue  # under an already-reported unexpected directory
+        # Collapse under an already-reported unexpected directory. Climb only
+        # the unexpected region: once an `allowed` ancestor is hit, every higher
+        # ancestor is allowed too (so none is `reported`), so stop there.
+        parent = path.parent
+        collapsed = False
+        while parent not in allowed:
+            if parent in reported:
+                collapsed = True
+                break
+            if (grandparent := parent.parent) == parent:
+                break
+            parent = grandparent
+        if collapsed:
+            continue
+
         result.append(path)
         reported.add(path)
 
