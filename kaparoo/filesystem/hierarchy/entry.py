@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any, ClassVar, Self
 
-    from kaparoo.filesystem.hierarchy.conditions import EntryKind
+    from kaparoo.filesystem.hierarchy.conditions import EntryKind, HookResolver
 
 
 def _reject_separator(name: str) -> None:
@@ -224,6 +224,14 @@ class Entry(Node, ABC):
         `depth`, the positional concern checked separately via `accepts_depth`.
         """
         return self.name.matches(path.name) and self.accepts_kind(path)
+
+    def accepts_condition(self, path: Path, resolver: HookResolver) -> bool:
+        """Whether `path` satisfies this entry's attribute `condition`.
+
+        A `None` condition is vacuously satisfied. `resolver` supplies the
+        `Content` hooks (`hooks` / `on_missing`) the condition may consult.
+        """
+        return self.condition is None or self.condition.check(path, resolver)
 
     @abstractmethod
     def _fields(self) -> tuple[object, ...]:

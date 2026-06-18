@@ -9,7 +9,13 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 from kaparoo.filesystem.hierarchy import Directory, File
-from kaparoo.filesystem.hierarchy.conditions import And, ChildCount, Empty, Size
+from kaparoo.filesystem.hierarchy.conditions import (
+    And,
+    ChildCount,
+    Empty,
+    HookResolver,
+    Size,
+)
 from kaparoo.filters import Glob, Literal, OneOf, Template
 
 
@@ -313,3 +319,20 @@ class TestMatches:
         p = tmp_path / "x.txt"
         p.touch()
         assert File("x.txt", depth=2).matches(p) is True  # depth is not weighed
+
+
+class TestAcceptsCondition:
+    def test_no_condition_is_satisfied(self, tmp_path: Path) -> None:
+        assert File("f").accepts_condition(tmp_path / "f", HookResolver()) is True
+
+    def test_passing_condition_is_satisfied(self, tmp_path: Path) -> None:
+        f = tmp_path / "f"
+        f.write_bytes(b"x")  # 1 byte
+        node = File("f", condition=Size(min=1))
+        assert node.accepts_condition(f, HookResolver()) is True
+
+    def test_failing_condition_is_not_satisfied(self, tmp_path: Path) -> None:
+        f = tmp_path / "f"
+        f.write_bytes(b"")  # 0 bytes
+        node = File("f", condition=Size(min=1))
+        assert node.accepts_condition(f, HookResolver()) is False
