@@ -11,7 +11,7 @@ from kaparoo.filesystem.exclude import build_excluder
 from kaparoo.filesystem.hierarchy.entry import Directory
 from kaparoo.filesystem.hierarchy.group import Group, flatten_entries, max_depth_of
 from kaparoo.filesystem.hierarchy.traverse._utils import (
-    _entry_matches,
+    _entry_accepts,
     _unique,
     _walk_depths,
 )
@@ -174,7 +174,7 @@ def _locate_under(
 
     for candidate, depth in _walk_depths(parent, max_depth_of(entries), excluder):
         for entry in entries:
-            if _entry_matches(entry, candidate, depth):
+            if _entry_accepts(entry, candidate, depth):
                 yield (candidate, entry)
 
                 if isinstance(entry, Directory):

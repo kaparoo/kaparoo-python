@@ -73,12 +73,13 @@ def _walk_depths(
             dirnames.clear()  # prune deeper levels (Path.walk honors the edit)
 
 
-def _entry_matches(entry: Entry, candidate: Path, depth: int) -> bool:
-    """Whether `entry` matches `candidate` at `depth`.
+def _entry_accepts(entry: Entry, candidate: Path, depth: int) -> bool:
+    """Whether `entry` accepts `candidate` at `depth`.
 
-    The single source of the three match gates shared by `locate` and
-    `validate`, run cheapest-first: the in-memory `depth` range and name
-    checks before `accepts_kind`, which stats the path.
+    Combines `entry`'s `accepts_depth` / `accepts_kind` with its name filter --
+    the single source of the three gates shared by `locate` and `validate`,
+    run cheapest-first: the in-memory `depth` range and name checks before
+    `accepts_kind`, which stats the path.
 
     Args:
         entry: The spec entry to test.

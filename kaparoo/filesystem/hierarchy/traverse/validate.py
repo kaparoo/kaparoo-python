@@ -20,7 +20,7 @@ from kaparoo.filesystem.hierarchy.group import (
     max_depth_of,
 )
 from kaparoo.filesystem.hierarchy.traverse._utils import (
-    _entry_matches,
+    _entry_accepts,
     _unique,
     _walk_depths,
 )
@@ -306,7 +306,7 @@ def _scan_frame(
     for candidate, depth in _walk_depths(parent, max_depth, excluder):
         seen.add(candidate)
         for entry in entries:
-            if _entry_matches(entry, candidate, depth):
+            if _entry_accepts(entry, candidate, depth):
                 pairs.append((candidate, entry))
                 if isinstance(entry, Directory):
                     _scan_frame(
