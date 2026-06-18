@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from kaparoo.filesystem.hierarchy.base import Node
+    from kaparoo.filesystem.hierarchy.entry import Entry
 
 
 def _unique(pairs: Iterable[tuple[Path, Node]]) -> Iterator[tuple[Path, Node]]:
@@ -70,3 +71,22 @@ def _walk_depths(
 
         if has_max_depth and depth >= max_depth:
             dirnames.clear()  # prune deeper levels (Path.walk honors the edit)
+
+
+def _entry_matches(entry: Entry, candidate: Path, depth: int) -> bool:
+    """Whether `entry` matches `candidate` at `depth`.
+
+    The single source of the three match gates shared by `locate` and
+    `validate`, run cheapest-first: the in-memory `depth` range and name
+    checks before `accepts_kind`, which stats the path.
+
+    Args:
+        entry: The spec entry to test.
+        candidate: The on-disk path the walk discovered.
+        depth: `candidate`'s depth below the walked parent (1-based).
+    """
+    return (
+        entry.accepts_depth(depth)
+        and entry.name.matches(candidate.name)
+        and entry.accepts_kind(candidate)
+    )

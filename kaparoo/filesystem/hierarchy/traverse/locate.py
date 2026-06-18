@@ -10,7 +10,11 @@ from typing import TYPE_CHECKING, cast
 from kaparoo.filesystem.exclude import build_excluder
 from kaparoo.filesystem.hierarchy.entry import Directory
 from kaparoo.filesystem.hierarchy.group import Group, flatten_entries, max_depth_of
-from kaparoo.filesystem.hierarchy.traverse._walk import _unique, _walk_depths
+from kaparoo.filesystem.hierarchy.traverse._utils import (
+    _entry_matches,
+    _unique,
+    _walk_depths,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
@@ -170,11 +174,7 @@ def _locate_under(
 
     for candidate, depth in _walk_depths(parent, max_depth_of(entries), excluder):
         for entry in entries:
-            if (
-                entry.accepts_depth(depth)
-                and entry.name.matches(candidate.name)
-                and entry.accepts_kind(candidate)
-            ):
+            if _entry_matches(entry, candidate, depth):
                 yield (candidate, entry)
 
                 if isinstance(entry, Directory):

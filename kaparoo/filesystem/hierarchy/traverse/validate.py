@@ -19,7 +19,11 @@ from kaparoo.filesystem.hierarchy.group import (
     flatten_entries,
     max_depth_of,
 )
-from kaparoo.filesystem.hierarchy.traverse._walk import _unique, _walk_depths
+from kaparoo.filesystem.hierarchy.traverse._utils import (
+    _entry_matches,
+    _unique,
+    _walk_depths,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
@@ -302,11 +306,7 @@ def _scan_frame(
     for candidate, depth in _walk_depths(parent, max_depth, excluder):
         seen.add(candidate)
         for entry in entries:
-            if (
-                entry.accepts_depth(depth)
-                and entry.name.matches(candidate.name)
-                and entry.accepts_kind(candidate)
-            ):
+            if _entry_matches(entry, candidate, depth):
                 pairs.append((candidate, entry))
                 if isinstance(entry, Directory):
                     _scan_frame(
