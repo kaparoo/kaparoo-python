@@ -427,9 +427,7 @@ def _validate_under(
     """Validate `tops` as entries realized directly under `root`.
 
     The `root_as_top`-less core of `validate`, also reused by `_validate_as_top`
-    for a directory's children. The `exclude` predicate is built once here and
-    threaded into both the locate phase (`_merge_matched`) and the
-    `_unexpected` sweep, rather than rebuilt per top node.
+    for a directory's children.
 
     Args:
         tops: The sibling nodes expected directly under `root`.
@@ -443,7 +441,7 @@ def _validate_under(
     if isinstance(tops, Node):
         tops = (tops,)
 
-    matched = _merge_matched(tops, root, excluder)
+    matched, seen = _scan_under(tops, root, excluder)
     present: set[Node] = {node for nodes in matched.values() for node in nodes}
 
     missing: list[Node] = []
@@ -485,38 +483,81 @@ def _validate_under(
 
     return ValidationReport(
         matched=matched,
-        unexpected=tuple(_unexpected(root, matched, excluder)),
+        unexpected=tuple(_classify_unexpected(seen, matched)),
         missing=tuple(missing),
         violations=tuple(violations),
         failed=failed,
     )
 
 
-def _merge_matched(
+def _scan_under(
     tops: tuple[Node, ...],
     root: Path,
     excluder: Callable[[Path], bool] | None,
-) -> dict[Path, tuple[Node, ...]]:
-    """Union each top node's `locate_map` by path (spec order kept).
+) -> tuple[dict[Path, tuple[Node, ...]], set[Path]]:
+    """Locate `tops` under `root`, returning the matches and every path seen.
 
-    Takes a pre-built `excluder` so every top node reuses one excluder instead
-    of rebuilding it per `locate_map` call.
+    `matched` maps each on-disk path to the distinct nodes it matches; `seen`
+    is every non-excluded path visited -- the candidates for `unexpected`.
 
     Args:
-        tops: The sibling top nodes to locate under `root`.
-        root: The directory walked for matches.
+        tops: The sibling top nodes expected under `root`.
+        root: The directory walked.
         excluder: A pre-built drop predicate, or `None` to exclude nothing.
 
     Returns:
-        Each path mapped to the nodes it matched, across all top nodes.
+        `(matched, seen)` -- each matched path mapped to its distinct nodes,
+        and every non-excluded path visited.
     """
-    merged: dict[Path, tuple[Node, ...]] = {}
+    pairs: list[tuple[Path, Node]] = []
+    seen: set[Path] = set()
+    _scan_frame(flatten_entries(tops), root, excluder, pairs, seen)
 
-    for node in tops:
-        for path, nodes in _locate_map(node, root, excluder).items():
-            merged[path] = merged.get(path, ()) + nodes
+    matched: dict[Path, list[Node]] = {}
+    for path, node in _unique(pairs):
+        matched.setdefault(path, []).append(node)
 
-    return merged
+    return {path: tuple(nodes) for path, nodes in matched.items()}, seen
+
+
+def _scan_frame(
+    entries: tuple[Entry, ...],
+    parent: Path,
+    excluder: Callable[[Path], bool] | None,
+    pairs: list[tuple[Path, Node]],
+    seen: set[Path],
+) -> None:
+    """Match `parent`'s descendants against `entries`, recording every path seen.
+
+    A matched `Directory` is descended even when its child spec is empty, so
+    strays inside an otherwise-unconstrained matched directory still surface as
+    `unexpected`.
+
+    Args:
+        entries: The leaf entries expected at or below `parent` (flattened).
+        parent: The directory walked for this frame.
+        excluder: A pre-built drop predicate, or `None` to exclude nothing.
+        pairs: Accumulator for `(path, entry)` matches.
+        seen: Accumulator for every non-excluded path visited.
+    """
+    max_depth = max_depth_of(entries) if entries else 1
+    for candidate, depth in _walk_depths(parent, max_depth, excluder):
+        seen.add(candidate)
+        for entry in entries:
+            if (
+                entry.accepts_depth(depth)
+                and entry.name.matches(candidate.name)
+                and entry.accepts_kind(candidate)
+            ):
+                pairs.append((candidate, entry))
+                if isinstance(entry, Directory):
+                    _scan_frame(
+                        flatten_entries(entry.children),
+                        candidate,
+                        excluder,
+                        pairs,
+                        seen,
+                    )
 
 
 def _check_group(
@@ -562,46 +603,37 @@ def _check_group(
     return None, together.required and not present_members, ()
 
 
-def _unexpected(
-    root: Path,
-    matched: dict[Path, tuple[Node, ...]],
-    excluder: Callable[[Path], bool] | None,
+def _classify_unexpected(
+    seen: set[Path], matched: dict[Path, tuple[Node, ...]]
 ) -> list[Path]:
-    """List paths under `root` matching no node (subtrees included).
+    """Derive the unexpected paths from `seen` and the final `matched` map.
 
-    A path is unexpected unless it is matched or an ancestor of a match; an
-    unexpected directory is reported once and not descended, and an excluded
-    path is neither reported nor descended.
+    A seen path is unexpected unless it is matched or an ancestor of a match;
+    an unexpected directory collapses its already-seen descendants (reported
+    once). Excluded paths never enter `seen`, so they are neither matched nor
+    reported.
 
     Args:
-        root: The directory walked.
-        matched: The matched paths (and their nodes) treated as expected.
-        excluder: A pre-built drop predicate, or `None` to exclude nothing.
+        seen: Every non-excluded path the walk visited.
+        matched: The final matched map (after demotion).
 
     Returns:
-        The unexpected paths, in walk order.
+        The unexpected paths, ancestor before descendant.
     """
     allowed: set[Path] = set(matched)
     for path in matched:
         allowed.update(path.parents)
 
-    def keep(candidate: Path) -> bool:
-        return candidate in allowed or (excluder is not None and excluder(candidate))
-
     result: list[Path] = []
-    for dirpath, dirnames, filenames in root.walk(top_down=True):
-        for name in filenames:
-            candidate = dirpath / name
-            if not keep(candidate):
-                result.append(candidate)
-        kept: list[str] = []
-        for name in dirnames:
-            candidate = dirpath / name
-            if candidate in allowed:
-                kept.append(name)  # descend (matched dir or ancestor of a match)
-            elif not keep(candidate):  # not allowed, not excluded -> report and prune
-                result.append(candidate)
-        dirnames[:] = kept
+    reported: set[Path] = set()
+    for path in sorted(seen):
+        if path in allowed:
+            continue
+        if any(parent in reported for parent in path.parents):
+            continue  # under an already-reported unexpected directory
+        result.append(path)
+        reported.add(path)
+
     return result
 
 
