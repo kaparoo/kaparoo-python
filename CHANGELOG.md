@@ -121,13 +121,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Exclusive` / `Together` with nothing present), and `violations` (an
   `Exclusive` with more than one side present, or a partly-present
   `Together`). `report.ok` (and its truthiness) is `True` only when the
-  last three are empty. A `required` enumerable name (`OneOf` / `Template`)
-  is satisfied by at least one present match. `validate` also accepts the
+  last three are empty. A `required` entry is satisfied by one present match
+  — an enumerable name (`OneOf` / `Template`) by any one listed name, an open
+  name (`Glob` / `Regex`) by any one matching path. `validate` also accepts the
   same `exclude=` as `locate`, so excluded paths are dropped from `matched`
   and not reported `unexpected`. It also takes the same `root_as_top=True` to
   validate `root` as the realized top entry itself (a `Group` top raises
   `TypeError`); a leaf name / kind mismatch reports the top as `missing`
-  without descending. Also exports the `ValidationReport` and `Violation`
+  without descending. A top-level `allow_extra` (`bool | Filter`) applies
+  blanket leniency to every directory (and the container `root`), as if each
+  carried it, combined with each `Directory`'s own. Also exports the
+  `ValidationReport` and `Violation`
   result types. Two reports combine with `+` (problem lists concatenate and
   `matched` merges, so the result is `ok` only when both are) for accumulating
   independent validations.
@@ -136,8 +140,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   file matching a top `File`'s name, or a directory matching a top
   `Directory`'s name whose subtree conforms (via `validate`); a top `Group`
   is realized by any one of its alternatives / members. The path is always
-  tested as the top of `spec`, never an inner node. (Checking whether a path
-  or sub-spec is *contained* within a spec is a separate future capability.)
+  tested as the top of `spec`, never an inner node. Takes the same
+  `allow_extra` as `validate` to accept a top whose subtree carries extra,
+  unspecified entries. (Checking whether a path or sub-spec is *contained*
+  within a spec is a separate future capability.)
 - `kaparoo.filesystem.hierarchy.scaffold(tree, root)`: the write operation —
   creates the structure a spec describes under `root` (the container, made if
   absent) and returns the newly created paths in creation order. Only

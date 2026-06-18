@@ -5,19 +5,6 @@ entry once it lands.
 
 ---
 
-## 📝 Make `required` on open names ("at least one match") explicit
-
-`validate` already treats a `required` open-ended name (`Glob`, `Regex`, ...)
-as "at least one matching path must exist": the node enters `present` the
-moment it matches any path, so zero matches make it `missing` (confirmed by
-hand, but undocumented and untested). Confirm this is the intended contract,
-then document it -- the `validate` docstring / README currently spell out only
-the enumerable `OneOf` / `Template` case -- and add a test. Note the asymmetry
-with `scaffold`, which instead *raises* on an open-named `required` entry
-because it cannot create one.
-
----
-
 ## 🐛 Settle `hierarchy.scaffold`'s atomicity / rollback contract
 
 The structural rework is done -- helpers are `Scaffolder` methods, `visit`

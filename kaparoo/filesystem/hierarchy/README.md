@@ -516,8 +516,9 @@ if not report:                     # truthy only when fully conformant
 A path is **unexpected** unless it is matched or an ancestor of a match —
 so anything below an *unspecified* directory counts too. A `required` entry
 is satisfied once its name matches one present path — for an enumerable name
-(`OneOf` / `Template`) that means *at least one* of the listed names exists,
-not all. `validate`
+(`OneOf` / `Template`) that means *at least one* of the listed names exists
+(not all), and for an open name (`Glob` / `Regex`) any one matching path.
+`validate`
 also takes the same
 `exclude=` as `locate`; excluded paths are dropped from `matched` and are not
 reported `unexpected`.
@@ -540,6 +541,12 @@ validate(spec, "/data").ok   # True even with /data/dataset/notes.zip present
 For finer control, `allow_extra` also takes a `Filter`: `allow_extra=Glob("*.zip")`
 ignores only unmatched entries whose name it matches, so a genuine stray (a
 stray `.py`, say) still surfaces as `unexpected`.
+
+To skip the per-directory annotations entirely, pass `allow_extra` to
+`validate` (or `conformer`) itself: it applies the same leniency to *every*
+directory — including the container `root` — as if each carried it, combined
+with any per-directory setting. `validate(spec, root, allow_extra=True)` checks
+that the named structure is present and ignores all other clutter at any level.
 
 Reports from independent validations combine with `+`: the problem lists
 concatenate and `matched` merges, so `a + b` is `ok` only when both are. This

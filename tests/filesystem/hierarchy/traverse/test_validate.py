@@ -58,6 +58,14 @@ class TestMissing:
         assert not report
         assert File("a.txt", required=True) in report.missing
 
+    def test_required_open_name_needs_one_match(self, tmp_path: Path) -> None:
+        # an open name is `required` = "at least one matching path is present"
+        spec = Directory("d", [File(Glob("*.png"), required=True)])
+        (tmp_path / "d").mkdir()
+        assert File(Glob("*.png"), required=True) in validate(spec, tmp_path).missing
+        (tmp_path / "d" / "a.png").write_text("x")
+        assert validate(spec, tmp_path).ok
+
 
 class TestUnexpected:
     def test_stray_file_and_pruned_dir(self, tmp_path: Path) -> None:
@@ -532,3 +540,34 @@ class TestAllowExtra:
         assert not report.ok
         assert (tmp_path / "dataset" / "archive.zip") not in report.unexpected
         assert (tmp_path / "dataset" / "junk.txt") in report.unexpected
+
+    def test_blanket_level_ignores_at_every_level(self, tmp_path: Path) -> None:
+        build(
+            tmp_path,
+            [
+                "notes.txt",  # the container's own extra (a sibling of `dataset`)
+                "dataset/scratch.tmp",  # extra at the top level
+                "dataset/meta.json",
+                "dataset/images/a.png",
+                "dataset/images/thumb.db",  # extra inside a strict-by-default subdir
+            ],
+        )
+        spec = Directory(
+            "dataset",
+            [File("meta.json"), Directory("images", [File(Glob("*.png"))])],
+        )  # no per-directory allow_extra
+        assert not validate(spec, tmp_path).ok  # strict: the extras are flagged
+        assert validate(spec, tmp_path, allow_extra=True).ok  # blanket: all ignored
+
+    def test_blanket_filter_ignores_only_matching(self, tmp_path: Path) -> None:
+        build(tmp_path, ["d/keep.txt", "d/a.zip", "d/junk.bin"])
+        spec = Directory("d", [File("keep.txt")])
+        report = validate(spec, tmp_path, allow_extra=Glob("*.zip"))
+        assert (tmp_path / "d" / "a.zip") not in report.unexpected  # ignored
+        assert (tmp_path / "d" / "junk.bin") in report.unexpected  # still a stray
+
+    def test_conformer_blanket(self, tmp_path: Path) -> None:
+        build(tmp_path, ["dataset/meta.json", "dataset/clutter.log"])
+        spec = Directory("dataset", [File("meta.json")])
+        assert not conformer(spec)(tmp_path / "dataset")  # strict: clutter rejected
+        assert conformer(spec, allow_extra=True)(tmp_path / "dataset")  # blanket ok
