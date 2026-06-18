@@ -86,14 +86,14 @@ class HookResolver:
         Raises:
             ValueError: If `name` has no hook and `on_missing` is `"error"`.
         """
-        fn = self.hooks.get(name)
-        if fn is None:
+        hook = self.hooks.get(name)
+        if hook is None:
             if self.on_missing == "skip":
                 return True
             msg = f"no hook supplied for content condition {name!r}"
             raise ValueError(msg)
 
-        return fn(path)
+        return hook(path)
 
 
 _NO_HOOKS = HookResolver()
