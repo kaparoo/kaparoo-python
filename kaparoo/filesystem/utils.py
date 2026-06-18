@@ -441,7 +441,9 @@ def ensure_file_extension(
             accepted extensions -- except the no-suffix case resolved by
             `add=True`.
     """
-    exts = normalize_extensions([ext] if isinstance(ext, str) else ext)
+    exts = [ext] if isinstance(ext, str) else list(ext)
+    exts = normalize_extensions(exts, lowercase=True)
+    exts = list(dict.fromkeys(exts))
 
     if not exts:
         msg = "ext must name at least one extension"
@@ -451,9 +453,10 @@ def ensure_file_extension(
     if add and not path.suffix:
         return path.with_suffix(f".{exts[0]}")
 
-    if file_extension(path) not in {e.casefold() for e in exts}:
+    file_ext = file_extension(path)
+    if file_ext not in exts:
         wanted = " / ".join(f".{e}" for e in exts)
-        msg = f"{path.name} must have a {wanted} extension (got {path.suffix!r})"
+        msg = f"{path.name} must have a {wanted} extension (got {file_ext!r})"
         raise ValueError(msg)
 
     return path
