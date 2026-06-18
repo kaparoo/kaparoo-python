@@ -126,6 +126,7 @@ def validate(
     root = Path(root)
     excluder = build_excluder(exclude, root)
     resolver = HookResolver(hooks or {}, on_missing)
+
     worker = _validate_as_top if root_as_top else _validate_under
     return worker(tree, root, excluder, resolver)
 
@@ -209,6 +210,7 @@ def _validate_under(
     missing: list[Node] = []
     violations: list[Violation] = []
     demoted: set[int] = set()
+
     for top in tops:
         for node in _walk_nodes(top):
             if id(node) in demoted:
@@ -303,6 +305,7 @@ def _scan_entries(
         seen: Accumulator for every non-excluded path visited.
     """
     max_depth = max_depth_of(entries) if entries else 1
+
     for candidate, depth in _walk_depths(parent, max_depth, excluder):
         seen.add(candidate)
         for entry in entries:
