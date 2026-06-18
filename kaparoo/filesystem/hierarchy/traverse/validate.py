@@ -124,8 +124,8 @@ def validate(
         TypeError: If `root_as_top` and `tree`'s top is a `Group`.
     """
     root = Path(root)
-    resolver = HookResolver(hooks or {}, on_missing)
     excluder = build_excluder(exclude, root)
+    resolver = HookResolver(hooks or {}, on_missing)
     worker = _validate_as_top if root_as_top else _validate_under
     return worker(tree, root, excluder, resolver)
 
@@ -464,11 +464,12 @@ def conformer(
     Returns:
         A predicate that is `True` for a path realizing `spec`'s top.
     """
-    resolver = HookResolver(hooks or {}, on_missing)
     tops = flatten_entries(spec)
+    excluder = None  # conformer judges each candidate strictly; no exclusions
+    resolver = HookResolver(hooks or {}, on_missing)
 
     def check(path: StrPath) -> bool:
         root = Path(path)
-        return any(_validate_as_top(top, root, None, resolver).ok for top in tops)
+        return any(_validate_as_top(top, root, excluder, resolver).ok for top in tops)
 
     return check
