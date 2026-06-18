@@ -115,6 +115,12 @@ def _condition_arg(data: Mapping[str, Any]) -> Condition | None:
     return None if raw is None else Condition.from_dict(raw)
 
 
+def _allow_extra_arg(data: Mapping[str, Any]) -> bool | Filter:
+    """Read the optional `allow_extra` from a directory dict (absent -> `False`)."""
+    raw = data.get("allow_extra", False)
+    return raw if isinstance(raw, bool) else Filter.from_dict(raw)
+
+
 class Entry(Node, ABC):
     """A named node in a filesystem hierarchy: a `File` or a `Directory`.
 
@@ -315,7 +321,7 @@ class Directory(Entry):
 
     _kind = "dir"
     _children: tuple[Node, ...]
-    _allow_extra: bool
+    _allow_extra: bool | Filter
 
     def __init__(
         self,
@@ -325,7 +331,7 @@ class Directory(Entry):
         depth: int | tuple[int, int | None] | None = 1,
         required: bool = False,
         condition: Condition | None = None,
-        allow_extra: bool = False,
+        allow_extra: bool | Filter = False,
     ) -> None:
         super().__init__(name, depth=depth, required=required, condition=condition)
         object.__setattr__(self, "_children", tuple(children))
@@ -337,13 +343,14 @@ class Directory(Entry):
         return self._children
 
     @property
-    def allow_extra(self) -> bool:
-        """Whether `validate` tolerates contents matching no child spec.
+    def allow_extra(self) -> bool | Filter:
+        """How `validate` treats contents matching no child spec.
 
-        When `True`, on-disk entries under this directory that match none of
-        `children` are ignored rather than reported `unexpected` (a matched
-        subdirectory keeps its own strictness). Only `validate` / `conformer`
-        read this; `locate` and `scaffold` ignore it.
+        `True` ignores any such on-disk entry (and its subtree) rather than
+        reporting it `unexpected`; a `Filter` ignores only those whose *name*
+        it matches, so real strays still surface. `False` (default) keeps the
+        directory strict. A matched subdirectory keeps its own setting. Only
+        `validate` / `conformer` read this; `locate` and `scaffold` ignore it.
         """
         return self._allow_extra
 
@@ -358,8 +365,8 @@ class Directory(Entry):
     @override
     def _repr_suffix(self) -> str:
         suffix = super()._repr_suffix()
-        if self._allow_extra:
-            suffix += ", allow_extra=True"
+        if self._allow_extra is not False:
+            suffix += f", allow_extra={self._allow_extra!r}"
         return suffix
 
     @override
@@ -367,8 +374,10 @@ class Directory(Entry):
         result: dict[str, Any] = {"node": "directory", "name": self._name.to_dict()}
         if self._children:
             result["children"] = [child.to_dict() for child in self._children]
-        if self._allow_extra:
-            result["allow_extra"] = True
+        if self._allow_extra is not False:
+            result["allow_extra"] = (
+                True if self._allow_extra is True else self._allow_extra.to_dict()
+            )
         result.update(self._common_payload())
         return result
 
@@ -382,5 +391,5 @@ class Directory(Entry):
             depth=_depth_arg(data),
             required=data.get("required", False),
             condition=_condition_arg(data),
-            allow_extra=data.get("allow_extra", False),
+            allow_extra=_allow_extra_arg(data),
         )

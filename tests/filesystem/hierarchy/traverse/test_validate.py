@@ -517,3 +517,18 @@ class TestAllowExtra:
         build(tmp_path, ["dataset/meta.json", "dataset/extra.bin"])
         spec = Directory("dataset", [File("meta.json")], allow_extra=True)
         assert validate(spec, tmp_path / "dataset", root_as_top=True).ok
+
+    def test_filter_ignores_only_matching_names(self, tmp_path: Path) -> None:
+        build(
+            tmp_path,
+            [
+                "dataset/meta.json",
+                "dataset/archive.zip",  # matches the filter -> ignored
+                "dataset/junk.txt",  # does not match -> still a stray
+            ],
+        )
+        spec = Directory("dataset", [File("meta.json")], allow_extra=Glob("*.zip"))
+        report = validate(spec, tmp_path)
+        assert not report.ok
+        assert (tmp_path / "dataset" / "archive.zip") not in report.unexpected
+        assert (tmp_path / "dataset" / "junk.txt") in report.unexpected

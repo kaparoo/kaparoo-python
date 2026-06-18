@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 
     from kaparoo.filesystem.exclude import ExcludeRule
     from kaparoo.filesystem.types import StrPath
+    from kaparoo.filters import Filter
 
     type ContentHooks = Mapping[str, Callable[[Path], bool]]
 
@@ -211,7 +212,7 @@ def _validate_under(
     excluder: Callable[[Path], bool] | None,
     resolver: HookResolver = _NO_HOOKS,
     *,
-    allow_extra: bool = False,
+    allow_extra: bool | Filter = False,
 ) -> ValidationReport:
     """Validate `tops` as entries realized directly under `root`.
 
@@ -292,7 +293,7 @@ def _scan_under(
     root: Path,
     excluder: Callable[[Path], bool] | None,
     *,
-    allow_extra: bool = False,
+    allow_extra: bool | Filter = False,
 ) -> tuple[dict[Path, tuple[Node, ...]], set[Path]]:
     """Locate `tops` under `root`, returning the matches and every path seen.
 
@@ -322,6 +323,16 @@ def _scan_under(
     return {path: tuple(nodes) for path, nodes in matched.items()}, seen
 
 
+def _ignores_extra(name: str, *, allow_extra: bool | Filter) -> bool:
+    """Whether the `allow_extra` setting ignores an unmatched entry named `name`.
+
+    `True` / `False` ignore all / none; a `Filter` ignores only matching names.
+    """
+    if isinstance(allow_extra, bool):
+        return allow_extra
+    return allow_extra.matches(name)
+
+
 def _scan_entries(
     entries: tuple[Entry, ...],
     parent: Path,
@@ -329,7 +340,7 @@ def _scan_entries(
     pairs: list[tuple[Path, Node]],
     seen: set[Path],
     *,
-    allow_extra: bool = False,
+    allow_extra: bool | Filter = False,
 ) -> None:
     """Match `parent`'s descendants against `entries`, recording every path seen.
 
@@ -346,7 +357,8 @@ def _scan_entries(
         excluder: A pre-built drop predicate, or `None` to exclude nothing.
         pairs: Accumulator for `(path, entry)` matches.
         seen: Accumulator for every non-excluded path visited.
-        allow_extra: Ignore (do not record) candidates matching no entry.
+        allow_extra: Ignore (do not record) candidates matching no entry --
+            `True` ignores all, a `Filter` only those whose name it matches.
     """
     max_depth = max_depth_of(entries) if entries else 1
 
@@ -368,7 +380,7 @@ def _scan_entries(
 
         # In an `allow_extra` frame an unmatched candidate is ignored: kept out
         # of `seen` so it never surfaces as `unexpected`.
-        if matched_here or not allow_extra:
+        if matched_here or not _ignores_extra(candidate.name, allow_extra=allow_extra):
             seen.add(candidate)
 
 

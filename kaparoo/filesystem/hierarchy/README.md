@@ -537,6 +537,10 @@ spec = Directory("dataset", [
 validate(spec, "/data").ok   # True even with /data/dataset/notes.zip present
 ```
 
+For finer control, `allow_extra` also takes a `Filter`: `allow_extra=Glob("*.zip")`
+ignores only unmatched entries whose name it matches, so a genuine stray (a
+stray `.py`, say) still surfaces as `unexpected`.
+
 Reports from independent validations combine with `+`: the problem lists
 concatenate and `matched` merges, so `a + b` is `ok` only when both are. This
 is meant for *disjoint* roots (e.g. validating several datasets and reporting

@@ -319,6 +319,13 @@ class TestDirectoryAllowExtra:
         assert spec.to_dict()["allow_extra"] is True
         assert Directory.from_dict(spec.to_dict()) == spec
 
+    def test_filter_form(self) -> None:
+        spec = Directory("d", allow_extra=Glob("*.zip"))
+        assert spec.allow_extra == Glob("*.zip")
+        assert spec != Directory("d", allow_extra=Glob("*.tar"))
+        assert "*.zip" in repr(spec)
+        assert Directory.from_dict(spec.to_dict()) == spec  # round-trips the filter
+
 
 class TestMatches:
     def test_true_when_name_and_kind_both_fit(self, tmp_path: Path) -> None:
