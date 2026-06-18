@@ -8,6 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-06-19
+
 ### Added
 
 - `kaparoo.filesystem.search` (`search_paths` / `search_files` /
