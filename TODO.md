@@ -5,12 +5,12 @@ entry once it lands.
 
 ---
 
-## 🔍 Review `hierarchy.compare` — validation part
+## 🔍 Review `hierarchy.traverse.validate`
 
 A rigorous correctness / edge-case / API-shape pass over `validate` and its
-helpers (`_validate_as_top`, `_validate_under`, `_check_group`,
-`_unexpected`, `_walk_nodes`, `_present_leaves`). The locate part has already
-been reviewed.
+helpers (`_validate_as_top`, `_validate_under`, `_scan_under`, `_scan_frame`,
+`_check_group`, `_classify_unexpected`, `_walk_nodes`, `_present_leaves`). The
+locate part (`hierarchy.traverse.locate`) has already been reviewed.
 
 ---
 
