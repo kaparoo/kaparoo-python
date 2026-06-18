@@ -140,7 +140,7 @@ def _locate_as_top(
 
     entry = cast("Entry", top)
 
-    if not (entry.name.matches(root.name) and entry.accepts_kind(root)):
+    if not entry.matches(root):
         return
 
     yield (root, entry)

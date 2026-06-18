@@ -159,7 +159,7 @@ def _validate_as_top(
         raise TypeError(msg)
 
     entry = cast("Entry", top)
-    if not (entry.name.matches(root.name) and entry.accepts_kind(root)):
+    if not entry.matches(root):
         return ValidationReport({}, (), (entry,), (), ())
 
     failed: tuple[tuple[Path, Node], ...] = ()

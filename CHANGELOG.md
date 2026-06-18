@@ -165,12 +165,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `hooks={name: callable}`; an absent name is governed by
   `on_missing="error" | "skip"`. The metadata conditions round-trip through
   `to_dict` / `from_dict`.
-- `Entry.accepts_depth(depth)` / `Entry.accepts_kind(path)`: two predicate
-  methods on the `Entry` base. `accepts_depth(depth)` returns `True` when
-  `depth` falls within the entry's inclusive `[min_depth, max_depth]` range
-  (`max_depth=None` is unbounded). `accepts_kind(path)` returns `True` when
-  the on-disk kind of `path` matches the entry's own kind (`File` ↔ file,
-  `Directory` ↔ directory).
+- `Entry.accepts_depth(depth)` / `Entry.accepts_kind(path)` / `Entry.matches(path)`:
+  predicate methods on the `Entry` base. `accepts_depth(depth)` returns `True`
+  when `depth` falls within the entry's inclusive `[min_depth, max_depth]`
+  range (`max_depth=None` is unbounded). `accepts_kind(path)` returns `True`
+  when the on-disk kind of `path` matches the entry's own kind (`File` ↔ file,
+  `Directory` ↔ directory). `matches(path)` combines the name filter with
+  `accepts_kind` -- `True` when `path`'s leaf name and on-disk kind both fit
+  the entry (depth, a positional concern, is left to `accepts_depth`).
 - `kaparoo.filesystem.hierarchy.group.flatten_entries(nodes)` /
   `max_depth_of(nodes)`: both accept a single `Node` **or** an iterable of
   nodes (`Node | Iterable[Node]`), so callers holding a single node need not

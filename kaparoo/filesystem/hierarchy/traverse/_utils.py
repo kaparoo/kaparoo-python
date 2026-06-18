@@ -76,18 +76,14 @@ def _walk_depths(
 def _entry_accepts(entry: Entry, candidate: Path, depth: int) -> bool:
     """Whether `entry` accepts `candidate` at `depth`.
 
-    Combines `entry`'s `accepts_depth` / `accepts_kind` with its name filter --
-    the single source of the three gates shared by `locate` and `validate`,
-    run cheapest-first: the in-memory `depth` range and name checks before
-    `accepts_kind`, which stats the path.
+    Adds the positional `accepts_depth` gate to `entry.matches` (name + kind) --
+    the single source of the gates shared by `locate` and `validate`, run
+    cheapest-first: the in-memory `depth` and name checks before `accepts_kind`,
+    which stats the path.
 
     Args:
         entry: The spec entry to test.
         candidate: The on-disk path the walk discovered.
         depth: `candidate`'s depth below the walked parent (1-based).
     """
-    return (
-        entry.accepts_depth(depth)
-        and entry.name.matches(candidate.name)
-        and entry.accepts_kind(candidate)
-    )
+    return entry.accepts_depth(depth) and entry.matches(candidate)

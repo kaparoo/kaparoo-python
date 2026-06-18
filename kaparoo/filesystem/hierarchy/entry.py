@@ -217,6 +217,14 @@ class Entry(Node, ABC):
         """Whether `path`'s on-disk kind matches this entry's (file vs dir)."""
         return path.is_dir() if self._kind == "dir" else path.is_file()
 
+    def matches(self, path: Path) -> bool:
+        """Whether `path`'s leaf name and on-disk kind both fit this entry.
+
+        Combines the name filter with `accepts_kind`; it does not weigh
+        `depth`, the positional concern checked separately via `accepts_depth`.
+        """
+        return self.name.matches(path.name) and self.accepts_kind(path)
+
     @abstractmethod
     def _fields(self) -> tuple[object, ...]:
         """Return the identity fields shown in `repr`, excluding `depth`."""

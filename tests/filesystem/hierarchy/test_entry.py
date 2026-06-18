@@ -291,3 +291,25 @@ class TestAcceptsKind:
     def test_directory_children_are_frozen(self) -> None:
         with pytest.raises(FrozenInstanceError):
             Directory("d", [File("a")])._children = ()  # noqa: SLF001
+
+
+class TestMatches:
+    def test_true_when_name_and_kind_both_fit(self, tmp_path: Path) -> None:
+        p = tmp_path / "x.txt"
+        p.touch()
+        assert File("x.txt").matches(p) is True
+
+    def test_false_on_name_mismatch(self, tmp_path: Path) -> None:
+        p = tmp_path / "x.txt"
+        p.touch()
+        assert File("other.txt").matches(p) is False
+
+    def test_false_on_kind_mismatch(self, tmp_path: Path) -> None:
+        d = tmp_path / "sub"
+        d.mkdir()
+        assert File("sub").matches(d) is False  # name fits, kind does not
+
+    def test_ignores_depth(self, tmp_path: Path) -> None:
+        p = tmp_path / "x.txt"
+        p.touch()
+        assert File("x.txt", depth=2).matches(p) is True  # depth is not weighed
