@@ -273,7 +273,7 @@ def _scan_under(
     """
     pairs: list[tuple[Path, Node]] = []
     seen: set[Path] = set()
-    _scan_frame(flatten_entries(tops), root, excluder, pairs, seen)
+    _scan_entries(flatten_entries(tops), root, excluder, pairs, seen)
 
     matched: dict[Path, list[Node]] = {}
     for path, node in _unique(pairs):
@@ -282,7 +282,7 @@ def _scan_under(
     return {path: tuple(nodes) for path, nodes in matched.items()}, seen
 
 
-def _scan_frame(
+def _scan_entries(
     entries: tuple[Entry, ...],
     parent: Path,
     excluder: Callable[[Path], bool] | None,
@@ -297,7 +297,7 @@ def _scan_frame(
 
     Args:
         entries: The leaf entries expected at or below `parent` (flattened).
-        parent: The directory walked for this frame.
+        parent: The directory walked for these entries.
         excluder: A pre-built drop predicate, or `None` to exclude nothing.
         pairs: Accumulator for `(path, entry)` matches.
         seen: Accumulator for every non-excluded path visited.
@@ -309,7 +309,7 @@ def _scan_frame(
             if _entry_accepts(entry, candidate, depth):
                 pairs.append((candidate, entry))
                 if isinstance(entry, Directory):
-                    _scan_frame(
+                    _scan_entries(
                         flatten_entries(entry.children),
                         candidate,
                         excluder,
