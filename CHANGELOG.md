@@ -20,6 +20,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   normalized -- `level=2` yields `"tar.gz"` from `data.tar.gz`,
   `lowercase=False` keeps case, no suffix gives `""`. `ensure_file_extension`
   now builds on these.
+- `kaparoo.filesystem.exceptions.UnsupportedExtensionError` (also re-exported
+  from `kaparoo.filesystem`): a `ValueError` subclass for a path whose
+  extension is none of the expected ones. The constructor normalizes and
+  de-duplicates `expected` (via `normalize_extensions`) and takes an optional
+  `kind` label, rendering e.g. `unsupported phase extension 'xyz' (expected
+  one of bin, txt)`; it exposes `ext` / `expected` / `kind`.
 
 ## [0.8.0] - 2026-06-19
 

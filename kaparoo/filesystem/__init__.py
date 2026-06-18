@@ -3,6 +3,7 @@ __all__ = (
     "NotAFileError",
     "StagedDirectory",
     "StagedFile",
+    "UnsupportedExtensionError",
     "dir_empty",
     "dir_empty_unsafe",
     "dir_exists",
@@ -49,7 +50,11 @@ from kaparoo.filesystem.directory import (
     make_dir,
     make_dirs,
 )
-from kaparoo.filesystem.exceptions import DirectoryNotFoundError, NotAFileError
+from kaparoo.filesystem.exceptions import (
+    DirectoryNotFoundError,
+    NotAFileError,
+    UnsupportedExtensionError,
+)
 from kaparoo.filesystem.existence import (
     dir_exists,
     dirs_exist,
