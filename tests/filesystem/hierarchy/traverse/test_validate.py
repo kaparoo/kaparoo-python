@@ -455,3 +455,65 @@ class TestValidateAtRoot:
         spec = Exclusive(File("a"), File("b"))
         with pytest.raises(TypeError, match="Entry top node"):
             validate(spec, tmp_path, root_as_top=True)
+
+
+class TestAllowExtra:
+    def test_extra_files_and_subtrees_ignored(self, tmp_path: Path) -> None:
+        build(
+            tmp_path,
+            [
+                "dataset/meta.json",
+                "dataset/images/a.png",
+                "dataset/archive.zip",  # incidental file
+                "dataset/.cache/x/y.bin",  # incidental subtree
+            ],
+        )
+        spec = Directory(
+            "dataset",
+            [File("meta.json"), Directory("images", [File(Glob("*.png"))])],
+            allow_extra=True,
+        )
+        report = validate(spec, tmp_path)
+        assert report.ok
+        assert report.unexpected == ()
+
+    def test_without_allow_extra_reports_them(self, tmp_path: Path) -> None:
+        build(tmp_path, ["dataset/meta.json", "dataset/archive.zip"])
+        spec = Directory("dataset", [File("meta.json")])  # strict (default)
+        report = validate(spec, tmp_path)
+        assert not report.ok
+        assert (tmp_path / "dataset" / "archive.zip") in report.unexpected
+
+    def test_matched_subdirectory_stays_strict(self, tmp_path: Path) -> None:
+        build(
+            tmp_path,
+            [
+                "dataset/images/a.png",
+                "dataset/images/stray.txt",  # stray inside the strict matched subdir
+                "dataset/junk.zip",  # extra at the lenient level
+            ],
+        )
+        spec = Directory(
+            "dataset",
+            [Directory("images", [File(Glob("*.png"))])],  # images stays strict
+            allow_extra=True,
+        )
+        report = validate(spec, tmp_path)
+        assert not report.ok
+        assert (tmp_path / "dataset" / "junk.zip") not in report.unexpected
+        assert (tmp_path / "dataset" / "images" / "stray.txt") in report.unexpected
+
+    def test_does_not_relax_required(self, tmp_path: Path) -> None:
+        build(tmp_path, ["dataset/extra.txt"])  # required meta.json absent
+        spec = Directory(
+            "dataset", [File("meta.json", required=True)], allow_extra=True
+        )
+        report = validate(spec, tmp_path)
+        assert not report.ok
+        assert File("meta.json", required=True) in report.missing  # still enforced
+        assert report.unexpected == ()  # extra.txt ignored
+
+    def test_root_as_top(self, tmp_path: Path) -> None:
+        build(tmp_path, ["dataset/meta.json", "dataset/extra.bin"])
+        spec = Directory("dataset", [File("meta.json")], allow_extra=True)
+        assert validate(spec, tmp_path / "dataset", root_as_top=True).ok

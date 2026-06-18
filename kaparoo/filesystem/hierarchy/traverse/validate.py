@@ -198,7 +198,9 @@ def _validate_as_top(
 
     report = ValidationReport({root: (entry,)}, (), (), (), failed)
     if isinstance(entry, Directory):
-        report += _validate_under(entry.children, root, excluder, resolver)
+        report += _validate_under(
+            entry.children, root, excluder, resolver, allow_extra=entry.allow_extra
+        )
 
     return report
 
@@ -208,6 +210,8 @@ def _validate_under(
     root: Path,
     excluder: Callable[[Path], bool] | None,
     resolver: HookResolver = _NO_HOOKS,
+    *,
+    allow_extra: bool = False,
 ) -> ValidationReport:
     """Validate `tops` as entries realized directly under `root`.
 
@@ -219,6 +223,8 @@ def _validate_under(
         root: The directory validated.
         excluder: A pre-built drop predicate, or `None` to exclude nothing.
         resolver: The `Content` hook resolver.
+        allow_extra: Ignore `root`'s contents matching no entry in `tops`,
+            rather than reporting them `unexpected`.
 
     Returns:
         The combined report for `tops` under `root`.
@@ -226,7 +232,7 @@ def _validate_under(
     if isinstance(tops, Node):
         tops = (tops,)
 
-    matched, seen = _scan_under(tops, root, excluder)
+    matched, seen = _scan_under(tops, root, excluder, allow_extra=allow_extra)
     present: set[Node] = {node for nodes in matched.values() for node in nodes}
 
     missing: list[Node] = []
@@ -285,6 +291,8 @@ def _scan_under(
     tops: tuple[Node, ...],
     root: Path,
     excluder: Callable[[Path], bool] | None,
+    *,
+    allow_extra: bool = False,
 ) -> tuple[dict[Path, tuple[Node, ...]], set[Path]]:
     """Locate `tops` under `root`, returning the matches and every path seen.
 
@@ -295,6 +303,7 @@ def _scan_under(
         tops: The sibling top nodes expected under `root`.
         root: The directory walked.
         excluder: A pre-built drop predicate, or `None` to exclude nothing.
+        allow_extra: Keep `root`'s contents matching no top out of `seen`.
 
     Returns:
         `(matched, seen)` -- each matched path mapped to its distinct nodes,
@@ -302,7 +311,9 @@ def _scan_under(
     """
     pairs: list[tuple[Path, Node]] = []
     seen: set[Path] = set()
-    _scan_entries(flatten_entries(tops), root, excluder, pairs, seen)
+
+    entries = flatten_entries(tops)
+    _scan_entries(entries, root, excluder, pairs, seen, allow_extra=allow_extra)
 
     matched: dict[Path, list[Node]] = {}
     for path, node in _unique(pairs):
@@ -317,12 +328,17 @@ def _scan_entries(
     excluder: Callable[[Path], bool] | None,
     pairs: list[tuple[Path, Node]],
     seen: set[Path],
+    *,
+    allow_extra: bool = False,
 ) -> None:
     """Match `parent`'s descendants against `entries`, recording every path seen.
 
     A matched `Directory` is descended even when its child spec is empty, so
     strays inside an otherwise-unconstrained matched directory still surface as
-    `unexpected`.
+    `unexpected`. When `allow_extra` is set, a candidate matching no entry is
+    instead kept out of `seen`, so it (and its subtree) is ignored rather than
+    reported `unexpected`; each matched `Directory` is descended with its own
+    `allow_extra`, so a strict subdirectory stays strict.
 
     Args:
         entries: The leaf entries expected at or below `parent` (flattened).
@@ -330,17 +346,30 @@ def _scan_entries(
         excluder: A pre-built drop predicate, or `None` to exclude nothing.
         pairs: Accumulator for `(path, entry)` matches.
         seen: Accumulator for every non-excluded path visited.
+        allow_extra: Ignore (do not record) candidates matching no entry.
     """
     max_depth = max_depth_of(entries) if entries else 1
 
     for candidate, depth in _walk_depths(parent, max_depth, excluder):
-        seen.add(candidate)
+        matched_here = False
         for entry in entries:
             if _entry_accepts(entry, candidate, depth):
+                matched_here = True
                 pairs.append((candidate, entry))
                 if isinstance(entry, Directory):
-                    child_entries = flatten_entries(entry.children)
-                    _scan_entries(child_entries, candidate, excluder, pairs, seen)
+                    _scan_entries(
+                        flatten_entries(entry.children),
+                        candidate,
+                        excluder,
+                        pairs,
+                        seen,
+                        allow_extra=entry.allow_extra,
+                    )
+
+        # In an `allow_extra` frame an unmatched candidate is ignored: kept out
+        # of `seen` so it never surfaces as `unexpected`.
+        if matched_here or not allow_extra:
+            seen.add(candidate)
 
 
 def _check_group(

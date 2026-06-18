@@ -299,6 +299,27 @@ class TestAcceptsKind:
             Directory("d", [File("a")])._children = ()  # noqa: SLF001
 
 
+class TestDirectoryAllowExtra:
+    def test_defaults_false(self) -> None:
+        assert Directory("d").allow_extra is False
+
+    def test_stored(self) -> None:
+        assert Directory("d", allow_extra=True).allow_extra is True
+
+    def test_distinguishes_equality(self) -> None:
+        assert Directory("d", allow_extra=True) != Directory("d")
+        assert Directory("d", allow_extra=True) == Directory("d", allow_extra=True)
+
+    def test_repr_shows_only_when_set(self) -> None:
+        assert "allow_extra=True" in repr(Directory("d", allow_extra=True))
+        assert "allow_extra" not in repr(Directory("d"))
+
+    def test_round_trips(self) -> None:
+        spec = Directory("d", [File("a")], allow_extra=True)
+        assert spec.to_dict()["allow_extra"] is True
+        assert Directory.from_dict(spec.to_dict()) == spec
+
+
 class TestMatches:
     def test_true_when_name_and_kind_both_fit(self, tmp_path: Path) -> None:
         p = tmp_path / "x.txt"

@@ -259,14 +259,18 @@ class Entry(Node, ABC):
 
         return payload
 
-    def __repr__(self) -> str:
-        inner = ", ".join(repr(field) for field in self._fields())
+    def _repr_suffix(self) -> str:
+        """The keyword-argument tail of `repr` (`depth` / `required` / `condition`)."""
         suffix = _depth_suffix(self._depth)
         if self._required:
             suffix += ", required=True"
         if self._condition is not None:
             suffix += f", condition={self._condition!r}"
-        return f"{type(self).__name__}({inner}{suffix})"
+        return suffix
+
+    def __repr__(self) -> str:
+        inner = ", ".join(repr(field) for field in self._fields())
+        return f"{type(self).__name__}({inner}{self._repr_suffix()})"
 
 
 @register_node("file")
@@ -307,10 +311,11 @@ class Directory(Entry):
     shared by every one of them.
     """
 
-    __slots__ = ("_children",)
+    __slots__ = ("_allow_extra", "_children")
 
     _kind = "dir"
     _children: tuple[Node, ...]
+    _allow_extra: bool
 
     def __init__(
         self,
@@ -320,24 +325,50 @@ class Directory(Entry):
         depth: int | tuple[int, int | None] | None = 1,
         required: bool = False,
         condition: Condition | None = None,
+        allow_extra: bool = False,
     ) -> None:
         super().__init__(name, depth=depth, required=required, condition=condition)
         object.__setattr__(self, "_children", tuple(children))
+        object.__setattr__(self, "_allow_extra", allow_extra)
 
     @property
     def children(self) -> tuple[Node, ...]:
         """The contained nodes, in insertion order."""
         return self._children
 
+    @property
+    def allow_extra(self) -> bool:
+        """Whether `validate` tolerates contents matching no child spec.
+
+        When `True`, on-disk entries under this directory that match none of
+        `children` are ignored rather than reported `unexpected` (a matched
+        subdirectory keeps its own strictness). Only `validate` / `conformer`
+        read this; `locate` and `scaffold` ignore it.
+        """
+        return self._allow_extra
+
     @override
     def _fields(self) -> tuple[object, ...]:
         return (self._name, self._children)
+
+    @override
+    def _key(self) -> tuple[object, ...]:
+        return (*super()._key(), self._allow_extra)
+
+    @override
+    def _repr_suffix(self) -> str:
+        suffix = super()._repr_suffix()
+        if self._allow_extra:
+            suffix += ", allow_extra=True"
+        return suffix
 
     @override
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"node": "directory", "name": self._name.to_dict()}
         if self._children:
             result["children"] = [child.to_dict() for child in self._children]
+        if self._allow_extra:
+            result["allow_extra"] = True
         result.update(self._common_payload())
         return result
 
@@ -351,4 +382,5 @@ class Directory(Entry):
             depth=_depth_arg(data),
             required=data.get("required", False),
             condition=_condition_arg(data),
+            allow_extra=data.get("allow_extra", False),
         )

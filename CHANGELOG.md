@@ -63,7 +63,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `None` is any depth (the tree-level `**`), and a `(min, max)` tuple is
   an inclusive range (`max=None` unbounded), exposed as `min_depth` /
   `max_depth`. Each entry also takes a keyword-only `required` flag
-  (default `False`) asserting it must be present. Two sibling constraints
+  (default `False`) asserting it must be present. A `Directory` additionally
+  takes a keyword-only `allow_extra` flag (default `False`): when `True`,
+  `validate` / `conformer` ignore its on-disk contents that match none of its
+  `children` instead of reporting them `unexpected` (a matched subdirectory
+  keeps its own strictness). Two sibling constraints
   can sit among a directory's
   children: `Exclusive` (the present siblings may come from at most one of
   its alternatives, each a set of independent nodes on one side of the

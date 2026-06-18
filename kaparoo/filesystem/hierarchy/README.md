@@ -514,14 +514,28 @@ if not report:                     # truthy only when fully conformant
 | `ok` | `True` (and the report is truthy) when the four above are empty |
 
 A path is **unexpected** unless it is matched or an ancestor of a match —
-so anything below an *unspecified* directory counts too (describe the
-contents, or accept them with a wildcard like `File(Glob("*"))`, to keep
-them out of the report). A `required` entry is satisfied once its name
-matches one present path — for an enumerable name (`OneOf` / `Template`)
-that means *at least one* of the listed names exists, not all. `validate`
+so anything below an *unspecified* directory counts too. A `required` entry
+is satisfied once its name matches one present path — for an enumerable name
+(`OneOf` / `Template`) that means *at least one* of the listed names exists,
+not all. `validate`
 also takes the same
 `exclude=` as `locate`; excluded paths are dropped from `matched` and are not
 reported `unexpected`.
+
+To keep extras out of the report you can describe them (a wildcard like
+`File(Glob("*"))`), or — when you only care about the structure and not the
+clutter — set `allow_extra=True` on the directory: on-disk contents matching
+none of its children are then ignored, including arbitrary subtrees. The
+leniency is local, so a matched subdirectory with its own spec stays strict:
+
+```python
+spec = Directory("dataset", [
+    File("metadata.json"),
+    Directory("images", [File(Glob("*.png"))]),   # still strict: only PNGs
+], allow_extra=True)                              # ignore stray archives, etc.
+
+validate(spec, "/data").ok   # True even with /data/dataset/notes.zip present
+```
 
 Reports from independent validations combine with `+`: the problem lists
 concatenate and `matched` merges, so `a + b` is `ok` only when both are. This
