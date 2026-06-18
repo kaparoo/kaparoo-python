@@ -327,6 +327,7 @@ def test_ensure_file_extension_add_still_rejects_wrong_suffix():
 
 def test_normalize_extension_strips_whitespace_and_leading_dots():
     assert normalize_extension(" .BIN ") == "BIN"  # whitespace + dot, case kept
+    assert normalize_extension(" .BIN ", lowercase=True) == "bin"  # opt-in lower-case
     assert normalize_extension("bin") == "bin"
     assert normalize_extension("..tar") == "tar"  # every leading dot
     assert normalize_extension("tar.gz") == "tar.gz"  # internal dot kept
@@ -341,6 +342,7 @@ def test_normalize_extensions_maps_keeping_empties_and_duplicates():
         "bin",
         "",
     ]
+    assert normalize_extensions([".BIN", "Txt"], lowercase=True) == ["bin", "txt"]
 
 
 # --- file_extension --------------------------------------------------------

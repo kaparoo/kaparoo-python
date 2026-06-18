@@ -382,14 +382,15 @@ def reserve_paths(
 # ========================== #
 
 
-def normalize_extension(ext: str) -> str:
-    """Strip surrounding whitespace and leading dots from an extension string."""
-    return ext.strip().lstrip(".")
+def normalize_extension(ext: str, *, lowercase: bool = False) -> str:
+    """Strip surrounding whitespace and leading dots; lower-case when asked."""
+    ext = ext.strip().lstrip(".")
+    return ext.casefold() if lowercase else ext
 
 
-def normalize_extensions(exts: Iterable[str]) -> list[str]:
+def normalize_extensions(exts: Iterable[str], *, lowercase: bool = False) -> list[str]:
     """`normalize_extension` over `exts` (keeping any empties and duplicates)."""
-    return [normalize_extension(ext) for ext in exts]
+    return [normalize_extension(ext, lowercase=lowercase) for ext in exts]
 
 
 def file_extension(path: StrPath, *, level: int = 1, lowercase: bool = True) -> str:
@@ -404,8 +405,8 @@ def file_extension(path: StrPath, *, level: int = 1, lowercase: bool = True) -> 
     if level < 1:
         msg = f"level must be >= 1, got {level}"
         raise ValueError(msg)
-    ext = normalize_extension("".join(Path(path).suffixes[-level:]))
-    return ext.casefold() if lowercase else ext
+    suffix = "".join(Path(path).suffixes[-level:])
+    return normalize_extension(suffix, lowercase=lowercase)
 
 
 def ensure_file_extension(
