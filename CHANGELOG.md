@@ -19,7 +19,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   returns the path's last (up to) `level` suffix(es), dot-joined and
   normalized -- `level=2` yields `"tar.gz"` from `data.tar.gz`,
   `lowercase=False` keeps case, no suffix gives `""`. `ensure_file_extension`
-  now builds on these.
+  now builds on these. All are re-exported from the top-level
+  `kaparoo.filesystem` namespace.
 - `kaparoo.filesystem.exceptions.UnsupportedExtensionError` (also re-exported
   from `kaparoo.filesystem`): a `ValueError` subclass for an extension that is
   none of the supported ones. The constructor normalizes `supported` (strips

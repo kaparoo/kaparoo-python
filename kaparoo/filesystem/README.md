@@ -9,6 +9,7 @@
 - [Exception hierarchy](#exception-hierarchy)
 - [Creating and emptying directories](#creating-and-emptying-directories)
 - [Path manipulation](#path-manipulation)
+- [Extensions](#extensions)
 - [Reserving a destination](#reserving-a-destination)
 - [Safe (atomic) writes](#safe-atomic-writes)
 - [Platform notes](#platform-notes)
@@ -22,10 +23,12 @@
   `dir_not_empty(s)` with validation, plus `_unsafe` variants that skip
   pre-checks
 - [`utils`](./utils.py) — `stringify_path(s)`, `wrap_path(s)`,
-  `reserve_path(s)`, `ensure_file_extension`
+  `reserve_path(s)`, and the extension helpers `ensure_file_extension` /
+  `file_extension` / `normalize_extension(s)`
 - [`staged`](./staged.py) — `StagedFile` / `StagedDirectory`, safe
   (atomic) writers usable as a context manager or explicitly
-- [`exceptions`](./exceptions.py) — `DirectoryNotFoundError`, `NotAFileError`
+- [`exceptions`](./exceptions.py) — `DirectoryNotFoundError`, `NotAFileError`,
+  `UnsupportedExtensionError`
 - [`types`](./types.py) — `StrPath`, `StrPaths` type aliases
 - [`units`](./units.py) — byte-size multipliers (`KB` / `MB` / `GB` / `TB`,
   `KIB` / `MIB` / `GIB` / `TIB`)
@@ -77,6 +80,10 @@ try:
 except FileNotFoundError:  # catches DirectoryNotFoundError too
     ...
 ```
+
+`UnsupportedExtensionError` (raised by `ensure_file_extension`, see
+[Extensions](#extensions)) likewise subclasses `ValueError`, so an
+`except ValueError` catches it.
 
 ## Creating and emptying directories
 
@@ -136,25 +143,49 @@ stringify_paths(["data/a.txt", "data/b.txt"], after="data")  # ["a.txt", "b.txt"
 wrap_path("logs", prepend="var", append="server.log")  # var/logs/server.log
 ```
 
+## Extensions
+
+`normalize_extension` cleans up an extension string — it strips surrounding
+whitespace and leading dots, keeping case unless `lowercase=True`.
+`normalize_extensions` maps it over an iterable (empties and duplicates are
+deliberately kept — that policy is the caller's). `file_extension` reads a
+path's trailing suffix(es): the last `level` of them, dot-joined and
+normalized (lower-cased by default).
+
+```python
+from kaparoo.filesystem import (
+    file_extension, normalize_extension, normalize_extensions,
+)
+
+normalize_extension("  .TAR ")                          # "TAR" (case kept)
+normalize_extension(".PNG", lowercase=True)             # "png"
+normalize_extensions([".jpg", "PNG"], lowercase=True)   # ["jpg", "png"]
+
+file_extension("photo.JPG")                             # "jpg" (lower-cased)
+file_extension("data.tar.gz", level=2)                  # "tar.gz"
+file_extension("README")                                # ""    (no suffix)
+```
+
 `ensure_file_extension` is a pure (no filesystem) extension check: it
-requires a `.<ext>` final suffix, raising `ValueError` otherwise. `ext` may
-be a single extension or an iterable of acceptable ones; the leading dot is
-optional and the match is case-insensitive. `add=True` mirrors `make` on
-`ensure_dir_exists` — it appends the (first) extension when the path has no
-suffix (`np.save`-style) instead of raising; a *wrong* suffix still raises.
+requires a `.<ext>` final suffix, raising `UnsupportedExtensionError` (a
+`ValueError` subclass) otherwise. `ext` may be a single extension or an
+iterable of acceptable ones; the leading dot is optional and the match is
+case-insensitive. `add=True` mirrors `make` on `ensure_dir_exists` — it
+appends the (first) extension when the path has no suffix (`np.save`-style)
+instead of raising; a *wrong* suffix still raises.
 
 ```python
 from kaparoo.filesystem import ensure_file_extension
 
 ensure_file_extension("data.bin", "bin")             # Path("data.bin")
-ensure_file_extension("data.txt", "bin")             # ValueError
-ensure_file_extension("out/00000_phase", "bin")      # ValueError (no suffix)
+ensure_file_extension("data.txt", "bin")             # UnsupportedExtensionError
+ensure_file_extension("out/00000_phase", "bin")      # UnsupportedExtensionError (no suffix)
 
 # Any of several accepted extensions:
 ensure_file_extension("img.jpeg", ("jpg", "jpeg", "png"))  # Path("img.jpeg")
 
 ensure_file_extension("out/00000_phase", "bin", add=True)  # Path("out/00000_phase.bin")
-ensure_file_extension("out/data.txt", "bin", add=True)     # ValueError (wrong suffix)
+ensure_file_extension("out/data.txt", "bin", add=True)     # UnsupportedExtensionError (wrong suffix)
 ```
 
 ## Reserving a destination

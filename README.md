@@ -33,7 +33,8 @@ Each submodule ships its own README with focused examples.
 `ensure_*` validators, `make_dir(s)` (with a destructive `clean` reset
 option), `dir_empty(s)`, `reserve_path(s)` guards for not-yet-existing
 destinations, `StagedFile` / `StagedDirectory` for safe (atomic) writes,
-path stringification, and a small exception hierarchy.
+path stringification, extension helpers (`ensure_file_extension`,
+`file_extension`, `normalize_extension(s)`), and a small exception hierarchy.
 
 ### [`kaparoo.filesystem.search`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/filesystem/search)
 
