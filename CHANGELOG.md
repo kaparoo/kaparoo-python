@@ -21,11 +21,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `lowercase=False` keeps case, no suffix gives `""`. `ensure_file_extension`
   now builds on these.
 - `kaparoo.filesystem.exceptions.UnsupportedExtensionError` (also re-exported
-  from `kaparoo.filesystem`): a `ValueError` subclass for a path whose
-  extension is none of the expected ones. The constructor normalizes and
-  de-duplicates `expected` (via `normalize_extensions`) and takes an optional
-  `kind` label, rendering e.g. `unsupported phase extension 'xyz' (expected
-  one of bin, txt)`; it exposes `ext` / `expected` / `kind`.
+  from `kaparoo.filesystem`): a `ValueError` subclass for an extension that is
+  none of the supported ones. The constructor normalizes `supported` (strips
+  surrounding whitespace and leading dots, case preserved), de-duplicates it,
+  and drops empties; an optional `kind` labels the message, rendering e.g.
+  `unsupported extension 'gif' (supported: 'jpg', 'png')` (with ` for <kind>`
+  inserted when `kind` is given). It exposes `ext` / `supported` / `kind`.
+
+### Changed
+
+- `kaparoo.filesystem.utils.ensure_file_extension` now raises the new
+  `UnsupportedExtensionError` (a `ValueError` subclass, so existing
+  `except ValueError` still catches it) instead of a plain `ValueError` when a
+  path's final suffix is none of the accepted extensions. The empty-`ext`
+  argument still raises a plain `ValueError`.
 
 ## [0.8.0] - 2026-06-19
 

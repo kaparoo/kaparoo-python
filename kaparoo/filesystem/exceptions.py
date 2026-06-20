@@ -10,8 +10,6 @@ __all__ = (
 
 from typing import TYPE_CHECKING
 
-from kaparoo.filesystem.utils import normalize_extension, normalize_extensions
-
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
@@ -30,22 +28,40 @@ class NotAFileError(OSError):
 
 
 class UnsupportedExtensionError(ValueError):
-    """Raised when a path's extension is none of the expected ones.
+    """Raised when an extension is none of the supported ones.
 
-    A `ValueError` subclass, so an existing `except ValueError` still catches
-    it. `expected` is normalized (`normalize_extensions`), de-duplicated, and
-    stripped of empties; an optional `kind` (e.g. `"phase"`) labels the message.
+    A `ValueError` subclass, so existing `except ValueError` handlers still
+    catch it. `ext` and each entry of `supported` are normalized alike --
+    surrounding whitespace and leading dots are stripped, with case preserved
+    -- after which `supported` is de-duplicated and empty entries are dropped
+    (so `".jpg"`, `"jpg "`, and `"jpg"` collapse to a single `"jpg"`). The
+    optional `kind` (whitespace-stripped) names what the extension is for and,
+    when given, is woven into the message as `for <kind>`.
+
+    Raises:
+        ValueError: If `supported` names no usable extension -- empty, or
+            every entry normalizes to "".
     """
 
-    def __init__(self, ext: str, expected: Iterable[str], kind: str = "") -> None:
-        expected = tuple(dict.fromkeys(e for e in normalize_extensions(expected) if e))
-        if not expected:
-            msg = "expected must list at least one extension"
+    def __init__(self, ext: str, supported: Iterable[str], kind: str = "") -> None:
+        def normalize(ext: str) -> str:
+            return ext.strip().lstrip(".")
+
+        supported = (normalize(ext) for ext in supported)
+        supported = tuple(dict.fromkeys(ext for ext in supported if ext))
+        if not supported:
+            msg = "supported must list at least one extension"
             raise ValueError(msg)
-        self.ext = normalize_extension(ext)
-        self.expected = expected
-        self.kind = kind
-        label = f"{kind} extension" if kind else "extension"
-        super().__init__(
-            f"unsupported {label} {self.ext!r} (expected one of {', '.join(expected)})"
-        )
+
+        self.ext = normalize(ext)
+        self.supported = supported
+        self.kind = kind.strip()
+
+        msg = f"unsupported extension {self.ext!r}"
+
+        if self.kind:
+            msg += f" for {self.kind}"
+
+        msg += f" (supported: {', '.join(repr(ext) for ext in self.supported)})"
+
+        super().__init__(msg)

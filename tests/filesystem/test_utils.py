@@ -252,16 +252,16 @@ def test_ensure_file_extension_leading_dot_in_ext_is_optional():
 
 
 def test_ensure_file_extension_rejects_wrong_or_missing():
-    with pytest.raises(ValueError, match=r"must have a \.bin extension"):
+    with pytest.raises(ValueError, match=r"supported: 'bin'"):
         ensure_file_extension("a.txt", "bin")
-    with pytest.raises(ValueError, match=r"must have a \.bin extension"):
+    with pytest.raises(ValueError, match=r"supported: 'bin'"):
         ensure_file_extension("a", "bin")  # no extension
 
 
 def test_ensure_file_extension_only_final_suffix():
     # Only the last component counts: ".tar.gz" matches "gz", not "tar.gz".
     assert ensure_file_extension("a.tar.gz", "gz").name == "a.tar.gz"
-    with pytest.raises(ValueError, match=r"must have a \.tar\.gz extension"):
+    with pytest.raises(ValueError, match=r"supported: 'tar\.gz'"):
         ensure_file_extension("a.tar.gz", "tar.gz")
 
 
@@ -279,13 +279,13 @@ def test_ensure_file_extension_accepts_any_of_several():
 
 
 def test_ensure_file_extension_rejects_when_none_match():
-    with pytest.raises(ValueError, match=r"must have a \.jpg / \.png extension"):
+    with pytest.raises(ValueError, match=r"supported: 'jpg', 'png'"):
         ensure_file_extension("a.gif", ("jpg", "png"))
 
 
 def test_ensure_file_extension_str_not_iterated_as_chars():
     # A str `ext` is one extension, not the iterable of its characters.
-    with pytest.raises(ValueError, match=r"must have a \.bin extension"):
+    with pytest.raises(ValueError, match=r"supported: 'bin'"):
         ensure_file_extension("a.b", "bin")
 
 
@@ -318,7 +318,7 @@ def test_ensure_file_extension_add_with_optional_leading_dot():
 
 def test_ensure_file_extension_add_still_rejects_wrong_suffix():
     # `add` only resolves the missing-suffix case; a wrong suffix still raises.
-    with pytest.raises(ValueError, match=r"must have a \.bin extension"):
+    with pytest.raises(ValueError, match=r"supported: 'bin'"):
         ensure_file_extension("out/x.txt", "bin", add=True)
 
 

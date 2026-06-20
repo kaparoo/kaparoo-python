@@ -19,6 +19,8 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, overload
 
+from kaparoo.filesystem.exceptions import UnsupportedExtensionError
+
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from typing import Literal
@@ -437,9 +439,10 @@ def ensure_file_extension(
         The path as a Path object, guaranteed to end in an accepted `.<ext>`.
 
     Raises:
-        ValueError: If `ext` is empty, or `path`'s final suffix is none of the
+        ValueError: If `ext` is empty.
+        UnsupportedExtensionError: If `path`'s final suffix is none of the
             accepted extensions -- except the no-suffix case resolved by
-            `add=True`.
+            `add=True`. A `ValueError` subclass.
     """
     exts = [ext] if isinstance(ext, str) else list(ext)
     exts = normalize_extensions(exts, lowercase=True)
@@ -455,8 +458,6 @@ def ensure_file_extension(
 
     file_ext = file_extension(path)
     if file_ext not in exts:
-        wanted = " / ".join(f".{e}" for e in exts)
-        msg = f"{path.name} must have a {wanted} extension (got {file_ext!r})"
-        raise ValueError(msg)
+        raise UnsupportedExtensionError(file_ext, exts)
 
     return path
