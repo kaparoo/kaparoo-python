@@ -385,21 +385,28 @@ def reserve_paths(
 
 
 def normalize_extension(ext: str, *, lowercase: bool = False) -> str:
-    """Strip surrounding whitespace and leading dots; lower-case when asked."""
+    """Strip surrounding whitespace and leading dots from an extension; lower-case when asked."""
     ext = ext.strip().lstrip(".")
-    return ext.casefold() if lowercase else ext
+    return ext.lower() if lowercase else ext
 
 
 def normalize_extensions(exts: Iterable[str], *, lowercase: bool = False) -> list[str]:
-    """`normalize_extension` over `exts` (keeping any empties and duplicates)."""
+    """Strip surrounding whitespace and leading dots from each extension; lower-case when asked."""
     return [normalize_extension(ext, lowercase=lowercase) for ext in exts]
 
 
 def file_extension(path: StrPath, *, level: int = 1, lowercase: bool = True) -> str:
-    """The last (up to) `level` suffix(es) of `path`, dot-joined and normalized.
+    """Return the last (up to) `level` suffix(es) of `path`, dot-joined and normalized.
 
-    `level=2` turns `data.tar.gz` into `"tar.gz"`; `lowercase=False` keeps the
-    original case. Returns `""` when `path` has no suffix.
+    Args:
+        path: The path to read the extension from.
+        level: How many trailing suffixes to join. `level=2` turns `data.tar.gz`
+            into `"tar.gz"`. Defaults to 1.
+        lowercase: Whether to lower-case the result. Defaults to True.
+
+    Returns:
+        The dot-joined suffixes without a leading dot, or `""` when `path` has
+            no suffix.
 
     Raises:
         ValueError: If `level` is less than 1.
@@ -416,24 +423,16 @@ def ensure_file_extension(
 ) -> Path:
     """Return `path` as a `Path`, requiring a case-insensitive `.<ext>` suffix.
 
-    A pure path check that never touches the filesystem. `ext` is a single
-    extension or an iterable of acceptable ones (e.g. `("jpg", "jpeg")`); the
-    leading dot on each is optional, so `"bin"` and `".bin"` behave the same.
-    Only the final suffix is considered: `archive.tar.gz` matches `ext="gz"`,
-    not `ext="tar.gz"`.
-
-    `add` mirrors `make` on `ensure_dir_exists`: when False (the default) a
-    path with no suffix raises like any other mismatch; when True, the missing
-    suffix is appended -- the *first* of `ext` when several are given, so pass
-    an ordered list/tuple if that matters. A *wrong* suffix always raises,
-    regardless of `add`.
+    A pure path check that never touches the filesystem. Only the final suffix
+    is considered, so `archive.tar.gz` matches `ext="gz"`, not `ext="tar.gz"`.
+    A wrong suffix always raises; `add` only fills in a missing one.
 
     Args:
         path: The path to check.
         ext: The required extension, or an iterable of acceptable ones, each
-            with or without a leading dot.
-        add: Whether to append the (first) extension when `path` has no
-            suffix, instead of raising. Defaults to False.
+            with or without a leading dot. Compared case-insensitively.
+        add: Whether to append the first of `ext` when `path` has no suffix,
+            instead of raising. Defaults to False.
 
     Returns:
         The path as a Path object, guaranteed to end in an accepted `.<ext>`.
@@ -441,23 +440,23 @@ def ensure_file_extension(
     Raises:
         ValueError: If `ext` is empty.
         UnsupportedExtensionError: If `path`'s final suffix is none of the
-            accepted extensions -- except the no-suffix case resolved by
+            accepted extensions, except the no-suffix case resolved by
             `add=True`. A `ValueError` subclass.
     """
     exts = [ext] if isinstance(ext, str) else list(ext)
-    exts = normalize_extensions(exts, lowercase=True)
-    exts = list(dict.fromkeys(exts))
+    exts = list(dict.fromkeys(normalize_extensions(exts, lowercase=True)))
 
     if not exts:
         msg = "ext must name at least one extension"
         raise ValueError(msg)
 
     path = Path(path)
-    if add and not path.suffix:
+    path_ext = file_extension(path, lowercase=True)
+
+    if add and not path_ext:
         return path.with_suffix(f".{exts[0]}")
 
-    file_ext = file_extension(path)
-    if file_ext not in exts:
-        raise UnsupportedExtensionError(file_ext, exts)
+    if path_ext not in exts:
+        raise UnsupportedExtensionError(path_ext, exts)
 
     return path

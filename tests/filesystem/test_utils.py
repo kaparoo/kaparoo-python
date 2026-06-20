@@ -345,6 +345,13 @@ def test_normalize_extensions_maps_keeping_empties_and_duplicates():
     assert normalize_extensions([".BIN", "Txt"], lowercase=True) == ["bin", "txt"]
 
 
+def test_normalize_extension_lower_cases_with_lower_not_casefold():
+    # `lower()`, not `casefold()`: "ß" stays "ß" (casefold would yield "ss"),
+    # so the characters survive when the result is appended back to a name.
+    assert normalize_extension("ß", lowercase=True) == "ß"
+    assert normalize_extensions(["ß"], lowercase=True) == ["ß"]
+
+
 # --- file_extension --------------------------------------------------------
 
 
