@@ -28,6 +28,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and drops empties; an optional `kind` labels the message, rendering e.g.
   `unsupported extension 'gif' (supported: 'jpg', 'png')` (with ` for <kind>`
   inserted when `kind` is given). It exposes `ext` / `supported` / `kind`.
+- `kaparoo.filesystem.hierarchy.scaffold` gains two options. `on_create` is a
+  callback `on_create(path, file_node)` run once for each file *actually*
+  created -- the seam for writing a file's content (scaffold otherwise leaves
+  an empty skeleton); it is not called for an untouched existing file, under
+  `dry_run`, or with `dirs_only`. `dirs_only=True` creates only the directory
+  skeleton, skipping every file (including `required` ones); pairing it with
+  `on_create` raises `ValueError`.
+- `kaparoo.filesystem.hierarchy.Entry.is_direct_child`: a read-only property,
+  `True` only when the entry is pinned to exactly `depth` 1 (`min_depth` and
+  `max_depth` both 1) -- the default, unranged position `scaffold` requires to
+  create a node.
 
 ### Changed
 
@@ -36,6 +47,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `except ValueError` still catches it) instead of a plain `ValueError` when a
   path's final suffix is none of the accepted extensions. The empty-`ext`
   argument still raises a plain `ValueError`.
+- `kaparoo.filesystem.hierarchy.scaffold` now raises `NotADirectoryError` (a
+  file where a directory is described) or `NotAFileError` (a directory where a
+  file is described) for a wrong-kind conflict, instead of a plain `ValueError`,
+  aligning with the rest of `kaparoo.filesystem`. **Breaking** for callers that
+  caught these as `ValueError` -- `NotADirectoryError` / `NotAFileError` are
+  `OSError` subclasses, not `ValueError`.
 
 ## [0.8.0] - 2026-06-19
 

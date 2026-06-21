@@ -630,9 +630,27 @@ cannot be satisfied and raises. `Together` creates all its members
 Files are created **empty** (the skeleton, not its contents). Creation is
 **idempotent**: an existing directory is descended unchanged and an existing
 file is never clobbered, so only newly created paths are returned and a
-re-run is a no-op. A path that exists with the wrong kind (a file where a
-directory is described, or vice versa) is a conflict and raises. `dry_run`
-runs every check but no write, returning the paths that *would* be created.
+re-run is a no-op. A path that exists with the wrong kind raises
+`NotADirectoryError` (a file where a directory is described) or `NotAFileError`
+(a directory where a file is described). `dry_run` runs every check but no
+write, returning the paths that *would* be created.
+
+Two options shape what gets written. **`on_create`** is a callback run once
+for each file *actually* created — `on_create(path, file_node)`, the seam for
+writing a file's content (scaffold only makes the skeleton). It is not called
+for an untouched existing file, under `dry_run`, or with `dirs_only`.
+**`dirs_only=True`** writes only the directory skeleton, skipping every file
+(including `required` ones); pairing it with `on_create` raises `ValueError`.
+
+```python
+# Fill each created file from its spec node, then build the tree.
+def fill(path, node):
+    if path.name == "README.md":
+        path.write_text("# Project\n")
+
+scaffold(spec, "/tmp/out", on_create=fill)
+scaffold(spec, "/tmp/out", dirs_only=True)   # directories only, no files
+```
 
 ## See also
 
