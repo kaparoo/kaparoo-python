@@ -607,3 +607,55 @@ def test_transformed_batch_matches_scalar(src: ListDataSequence[str, int]):
     transformed = TransformedSequence(src, str.upper)
     idx = [0, 4, 2]
     assert transformed.get_items(idx) == [transformed.get_item(i) for i in idx]
+
+
+# --- batch delegation issues one batched call per source (spied) -----------
+
+
+def test_sliced_get_items_delegates_one_batch_to_source():
+    rec = RecordingSequence(["a0", "a1", "a2", "a3"])
+    sliced = SlicedSequence(rec, [3, 1, 2])  # view index -> source index
+    assert sliced.get_items([2, 0]) == ["a2", "a3"]
+    # one batched call, mapped through `indices`, in request order
+    assert rec.item_calls == [[2, 3]]
+
+
+def test_sliced_get_metas_delegates_one_batch_to_source():
+    rec = RecordingSequence(["a0", "a1", "a2", "a3"])
+    sliced = SlicedSequence(rec, [3, 1, 2])
+    assert sliced.get_metas([0, 1]) == ["ma3", "ma1"]
+    assert rec.meta_calls == [[3, 1]]
+
+
+def test_windowed_get_item_issues_one_batched_source_read():
+    rec = RecordingSequence(["a", "b", "c", "d", "e"])
+    ws = FirstMetaWindow(rec, size=3)
+    assert ws.get_item(0) == ("a", "b", "c")
+    # the window's index range is fetched in a single batched read
+    assert rec.item_calls == [[0, 1, 2]]
+
+
+def test_windowed_get_item_batches_the_strided_range():
+    rec = RecordingSequence(["a", "b", "c", "d", "e"])
+    ws = FirstMetaWindow(rec, size=3, skip=2)  # strided window: 0, 2, 4
+    assert ws.get_item(0) == ("a", "c", "e")
+    assert rec.item_calls == [[0, 2, 4]]
+
+
+def test_zipped_get_items_delegates_one_batch_per_source():
+    a = RecordingSequence(["a0", "a1", "a2"])
+    b = RecordingSequence(["b0", "b1", "b2"])
+    zipped = ZippedSequence(a, b)
+    assert zipped.get_items([2, 0]) == [("a2", "b2"), ("a0", "b0")]
+    # each source gets exactly one batched call with the normalized indices
+    assert a.item_calls == [[2, 0]]
+    assert b.item_calls == [[2, 0]]
+
+
+def test_zipped_get_metas_delegates_one_batch_per_source():
+    a = RecordingSequence(["a0", "a1"])
+    b = RecordingSequence(["b0", "b1"])
+    zipped = ZippedSequence(a, b)
+    assert zipped.get_metas([1, 0]) == [("ma1", "mb1"), ("ma0", "mb0")]
+    assert a.meta_calls == [[1, 0]]
+    assert b.meta_calls == [[1, 0]]
