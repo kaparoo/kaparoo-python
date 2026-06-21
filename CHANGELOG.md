@@ -8,6 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-06-22
+
 ### Added
 
 - `kaparoo.filesystem.utils.normalize_extension` / `normalize_extensions` /
