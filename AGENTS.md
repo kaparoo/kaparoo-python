@@ -172,12 +172,15 @@ changes.
 Releases are automated by
 [`.github/workflows/publish.yml`](./.github/workflows/publish.yml):
 pushing an annotated tag matching `v*.*.*` triggers CI verification,
-a sdist+wheel build (`uv build` + `twine check`), then TestPyPI and
-PyPI publishes via `pypa/gh-action-pypi-publish`. Both publish steps
-use GitHub's OIDC trusted-publishing flow -- no API tokens are stored
+then a sdist+wheel build (`uv build` + `twine check`) that first asserts
+the tag matches `pyproject.toml`'s `version`, then TestPyPI and PyPI
+publishes via `pypa/gh-action-pypi-publish`. Both publish steps use
+GitHub's OIDC trusted-publishing flow -- no API tokens are stored
 anywhere. The PyPI step is gated by the GitHub `pypi` environment,
 which has a manual approval rule, so PyPI never ships without a human
-reviewing the TestPyPI artifact first.
+reviewing the TestPyPI artifact first. After PyPI, a final job publishes
+a GitHub Release for the tag -- the matching `CHANGELOG.md` section as the
+notes, with the built sdist + wheel attached.
 
 Release procedure for `X.Y.Z`:
 
@@ -204,7 +207,9 @@ Release procedure for `X.Y.Z`:
    Extend the smoke checks to import and exercise whatever the release
    actually touches (new submodule, renamed symbol, fixed bug, ...).
 7. Approve the `pypi` environment in the GitHub Actions UI to release
-   the PyPI publish step. The job uploads to PyPI via OIDC.
+   the PyPI publish step. The job uploads to PyPI via OIDC, after which
+   the `github-release` job publishes the matching GitHub Release
+   automatically (CHANGELOG notes + artifacts) -- no manual step.
 
 Named indexes (`pypi`, `testpypi`) are configured under
 `[[tool.uv.index]]` in `pyproject.toml`; `testpypi` carries
