@@ -85,13 +85,18 @@ applying it by hand.
 - Docstrings are optional — write them where they clarify intent, not
   mechanically. "Mechanically" targets two habits to avoid: comments (or
   docstrings) that merely restate the code, and a base class whose
-  docstring explains itself in terms of its specific subclasses. It is
+  docstring explains itself in terms of its specific subclasses — except a
+  *closed* hierarchy's base, which may name its subclasses as a deliberate
+  family map (`Filter`, `Node`, `Reduction`). It is
   *not* a licence to leave a consumed method bare. When written, document
   *intent and contracts, not mechanism*:
   - Lead with a one-line summary — declarative noun phrase for
     classes ("An ordered, lazily-loaded, read-only sequence ..."),
     imperative verb phrase for functions and methods ("Yield sliding
-    windows from `sequence`.").
+    windows from `sequence`."). Property getters and boolean-returning
+    *methods* take a noun phrase instead — "The reporting unit ..." and
+    "Whether `path` satisfies this condition.". A boolean *function* stays
+    imperative ("Test whether a directory is empty.").
   - A concrete public method that callers consume (`Mean.step`,
     `Var.merge`) must be **self-explainable** from its own docstring and
     signature — never lean on an inherited parent docstring to carry it.
