@@ -159,6 +159,10 @@ def validate(
 
     Raises:
         TypeError: If `root_as_top` and `tree`'s top is a `Group`.
+        OSError: If a matched path cannot be read while checking its
+            `condition` (e.g. it was made inaccessible after `locate` matched
+            it). Condition checks read the filesystem, so an I/O error surfaces
+            rather than being absorbed into the report.
     """
     root = Path(root)
     excluder = build_excluder(exclude, root)
@@ -594,7 +598,8 @@ def conformer(
             extra, unspecified entries.
 
     Returns:
-        A predicate that is `True` for a path realizing `spec`'s top.
+        A predicate that is `True` for a path realizing `spec`'s top. Like
+        `validate`, it surfaces a condition's filesystem errors as `OSError`.
     """
     tops = flatten_entries(spec)
     excluder = None  # conformer judges each candidate strictly; no exclusions
