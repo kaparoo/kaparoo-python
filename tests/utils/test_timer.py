@@ -464,6 +464,17 @@ def test_span_timer_measure_while_paused_raises(fake_clock):
                 pass
 
 
+def test_span_timer_measure_paused_at_block_end_raises(fake_clock):
+    # enter=0, block start=100ms, pause=200ms; measure exit raises while paused.
+    # __exit__ then auto-resumes (300ms) and finalizes (400ms).
+    fake_clock(0, 100_000_000, 200_000_000, 300_000_000, 400_000_000)
+    with SpanTimer("ms") as st:
+        with pytest.raises(RuntimeError, match="ended while paused"):  # noqa: SIM117
+            with st.measure("B"):
+                st.pause()  # left open across the block end
+        assert st.records == ()  # nothing recorded; the span was abandoned
+
+
 def test_span_timer_measure_unstarted_raises():
     st = SpanTimer()
     with pytest.raises(RuntimeError, match="not been started"):  # noqa: SIM117

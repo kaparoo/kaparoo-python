@@ -424,9 +424,12 @@ class SpanTimer(Timer):
 
         Unlike `lap`, which splits the timeline into contiguous spans,
         `measure` times only the wrapped region; time spent outside any
-        `measure` block is attributed to no span. Pauses inside the
-        block are excluded. A span is recorded only on clean exit -- if
-        the block raises, nothing is recorded and the exception propagates.
+        `measure` block is attributed to no span. Paused intervals inside the
+        block are excluded, but pause/resume must balance within it: a bare
+        `pause()` left open at the block's end raises -- wrap the excluded
+        region in `suspend()` instead. A span is recorded only on clean exit
+        -- if the block raises, nothing is recorded and the exception
+        propagates.
         Repeated labels follow `on_same_label`, exactly as `lap`. Do not
         nest `measure` blocks: each resets the shared baseline, so an outer
         block would record only the span after its inner block ends.
@@ -442,8 +445,8 @@ class SpanTimer(Timer):
             None. The wrapped block runs while the span is timed.
 
         Raises:
-            RuntimeError: If the timer has not been started, or is paused on
-                entry.
+            RuntimeError: If the timer has not been started, is paused on
+                entry, or is still paused at the block's end.
             ValueError: If `on_same_label` is `"reject"` and `label` has
                 already been used in this `with` block.
         """
@@ -454,4 +457,10 @@ class SpanTimer(Timer):
 
         self._last_time = time.perf_counter_ns()
         yield
+        if self._paused:
+            msg = (
+                "measure() block ended while paused; balance pause/resume "
+                "inside it, or wrap the excluded part in `suspend()`."
+            )
+            raise RuntimeError(msg)
         self.lap(label)

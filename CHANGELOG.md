@@ -54,6 +54,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   caught these as `ValueError` -- `NotADirectoryError` / `NotAFileError` are
   `OSError` subclasses, not `ValueError`.
 
+### Fixed
+
+- `kaparoo.utils.SpanTimer.measure` now raises a clear, actionable `RuntimeError`
+  when its block ends while still paused (a `pause()` left open across the block
+  boundary), pointing to `suspend()`, instead of the misleading "Cannot record a
+  lap while paused" it surfaced from the trailing `lap`.
+
 ## [0.8.0] - 2026-06-19
 
 ### Added
