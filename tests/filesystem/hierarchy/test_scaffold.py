@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from kaparoo.filesystem import NotAFileError
 from kaparoo.filesystem.hierarchy import (
     Directory,
     Exclusive,
@@ -11,15 +12,29 @@ from kaparoo.filesystem.hierarchy import (
     Together,
     scaffold,
 )
+from kaparoo.filesystem.hierarchy.base import Node
 from kaparoo.filters import Glob, Template
 
 if TYPE_CHECKING:
     from pathlib import Path
+    from typing import Any
 
 
 def rel(paths: list[Path], root: Path) -> list[str]:
     """Root-relative POSIX strings, for order-sensitive assertions."""
     return [p.relative_to(root).as_posix() for p in paths]
+
+
+class FakeNode(Node):
+    """A `Node` outside the File/Directory/Together/Exclusive closed world."""
+
+    __slots__ = ()
+
+    def _key(self) -> tuple[object, ...]:
+        return ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"node": "fake"}
 
 
 class TestScaffoldBasics:
@@ -63,7 +78,7 @@ class TestNonCreatable:
         assert rel(created, tmp_path) == ["d", "d/keep.txt"]  # glob skipped
 
     def test_open_filter_required_raises(self, tmp_path: Path) -> None:
-        with pytest.raises(ValueError, match="enumerable"):
+        with pytest.raises(ValueError, match="not creatable"):
             scaffold(File(Glob("*.log"), required=True), tmp_path)
 
     def test_open_directory_optional_is_skipped(self, tmp_path: Path) -> None:
@@ -77,7 +92,7 @@ class TestNonCreatable:
         assert rel(created, tmp_path) == ["d", "d/here"]
 
     def test_non_fixed_depth_required_raises(self, tmp_path: Path) -> None:
-        with pytest.raises(ValueError, match="fixed at 1"):
+        with pytest.raises(ValueError, match="fixed depth of 1"):
             scaffold(File("any", depth=None, required=True), tmp_path)
 
 
@@ -154,12 +169,12 @@ class TestIdempotency:
 class TestTypeConflict:
     def test_file_where_directory_expected_raises(self, tmp_path: Path) -> None:
         (tmp_path / "d").write_text("i am a file")
-        with pytest.raises(ValueError, match="a file exists there"):
+        with pytest.raises(NotADirectoryError, match="a file exists there"):
             scaffold(Directory("d", [File("x")]), tmp_path)
 
     def test_directory_where_file_expected_raises(self, tmp_path: Path) -> None:
         (tmp_path / "x").mkdir()
-        with pytest.raises(ValueError, match="a directory exists there"):
+        with pytest.raises(NotAFileError, match="a directory exists there"):
             scaffold(File("x"), tmp_path)
 
 
@@ -232,3 +247,90 @@ class TestScaffoldAtRoot:
         plan = scaffold(spec, root, root_as_top=True, dry_run=True)
         assert rel(plan, tmp_path) == ["dataset", "dataset/a", "dataset/b"]
         assert not root.exists()  # disk untouched
+
+
+class TestOnCreate:
+    def test_called_for_each_new_file_to_fill_content(self, tmp_path: Path) -> None:
+        spec = Directory("d", [File("a.txt"), Directory("sub", [File("b.txt")])])
+
+        def fill(path: Path, node: File) -> None:
+            path.write_text(f"content of {path.name}")
+
+        scaffold(spec, tmp_path, on_create=fill)
+        assert (tmp_path / "d" / "a.txt").read_text() == "content of a.txt"
+        assert (tmp_path / "d" / "sub" / "b.txt").read_text() == "content of b.txt"
+
+    def test_receives_the_spec_file_node(self, tmp_path: Path) -> None:
+        leaf = File(Template("shard_{:02d}.bin", range(2)))
+        calls: list[tuple[str, File]] = []
+        scaffold(leaf, tmp_path, on_create=lambda p, n: calls.append((p.name, n)))
+        assert [name for name, _ in calls] == ["shard_00.bin", "shard_01.bin"]
+        assert all(node is leaf for _, node in calls)  # same spec node each time
+
+    def test_not_called_for_existing_file(self, tmp_path: Path) -> None:
+        spec = Directory("d", [File("a.txt")])
+        scaffold(spec, tmp_path)  # create the file first
+        (tmp_path / "d" / "a.txt").write_text("kept")
+        seen: list[Path] = []
+        again = scaffold(spec, tmp_path, on_create=lambda p, n: seen.append(p))
+        assert again == []  # nothing new
+        assert seen == []  # idempotent: hook not fired
+        assert (tmp_path / "d" / "a.txt").read_text() == "kept"  # not clobbered
+
+    def test_not_called_under_dry_run(self, tmp_path: Path) -> None:
+        seen: list[Path] = []
+        plan = scaffold(
+            File("a.txt"), tmp_path, on_create=lambda p, n: seen.append(p), dry_run=True
+        )
+        assert rel(plan, tmp_path) == ["a.txt"]  # planned
+        assert seen == []  # but the hook never ran
+        assert not (tmp_path / "a.txt").exists()
+
+    def test_fires_for_a_file_top(self, tmp_path: Path) -> None:
+        root = tmp_path / "model.bin"
+        scaffold(
+            File("model.bin"),
+            root,
+            root_as_top=True,
+            on_create=lambda p, n: p.write_text("weights"),
+        )
+        assert root.read_text() == "weights"
+
+    def test_combined_with_dirs_only_raises(self, tmp_path: Path) -> None:
+        with pytest.raises(ValueError, match="dirs_only"):
+            scaffold(File("a"), tmp_path, on_create=lambda p, n: None, dirs_only=True)
+
+
+class TestDirsOnly:
+    def test_creates_only_directories(self, tmp_path: Path) -> None:
+        spec = Directory("d", [File("a.txt"), Directory("sub", [File("b.txt")])])
+        created = scaffold(spec, tmp_path, dirs_only=True)
+        assert rel(created, tmp_path) == ["d", "d/sub"]  # files skipped
+        assert not (tmp_path / "d" / "a.txt").exists()
+        assert (tmp_path / "d" / "sub").is_dir()
+
+    def test_skips_required_files_too(self, tmp_path: Path) -> None:
+        # a required file would normally be enforced; dirs_only overrides that
+        spec = Directory("d", [File("must.txt", required=True)])
+        created = scaffold(spec, tmp_path, dirs_only=True)
+        assert rel(created, tmp_path) == ["d"]
+        assert not (tmp_path / "d" / "must.txt").exists()
+
+    def test_file_top_creates_nothing(self, tmp_path: Path) -> None:
+        root = tmp_path / "model.bin"
+        created = scaffold(File("model.bin"), root, root_as_top=True, dirs_only=True)
+        assert created == []
+        assert not root.exists()
+
+
+class TestUnknownNodeType:
+    # The Node hierarchy is closed (File / Directory / Together / Exclusive),
+    # so these guard the defensive `case _` arms against a future subtree.
+    def test_dispatch_rejects_unknown_node(self, tmp_path: Path) -> None:
+        with pytest.raises(TypeError, match="unsupported node type"):
+            scaffold(FakeNode(), tmp_path)
+
+    def test_node_creatability_rejects_unknown_node(self, tmp_path: Path) -> None:
+        # reached when a group computes its members' creatability
+        with pytest.raises(TypeError, match="unsupported node type"):
+            scaffold(Together(FakeNode(), File("a")), tmp_path)
