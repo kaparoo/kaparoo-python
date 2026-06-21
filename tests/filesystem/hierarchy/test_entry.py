@@ -104,6 +104,13 @@ class TestDepth:
             assert node.min_depth == 1
             assert node.max_depth == 1
 
+    def test_is_direct_child_only_for_exact_depth_one(self) -> None:
+        assert File("a").is_direct_child  # default (1, 1)
+        assert Directory("d").is_direct_child
+        assert not File("a", depth=3).is_direct_child  # min != 1
+        assert not File("a", depth=None).is_direct_child  # (1, None): max != 1
+        assert not File("a", depth=(1, 2)).is_direct_child
+
     def test_exact_depth(self) -> None:
         node = File("frames", depth=3)
         assert (node.min_depth, node.max_depth) == (3, 3)

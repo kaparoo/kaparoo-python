@@ -206,6 +206,16 @@ class Entry(Node, ABC):
         return self._depth[1]
 
     @property
+    def is_direct_child(self) -> bool:
+        """Whether the entry is pinned to exactly depth 1 (a direct child).
+
+        True only when `min_depth` and `max_depth` are both 1 -- the default,
+        unranged position. Any wider or deeper depth (`depth=2`, `depth=None`,
+        `depth=(1, 3)`, ...) is False.
+        """
+        return self.min_depth == 1 and self.max_depth == 1
+
+    @property
     def required(self) -> bool:
         """Whether this entry must be present (vs optional)."""
         return self._required
@@ -256,7 +266,7 @@ class Entry(Node, ABC):
         `Filter` / `Condition` `_payload`, which is the *whole* field set.
         """
         payload: dict[str, Any] = {}
-        if self._depth != (1, 1):
+        if not self.is_direct_child:
             payload["depth"] = list(self._depth)
         if self._required:
             payload["required"] = True
