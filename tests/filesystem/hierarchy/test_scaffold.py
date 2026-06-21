@@ -334,3 +334,52 @@ class TestUnknownNodeType:
         # reached when a group computes its members' creatability
         with pytest.raises(TypeError, match="unsupported node type"):
             scaffold(Together(FakeNode(), File("a")), tmp_path)
+
+
+class TestBestEffortFailure:
+    # scaffold's documented failure contract: a mid-run raise is NOT rolled
+    # back -- paths already created stay, and an idempotent re-run resumes.
+    def test_on_create_raise_leaves_earlier_paths(self, tmp_path: Path) -> None:
+        spec = Directory("d", [File("a.txt"), File("b.txt"), File("c.txt")])
+
+        def fill(path: Path, node: File) -> None:
+            if path.name == "b.txt":
+                msg = "boom"
+                raise RuntimeError(msg)
+            path.write_text(f"content of {path.name}")
+
+        with pytest.raises(RuntimeError, match="boom"):
+            scaffold(spec, tmp_path, on_create=fill)
+
+        d = tmp_path / "d"
+        assert d.is_dir()
+        assert (d / "a.txt").read_text() == "content of a.txt"  # created before
+        assert (d / "b.txt").is_file()  # touched before its hook ran...
+        assert (d / "b.txt").read_text() == ""  # ...but content never written
+        assert not (d / "c.txt").exists()  # never reached
+
+    def test_idempotent_rerun_resumes_after_partial_failure(
+        self, tmp_path: Path
+    ) -> None:
+        spec = Directory("d", [File("a.txt"), File("b.txt"), File("c.txt")])
+
+        def failing(path: Path, node: File) -> None:
+            if path.name == "b.txt":
+                msg = "boom"
+                raise RuntimeError(msg)
+            path.write_text("first")
+
+        with pytest.raises(RuntimeError):
+            scaffold(spec, tmp_path, on_create=failing)
+
+        seen: list[str] = []
+
+        def fill(path: Path, node: File) -> None:
+            seen.append(path.name)
+            path.write_text("second")
+
+        again = scaffold(spec, tmp_path, on_create=fill)
+        assert rel(again, tmp_path) == ["d/c.txt"]  # only the still-missing file
+        assert seen == ["c.txt"]  # hook fires only for the newly created file
+        assert (tmp_path / "d" / "a.txt").read_text() == "first"  # not clobbered
+        assert (tmp_path / "d" / "c.txt").read_text() == "second"
