@@ -5,18 +5,6 @@ entry once it lands.
 
 ---
 
-## 🐛 Settle `hierarchy.scaffold`'s atomicity / rollback contract
-
-The structural rework is done -- helpers are `Scaffolder` methods, `visit`
-owns root creation, and `root_as_top` is supported -- so a from-scratch
-rewrite is no longer the plan. What remains is the **failure contract**: a
-wrong-kind path (a file where a directory is described, or vice versa) raises
-mid-run, leaving the paths already created on disk. Decide and implement the
-contract -- best-effort (current, document it), pre-flight validation before
-any write, or rollback of what this run created -- and cover it with tests.
-
----
-
 ## 📝 Unify docstrings to a consistent Google style
 
 One style library-wide: imperative title, an optional summary, then `Args` /
@@ -25,4 +13,4 @@ not mechanism (per AGENTS.md).
 
 ---
 
-*Last updated: 2026-06-19*
+*Last updated: 2026-06-21*

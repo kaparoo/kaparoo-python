@@ -35,8 +35,11 @@ def scaffold(
     `Without` and the `str` / `list[str]` sugar) at a fixed `depth` of 1; open
     names (`Glob`, `Regex`) and ranged depths are acceptance patterns, skipped
     when optional and raising when `required`. Creation is idempotent and never
-    clobbers; files are created empty. See the submodule README for the group
-    rules and worked examples.
+    clobbers; files are created empty. Failure is best-effort: a mid-run raise
+    (a conflict, an unsatisfiable `required` node, or an `on_create` that
+    raises) leaves the paths already created in place -- there is no rollback,
+    but an idempotent re-run resumes safely. See the submodule README for the
+    group rules and worked examples.
 
     Args:
         on_create: Callback `on_create(path, file_node)` run once per file

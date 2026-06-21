@@ -635,6 +635,11 @@ re-run is a no-op. A path that exists with the wrong kind raises
 (a directory where a file is described). `dry_run` runs every check but no
 write, returning the paths that *would* be created.
 
+Failure is **best-effort**: a mid-run raise — a conflict, an unsatisfiable
+`required` node, or an `on_create` callback that raises — leaves the paths
+already created in place. There is no rollback, but because creation is
+idempotent a re-run resumes safely.
+
 Two options shape what gets written. **`on_create`** is a callback run once
 for each file *actually* created — `on_create(path, file_node)`, the seam for
 writing a file's content (scaffold only makes the skeleton). It is not called
