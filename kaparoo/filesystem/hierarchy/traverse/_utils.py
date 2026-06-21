@@ -15,9 +15,6 @@ if TYPE_CHECKING:
 def _unique(pairs: Iterable[tuple[Path, Node]]) -> Iterator[tuple[Path, Node]]:
     """Stream `pairs`, suppressing ones already seen.
 
-    Args:
-        pairs: The `(path, node)` pairs to deduplicate.
-
     Yields:
         Each distinct pair in first-seen order (backed by a `seen` set).
     """
@@ -74,7 +71,7 @@ def _walk_depths(
 
 
 def _entry_accepts(entry: Entry, candidate: Path, depth: int) -> bool:
-    """Whether `entry` accepts `candidate` at `depth`.
+    """Test whether `entry` accepts `candidate` at `depth`.
 
     Adds the positional `accepts_depth` gate to `entry.matches` (name + kind) --
     the single source of the gates shared by `locate` and `validate`, run

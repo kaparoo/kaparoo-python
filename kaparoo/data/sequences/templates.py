@@ -46,7 +46,7 @@ class FileListSequence[T, M = Path](DataSequence[T, M]):
 
     @cached_property
     def files(self) -> tuple[Path, ...]:
-        """Immutable snapshot of the full file paths, in order (built once)."""
+        """Immutable snapshot of the full file paths, in order."""
         return tuple(self.get_file(i) for i in range(len(self)))
 
     def get_file(self, index: int) -> Path:
@@ -130,7 +130,7 @@ class FileFolderSequence[T, M = Path](FileListSequence[T, M]):
 
     @abstractmethod
     def list_files(self, root: Path) -> list[Path]:
-        """Return the full Path of every file to expose, in order.
+        """Return the full `Path` of every file to expose, in order.
 
         Called once from `__init__` after `root` has been validated.
         Every returned path must be under `root`; construction raises

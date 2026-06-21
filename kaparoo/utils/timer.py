@@ -30,7 +30,7 @@ class SpanRecord(TypedDict):
     lap) or by `measure` (the span of a wrapped block).
 
     Attributes:
-        label: The span's name. May carry a " (N)" suffix when produced
+        label: The span's name. May carry a `" (N)"` suffix when produced
             under `on_same_label="separate"`.
         duration: Length of this span, in the timer's `unit` and rounded
             by `ndigits` if given. For `lap`, the time since the previous
@@ -78,8 +78,8 @@ class Timer(ContextDecorator):
         """Initialize the timer with a reporting unit and optional precision.
 
         Args:
-            unit: The time unit for reported values. One of "s", "ms", "us",
-                "ns". Defaults to "s".
+            unit: The time unit for reported values. One of `"s"`, `"ms"`,
+                `"us"`, `"ns"`. Defaults to `"s"`.
             ndigits: The number of decimal places to round reported values to.
                 If None, no rounding is applied. Defaults to None.
 
@@ -236,7 +236,7 @@ class Timer(ContextDecorator):
             self._started = False
 
     def _finalize(self) -> None:
-        """Store the elapsed time in `elapsed`."""
+        """Capture the block's final elapsed duration on `with`-block exit."""
         elapsed_ns = time.perf_counter_ns() - self._start_time
         self._elapsed = self._format_time(elapsed_ns)
 
@@ -290,15 +290,15 @@ class SpanTimer(Timer):
         """Initialize the span timer.
 
         Args:
-            unit: The time unit for reported values. One of "s", "ms", "us",
-                "ns". Defaults to "s".
+            unit: The time unit for reported values. One of `"s"`, `"ms"`,
+                `"us"`, `"ns"`. Defaults to `"s"`.
             ndigits: The number of decimal places to round reported values
                 to. If None, no rounding is applied. Defaults to None.
             on_same_label: Behavior when a label passed to `lap` has been
-                used before in the same `with` block. "merge" records the
+                used before in the same `with` block. `"merge"` records the
                 label verbatim so duplicates aggregate in `summary`,
-                "separate" appends a " (N)" suffix so repeats stay distinct,
-                "reject" raises `ValueError`. Defaults to "merge".
+                `"separate"` appends a `" (N)"` suffix so repeats stay distinct,
+                `"reject"` raises `ValueError`. Defaults to `"merge"`.
 
         Raises:
             ValueError: If `unit` or `on_same_label` is not one of the
@@ -335,10 +335,6 @@ class SpanTimer(Timer):
         not included. Each record's `duration` is already rounded by
         `ndigits` (when set); this property sums those rounded values and
         rounds the sum once more.
-
-        Returns:
-            A mapping from label to total `duration` for that label, in the
-            timer's `unit`.
         """
         grouped: dict[str, float] = defaultdict(float)
         for record in self._records:
@@ -412,7 +408,7 @@ class SpanTimer(Timer):
 
         Raises:
             RuntimeError: If the timer has not been started, or is paused.
-            ValueError: If `on_same_label` is "reject" and `label` has
+            ValueError: If `on_same_label` is `"reject"` and `label` has
                 already been used in this `with` block.
         """
         self._ensure_started()
@@ -448,7 +444,7 @@ class SpanTimer(Timer):
         Raises:
             RuntimeError: If the timer has not been started, or is paused on
                 entry.
-            ValueError: If `on_same_label` is "reject" and `label` has
+            ValueError: If `on_same_label` is `"reject"` and `label` has
                 already been used in this `with` block.
         """
         self._ensure_started()

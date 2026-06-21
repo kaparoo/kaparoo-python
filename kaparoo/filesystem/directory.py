@@ -243,7 +243,7 @@ def make_dirs(
 
 
 def dir_empty_unsafe(path: StrPath) -> bool:
-    """Check if a directory is empty, skipping the existence check.
+    """Test whether a directory is empty, skipping the existence check.
 
     The caller must guarantee `path` is an existing directory; otherwise the
     underlying `os.scandir` raises (`FileNotFoundError`, `NotADirectoryError`).
@@ -253,7 +253,7 @@ def dir_empty_unsafe(path: StrPath) -> bool:
 
 
 def dirs_empty_unsafe(paths: StrPaths, *, root: StrPath | None = None) -> bool:
-    """Check if directories are empty, skipping existence checks.
+    """Test whether directories are empty, skipping existence checks.
 
     Each path carries the same caller obligation as `dir_empty_unsafe`.
     """
@@ -261,7 +261,7 @@ def dirs_empty_unsafe(paths: StrPaths, *, root: StrPath | None = None) -> bool:
 
 
 def dir_empty(path: StrPath) -> bool:
-    """Check if a directory is empty.
+    """Test whether a directory is empty.
 
     Args:
         path: The directory path to check.
@@ -278,7 +278,7 @@ def dir_empty(path: StrPath) -> bool:
 
 
 def dirs_empty(paths: StrPaths, *, root: StrPath | None = None) -> bool:
-    """Check if directories are empty.
+    """Test whether directories are empty.
 
     Args:
         paths: A sequence of directory paths to check.
@@ -299,7 +299,7 @@ def dirs_empty(paths: StrPaths, *, root: StrPath | None = None) -> bool:
 
 
 def dir_not_empty_unsafe(path: StrPath) -> bool:
-    """Check if a directory is not empty, skipping the existence check.
+    """Test whether a directory is not empty, skipping the existence check.
 
     Same caller obligation as `dir_empty_unsafe`.
     """
@@ -307,7 +307,7 @@ def dir_not_empty_unsafe(path: StrPath) -> bool:
 
 
 def dirs_not_empty_unsafe(paths: StrPaths, *, root: StrPath | None = None) -> bool:
-    """Check if directories are not empty, skipping existence checks.
+    """Test whether directories are not empty, skipping existence checks.
 
     Each path carries the same caller obligation as `dir_empty_unsafe`.
     """
@@ -315,7 +315,7 @@ def dirs_not_empty_unsafe(paths: StrPaths, *, root: StrPath | None = None) -> bo
 
 
 def dir_not_empty(path: StrPath) -> bool:
-    """Check if a directory is not empty.
+    """Test whether a directory is not empty.
 
     Args:
         path: The directory path to check.
@@ -332,7 +332,7 @@ def dir_not_empty(path: StrPath) -> bool:
 
 
 def dirs_not_empty(paths: StrPaths, *, root: StrPath | None = None) -> bool:
-    """Check if directories are not empty.
+    """Test whether directories are not empty.
 
     Args:
         paths: A sequence of directory paths to check.

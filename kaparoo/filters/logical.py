@@ -64,7 +64,7 @@ class NaryLogicalFilter(LogicalFilter, ABC):
 @register_filter("and")
 @dataclass(frozen=True, repr=False)
 class AndFilter(NaryLogicalFilter):
-    """A filter matching strings that satisfy ALL of `children` (logical conjunction)."""
+    """A filter matching strings that satisfy ALL of `children`."""
 
     @override
     def matches(self, target: str) -> bool:
@@ -74,7 +74,7 @@ class AndFilter(NaryLogicalFilter):
 @register_filter("or")
 @dataclass(frozen=True, repr=False)
 class OrFilter(NaryLogicalFilter):
-    """A filter matching strings that satisfy AT LEAST ONE of `children` (disjunction)."""
+    """A filter matching strings that satisfy AT LEAST ONE of `children`."""
 
     @override
     def matches(self, target: str) -> bool:
@@ -84,7 +84,7 @@ class OrFilter(NaryLogicalFilter):
 @register_filter("not")
 @dataclass(frozen=True, repr=False)
 class NotFilter(LogicalFilter):
-    """A filter matching strings that do NOT satisfy `child` (logical negation)."""
+    """A filter matching strings that do NOT satisfy `child`."""
 
     child: Filter
 

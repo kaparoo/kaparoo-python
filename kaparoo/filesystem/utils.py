@@ -62,16 +62,16 @@ def stringify_path(
 ) -> str:
     """Convert a path to a string and optionally trim shared head/tail parts.
 
-    The result is normalized to POSIX form (`/` separators) on every platform;
-    a path left with no components (e.g. trimmed against itself) stringifies to
-    `"."`.
-
     Args:
         path: The path to be converted to a string.
         after: The leading base path to make `path` relative to. If provided,
             returns only the part of `path` after `after`. Defaults to None.
         before: The trailing path to trim from `path`. If provided, returns
             only the part of `path` before `before`. Defaults to None.
+
+    Returns:
+        A POSIX-form string (`/` separators on every platform); `"."` when
+        nothing remains after trimming.
 
     Raises:
         ValueError: If `path` does not start with `after`,
@@ -86,15 +86,16 @@ def stringify_paths(
 ) -> list[str]:
     """Convert a sequence of paths to strings and optionally trim shared parts.
 
-    Each result is normalized to POSIX form (`/` separators) on every platform;
-    see `stringify_path` for the per-path behavior.
-
     Args:
         paths: The sequence of paths to be converted to strings.
         after: The leading base path to make each path relative to. If provided,
             returns only the part of each path after `after`. Defaults to None.
         before: The trailing path to trim from each path. If provided, returns
             only the part of each path before `before`. Defaults to None.
+
+    Returns:
+        A sequence of POSIX-form strings (`/` separators on every platform);
+        `"."` when nothing remains after trimming.
 
     Raises:
         ValueError: If any of `paths` does not start with `after`,

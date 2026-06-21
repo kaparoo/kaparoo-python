@@ -354,7 +354,7 @@ def _scan_under(
 def _ignores_extra(
     name: str, *, allow_extra: bool | Filter, extra_level: bool | Filter
 ) -> bool:
-    """Whether the directory's `allow_extra` or the blanket `extra_level` ignores `name`.
+    """Test whether `allow_extra` or the blanket `extra_level` ignores `name`.
 
     For each setting, `True` / `False` ignore all / none and a `Filter` ignores
     only matching names; the two are combined with OR.
@@ -386,7 +386,8 @@ def _scan_entries(
     setting) ignores a candidate matching no entry, it is kept out of `seen`,
     so it (and its subtree) is ignored rather than reported `unexpected`; each
     matched `Directory` is descended with its own `allow_extra` but the same
-    `extra_level`, so a strict subdirectory stays strict unless `extra_level` overrides it.
+    `extra_level`, so a strict subdirectory stays strict unless `extra_level`
+    overrides it.
 
     Args:
         entries: The leaf entries expected at or below `parent` (flattened).

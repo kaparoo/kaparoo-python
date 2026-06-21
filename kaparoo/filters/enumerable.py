@@ -147,12 +147,12 @@ class OneOfFilter(Expandable):
 
 
 def _axis_repr(axis: tuple[object, ...]) -> str:
-    """Render a materialized axis, compacting an integer arithmetic
-    progression (three or more terms) to the equivalent `range(...)`.
+    """Render a materialized axis, compacting an integer progression to `range(...)`.
 
-    `range` is a valid axis input, so the compact form re-creates the same
-    axis. Anything else -- too short, irregular, or non-integer -- is shown
-    as its plain tuple.
+    An arithmetic progression of three or more integers becomes the
+    equivalent `range(...)` (a valid axis input, so it re-creates the same
+    axis); anything too short, irregular, or non-integer shows as its plain
+    tuple.
     """
     if len(axis) >= 3 and all(type(v) is int for v in axis):
         values = cast("tuple[int, ...]", axis)

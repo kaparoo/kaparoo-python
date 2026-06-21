@@ -150,10 +150,11 @@ class TransformedSequence[T_in, M_in, T_out = T_in, M_out = M_in](
 
     @override
     def get_meta(self, index: int) -> M_out:
-        """Pass `source`'s metadata through unchanged (valid only when `M_out == M_in`)."""
-        # Passthrough -- correct only when M_out == M_in. A subclass with a
-        # different M_out MUST override this; the cast cannot catch a missing
-        # override, since generics are erased at runtime.
+        """Pass `source`'s metadata through unchanged.
+
+        A subclass whose `M_out` differs from `M_in` must override this.
+        """
+        # The cast cannot catch a missing override -- generics are erased at runtime.
         return cast("M_out", self._source.get_meta(index))
 
 
