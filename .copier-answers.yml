@@ -1,15 +1,19 @@
 # Changes here will be overwritten by Copier; do not edit by hand.
 # Run `copier update` to refresh from the template.
-_commit: v1.0.2
+_commit: v1.5.2
 _src_path: C:/Users/kaparoo/dev/kaparoo/python-project-template
 author_email: kaparoo2001@gmail.com
 author_name: Jaewoo Park
+coverage_fail_under: 95
 github_username: kaparoo
+include_todo: true
 is_library: true
 license_year: 2023
 package_name: kaparoo
 project_description: Personally common and useful Python features
 project_name: kaparoo-python
 python_version: '3.14'
+release_automation: github-oidc
 repo_name: kaparoo-python
 use_pytest: true
+use_testpypi: true
