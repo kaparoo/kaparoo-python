@@ -234,6 +234,18 @@ def test_reserve_paths_exist_ok_and_make_parents(tmp_path: Path, tmp_file: Path)
     assert fresh.parent.is_dir()
 
 
+def test_reserve_paths_make_parents_not_rolled_back_on_conflict(
+    tmp_path: Path, tmp_file: Path
+):
+    # Fail-fast with no rollback (documented to match `make_dirs`): a parent
+    # directory created for an earlier path is left in place even when a later,
+    # already-occupied path makes the batch raise.
+    fresh = tmp_path / "created" / "new.bin"
+    with pytest.raises(FileExistsError):
+        reserve_paths([fresh, tmp_file], make_parents=True)
+    assert fresh.parent.is_dir()  # the first path's side effect survives
+
+
 # --- ensure_file_extension -------------------------------------------------
 
 

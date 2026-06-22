@@ -218,6 +218,35 @@ def test_ensure_dirs_exist(
     assert result == expected
 
 
+def test_ensure_paths_exist_stringify(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    paths = ["file1.txt", "file2.txt", "file3.png", "sub_dir", "sub_dir/sub_file.txt"]
+    result = ensure_paths_exist(paths, root=fs.root, stringify=True)
+    expected = [fs.file1, fs.file2, fs.file3, fs.sub_dir, fs.sub_file]
+    assert result == [_stringify(p) for p in expected]
+    assert all(isinstance(p, str) for p in result)
+
+
+def test_ensure_files_exist_stringify(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    paths = ["file1.txt", "file2.txt", "file3.png", "sub_dir/sub_file.txt"]
+    result = ensure_files_exist(paths, root=fs.root, stringify=True)
+    expected = [fs.file1, fs.file2, fs.file3, fs.sub_file]
+    assert result == [_stringify(p) for p in expected]
+    assert all(isinstance(p, str) for p in result)
+
+
+def test_ensure_dirs_exist_stringify(
+    tmp_path: Path, tmp_dir: Path, tmp_filesystem: TmpFilesystem
+):
+    fs = tmp_filesystem
+    paths = ["dir", "root_dir", "root_dir/sub_dir"]
+    result = ensure_dirs_exist(paths, root=tmp_path, stringify=True)
+    expected = [tmp_dir, fs.root, fs.sub_dir]
+    assert result == [_stringify(p) for p in expected]
+    assert all(isinstance(p, str) for p in result)
+
+
 def test_ensure_dirs_exist_make_accepts_int_mode(tmp_path: Path):
     # Mirrors `test_ensure_dir_exists_make_accepts_int_mode` for the bulk
     # variant; covers the `_validate_mode(make)` call site at module level.

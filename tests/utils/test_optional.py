@@ -67,6 +67,30 @@ def test_unwrap_or_factories():
     ]
 
 
+def test_factory_not_called_on_present_value():
+    # Lazy-factory contract: a present value short-circuits, so the factory --
+    # and any side effect it carries -- never runs.
+    calls = 0
+
+    def factory() -> str:
+        nonlocal calls
+        calls += 1
+        return "fallback"
+
+    assert factory_if_none("value", factory) == "value"
+    assert unwrap_or_factory("value", factory) == "value"
+    assert unwrap_or_factories(["a", "b"], factory) == ["a", "b"]
+    assert calls == 0
+
+    # The factory still fires, once per None, when a fallback is actually needed.
+    assert unwrap_or_factories([None, "b", None], factory) == [
+        "fallback",
+        "b",
+        "fallback",
+    ]
+    assert calls == 2
+
+
 def test_optional_helpers_reexported_from_package():
     from kaparoo import utils
 

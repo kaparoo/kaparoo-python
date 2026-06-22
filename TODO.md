@@ -29,17 +29,4 @@ Surfaced by a source review; none are bugs.
 
 ---
 
-## ✅ Test completeness (low priority)
-
-Behaviors with full line coverage but no value-asserting test:
-
-- `ChildCount(only=...)` / `TreeSize` symlink-follow semantics.
-- The `stringify=True` branch of the bulk `ensure_*` / `dirs_*` helpers.
-- `reserve_paths`' documented non-rollback of `make_parents` side effects.
-- `Quantile` at a non-endpoint `q` (e.g. `0.9`) and `Std` merge via `Aggregator`.
-- The lazy-factory contract of the `optional` helpers (factory not called on
-  the present-value path).
-
----
-
 *Last updated: 2026-06-22*

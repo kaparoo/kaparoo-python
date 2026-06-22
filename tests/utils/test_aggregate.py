@@ -163,6 +163,14 @@ def test_quantile_half_equals_median():
     )
 
 
+def test_quantile_non_endpoint_value():
+    # A non-endpoint, non-median q: the smallest value whose cumulative weight
+    # reaches 90% of the total. Ten unit-weight values 1..10 -> 9.0.
+    q = Quantile(0.9)
+    values = [float(v) for v in range(1, 11)]
+    assert q.result(_accumulate(q, values)) == 9.0
+
+
 def test_quantile_out_of_range_raises():
     with pytest.raises(ValueError, match=r"q must be in \[0, 1\]"):
         Quantile(1.5)
@@ -313,6 +321,25 @@ def test_var_std_nest_via_aggregator():
         run.merge(ep)
 
     flat = Var()
+    flat_state = flat.identity()
+    for epoch in epochs:
+        for value, n in epoch:
+            flat_state = flat.step(flat_state, value, n)
+    assert run.compute()["x"] == pytest.approx(flat.result(flat_state))
+
+
+def test_std_merge_via_aggregator():
+    # Std merged across epochs through `Aggregator` (which calls the inherited
+    # Var.merge) equals the flat std over every sample.
+    epochs = [[(1.0, 2), (3.0, 1)], [(2.0, 1), (5.0, 2)]]
+    run = Aggregator(Std())
+    for epoch in epochs:
+        ep = run.fresh()
+        for value, n in epoch:
+            ep.update({"x": value}, weight=n)
+        run.merge(ep)
+
+    flat = Std()
     flat_state = flat.identity()
     for epoch in epochs:
         for value, n in epoch:

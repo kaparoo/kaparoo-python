@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import platform
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -93,6 +94,40 @@ class TestChildCount:
         }
         assert Condition.from_dict(only_files.to_dict()) == only_files
 
+    @pytest.mark.skipif(
+        platform.system() == "Windows",
+        reason="symlink creation requires privilege on Windows",
+    )
+    def test_only_follows_symlinks(self, tmp_path: Path) -> None:
+        # `only="files"` / `"dirs"` follow the link: a symlink to a file counts
+        # as a file, a symlink to a directory as a directory.
+        d = tmp_path / "d"
+        d.mkdir()
+        target_file = make_file(tmp_path / "tf", size=1)
+        target_dir = tmp_path / "td"
+        target_dir.mkdir()
+        (d / "link_file").symlink_to(target_file)
+        (d / "link_dir").symlink_to(target_dir, target_is_directory=True)
+
+        assert ChildCount(min=1, max=1, only="files").check(d)  # the file link
+        assert ChildCount(min=1, max=1, only="dirs").check(d)  # the dir link
+        assert ChildCount(min=2, max=2).check(d)  # both, unrestricted
+
+    @pytest.mark.skipif(
+        platform.system() == "Windows",
+        reason="symlink creation requires privilege on Windows",
+    )
+    def test_broken_symlink_counted_only_by_default(self, tmp_path: Path) -> None:
+        # A broken symlink is neither a regular file nor a directory, so the
+        # `only` filters skip it; only the unrestricted default counts it.
+        d = tmp_path / "d"
+        d.mkdir()
+        (d / "dangling").symlink_to(tmp_path / "nonexistent")
+
+        assert ChildCount(min=1, max=1).check(d)  # counted by the default
+        assert ChildCount(max=0, only="files").check(d)  # not a file
+        assert ChildCount(max=0, only="dirs").check(d)  # not a directory
+
 
 class TestTreeSize:
     def test_sums_file_sizes_recursively(self, tmp_path: Path) -> None:
@@ -112,6 +147,30 @@ class TestTreeSize:
         ts = TreeSize(max=1000)
         assert ts.to_dict() == {"kind": "tree_size", "max": 1000}
         assert Condition.from_dict(ts.to_dict()) == ts
+
+    @pytest.mark.skipif(
+        platform.system() == "Windows",
+        reason="symlink creation requires privilege on Windows",
+    )
+    def test_follows_file_symlink_but_not_dir_symlink(self, tmp_path: Path) -> None:
+        # A symlink to a regular file is followed and its target's bytes are
+        # summed; a symlinked directory is not descended, so its contents are
+        # excluded from the total.
+        root = tmp_path / "root"
+        root.mkdir()
+        make_file(root / "real", size=4)
+
+        target_file = make_file(tmp_path / "target.bin", size=10)
+        (root / "link_to_file").symlink_to(target_file)
+
+        other_dir = tmp_path / "other"
+        other_dir.mkdir()
+        make_file(other_dir / "hidden", size=100)
+        (root / "link_to_dir").symlink_to(other_dir, target_is_directory=True)
+
+        # 4 (real) + 10 (followed file link); the 100 bytes behind the dir
+        # link are not descended.
+        assert TreeSize(min=14, max=14).check(root)
 
 
 class TestApplicability:
