@@ -14,9 +14,6 @@ Surfaced by a source review; none are bugs.
   callable-bearing reductions.
 - `Aggregator.update` adds `weight` to the grand total even for an empty
   `values={}` batch. Skip the bump, or document it.
-- `kaparoo.filesystem.make_dirs` with a duplicated path and `exist_ok=False`
-  leaves a partial side effect (the second `mkdir` fails after the first
-  created it); the validate-first pass cannot catch duplicates. Dedup or note.
 - `kaparoo.filters.TemplateFilter.matches` materializes the full cartesian
   product into a `frozenset` on first call -- a memory pitfall for very large
   axes (`expand()` stays lazy). Document the eager-cache cost.

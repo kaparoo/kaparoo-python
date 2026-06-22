@@ -10,6 +10,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `kaparoo.filesystem.make_dirs` now detects a duplicated path in its
+  validate-first pass and raises `FileExistsError` *before* creating anything,
+  under strict-create (`exist_ok=False`, `clean=False`). Previously the second
+  occurrence's `mkdir` failed only after the first had already created the
+  directory, leaving a partial side effect. A repeat stays harmless (idempotent)
+  under `exist_ok=True` or `clean=True` and is still accepted there.
 - `kaparoo.filesystem.wrap_path` / `wrap_paths` now reject a Windows
   drive-relative `prepend` target or `append` value (e.g. `C:foo` -- a drive
   with no root) with `ValueError`, instead of silently discarding the other

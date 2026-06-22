@@ -171,6 +171,28 @@ def test_make_dirs_rejects_non_directory_before_creating(
     assert not ok.exists()  # nothing created before the bad entry was rejected
 
 
+def test_make_dirs_rejects_duplicate_before_creating(tmp_path: Path):
+    # A duplicated path under strict-create (exist_ok=False, clean=False) is
+    # caught in the validate-first pass, before any directory is created -- so
+    # the second `mkdir` no longer fails only after the first created it.
+    target = tmp_path / "dup"
+    with pytest.raises(FileExistsError, match="duplicate path"):
+        make_dirs([target, target])
+    assert not target.exists()  # nothing created before the duplicate was rejected
+
+
+def test_make_dirs_allows_duplicate_when_idempotent(tmp_path: Path):
+    # A repeat is harmless under exist_ok or clean (both make `mkdir`
+    # idempotent), so duplicates are accepted there rather than rejected.
+    target = tmp_path / "dup"
+    assert make_dirs([target, target], exist_ok=True) == [target, target]
+    assert target.is_dir()
+
+    other = tmp_path / "dup2"
+    assert make_dirs([other, other], clean=True) == [other, other]
+    assert other.is_dir()
+
+
 def test_make_dirs_clean_validates_before_wiping(tmp_path: Path, tmp_file: Path):
     # A bad entry later in the list must not cause earlier directories to be
     # wiped: every path is validated before any destructive operation runs.

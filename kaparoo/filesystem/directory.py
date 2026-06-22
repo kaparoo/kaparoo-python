@@ -214,26 +214,46 @@ def make_dirs(
             any path exists but is not a directory, or `clean` is True and
             any path is a symlink.
         ValueError: If `root` is provided and any of the paths are absolute.
+        FileExistsError: If `exist_ok` is False, `clean` is False, and `paths`
+            contains a duplicate (caught before any directory is created).
         OSError: If `exist_ok` is False, `clean` is False, and any of the
             paths already exist.
 
     Note:
-        Every path is validated (the non-directory / symlink checks above)
-        *before* any directory is wiped or created, so a deterministically
-        bad entry -- e.g. a file in the list -- fails without partially
-        cleaning earlier entries. Creation/cleanup is otherwise per-path and
-        not transactional, so a runtime failure (a race, a permission error)
-        partway through can still leave earlier entries created or cleaned.
+        Every path is validated (the non-directory / symlink checks above, and
+        the duplicate check under strict-create) *before* any directory is
+        wiped or created, so a deterministically bad entry -- e.g. a file in
+        the list, or a duplicated path under `exist_ok=False` -- fails without
+        partially creating or cleaning earlier entries. Creation/cleanup is
+        otherwise per-path and not transactional, so a runtime failure (a race,
+        a permission error) partway through can still leave earlier entries
+        created or cleaned.
     """
     _validate_mode(mode)
     paths = _join_root_if_provided(paths, root)
     directories = [Path(p) for p in paths]
+
+    # Catch a duplicated path in the validate-first pass: with exist_ok=False
+    # and no clean, the second occurrence's `mkdir` would fail only after the
+    # first already created it, leaving a partial side effect. A repeat is
+    # harmless (idempotent) under `exist_ok` or `clean`, so the check is scoped
+    # to the strict-create case.
+    if not exist_ok and not clean:
+        seen: set[Path] = set()
+        for directory in directories:
+            if directory in seen:
+                msg = f"duplicate path with exist_ok=False: {directory}"
+                raise FileExistsError(msg)
+            seen.add(directory)
+
     for directory in directories:
         _ensure_directory_target(directory, clean=clean)
+
     for directory in directories:
         if clean and directory.is_dir():
             shutil.rmtree(directory)
         directory.mkdir(mode=mode, parents=True, exist_ok=exist_ok)
+
     return stringify_paths(directories) if stringify else directories
 
 
