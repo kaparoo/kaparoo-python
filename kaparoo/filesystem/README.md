@@ -123,7 +123,9 @@ validated.
 
 `stringify_path(s)` converts to forward-slash strings, optionally
 trimming a leading or trailing portion. `wrap_path(s)` prepends and/or
-appends path components, rejecting absolute inputs where ambiguous.
+appends path components, rejecting absolute or drive-relative inputs where
+ambiguous (e.g. a `C:foo` prepend target, which would otherwise be silently
+discarded).
 
 ```python
 from pathlib import Path

@@ -438,7 +438,9 @@ locate_map(spec, "/data").items()      # iterate (path, nodes) tuples instead
 ```
 
 `locate` streams; `locate_map` materializes the full mapping before
-returning (its nodes are distinct, in spec-traversal order).
+returning (its nodes are distinct, in spec-traversal order). Both visit paths
+in a deterministic order — depth-first, each directory's entries sorted by
+name — independent of the OS directory order.
 
 `exclude=` drops specific paths from the results — e.g. punching holes in a
 nested `Template` product, which the name-level `Without` cannot do because
