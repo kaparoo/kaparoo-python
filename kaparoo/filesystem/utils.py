@@ -183,9 +183,10 @@ def wrap_path(
     if append is not None and _is_anchored(append):
         msg = f"cannot append an absolute or drive-relative path: {append}"
         raise ValueError(msg)
-    result = Path(path) if prepend is None else Path(prepend, path)
-    if append is not None:
-        result = result / append
+
+    parts = [p for p in (prepend, path, append) if p is not None]
+    result = Path(*parts)
+
     return stringify_path(result) if stringify else result
 
 
