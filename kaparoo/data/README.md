@@ -102,6 +102,34 @@ combined = ConcatSequence(train_a, train_b, train_c)
 len(combined)  # == len(train_a) + len(train_b) + len(train_c)
 ```
 
+#### Recipe: per-source windows (window first, then concat)
+
+When each source is itself a sequence of frames — a dataset of videos, audio
+clips, or time-series — and you want fixed-size *windows*, compose in this
+order so a window never straddles two sources:
+
+```python
+from kaparoo.data.sequences import ConcatSequence
+
+# ✓ Each clip stays within one video: window each source, then concatenate.
+clips = ConcatSequence(*(ClipWindow(v, size=16, step=8) for v in videos))
+
+# ✗ Reversed: the last clip spans the video_a -> video_b boundary.
+# WindowedSequence(ConcatSequence(*videos), size=16, step=8)
+```
+
+`ClipWindow` here is a [`WindowedSequence`](#windowedsequence) subclass.
+`WindowedSequence` derives its length from its own source, so windowing each
+video **before** concatenation keeps every clip inside one video;
+`ConcatSequence` then flattens the per-video clip lists into one dataset
+(O(log N) lookup over the videos). All sources must share the same `T` / `M`,
+which per-video clip views naturally do.
+
+`ConcatSequence` does not expose which source a global index fell in, so carry
+the provenance — e.g. `(video_id, start_frame)` — in each window's metadata.
+That is exactly what `WindowedSequence`'s abstract `get_meta` is for: the
+subclass decides how per-frame `M_in` becomes window `M_out`.
+
 ### `TransformedSequence`
 
 A lazy view that applies a `transform` callable to each item of
