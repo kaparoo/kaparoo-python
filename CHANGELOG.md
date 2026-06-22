@@ -16,6 +16,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Previously only siblings within a level were sorted; the order across sibling
   subtrees followed the OS directory order, so an open-depth match could vary
   by filesystem. `validate`'s report was already sorted and is unchanged.
+- `kaparoo.utils.aggregate.Aggregator.update` no longer adds `weight` to the
+  grand total for an empty `values={}` batch -- with nothing folded in, the
+  call contributes no weight (the `weight` property counts weight actually
+  folded in). A non-empty update is unchanged.
 
 ### Fixed
 

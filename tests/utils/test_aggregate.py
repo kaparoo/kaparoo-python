@@ -391,6 +391,16 @@ def test_update_nonpositive_weight_raises():
         Aggregator().update({"x": 1.0}, weight=0)
 
 
+def test_update_empty_values_does_not_change_weight():
+    # An empty batch folds in nothing, so it must not bump the grand total
+    # (which counts weight actually folded in) or touch any metric.
+    agg = Aggregator(Mean())
+    agg.update({"x": 1.0}, weight=2)
+    agg.update({}, weight=10)  # no values -> no contribution
+    assert agg.weight == 2.0
+    assert agg.compute() == {"x": 1.0}
+
+
 def test_reset_clears_state():
     agg = Aggregator(Mean())
     agg.update({"x": 1.0}, weight=2)

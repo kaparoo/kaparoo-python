@@ -578,7 +578,9 @@ class Aggregator:
         """Fold one sample of named `values` in, each carrying `weight`.
 
         Args:
-            values: Metric name -> value for this sample (e.g. one batch).
+            values: Metric name -> value for this sample (e.g. one batch). An
+                empty mapping is a no-op: nothing is folded and `weight` is not
+                added to the grand total.
             weight: Shared weight for every value (e.g. the batch size).
                 Defaults to 1.0.
 
@@ -598,7 +600,10 @@ class Aggregator:
                 states[key] = reduction.identity()
             states[key] = reduction.step(states[key], value, weight)
 
-        self._weight += weight
+        if values:
+            # An empty batch folds in nothing, so it adds no weight to the grand
+            # total (which counts weight actually folded in).
+            self._weight += weight
 
     def compute(self) -> dict[str, float]:
         """Project every accumulated metric to its final scalar.
@@ -677,11 +682,12 @@ class Aggregator:
     def weight(self) -> float:
         """Total weight folded in across every `update` (and absorbed via `merge`).
 
-        A grand total over every call, independent of which metric keys each
-        call carried -- so when updates have heterogeneous key sets it need
-        not equal any single metric's effective weight. A weighted reduction
-        already tracks its own per-metric weight inside its state (`Mean`'s
-        `total_weight`, `Var` / `Std`'s `weight`); unweighted reductions
-        (`Sum`, `Min`, `Max`, `Last`) discard weight entirely.
+        A grand total over every update that folds in at least one value (an
+        empty `values={}` update contributes nothing), independent of which
+        metric keys each call carried -- so when updates have heterogeneous key
+        sets it need not equal any single metric's effective weight. A weighted
+        reduction already tracks its own per-metric weight inside its state
+        (`Mean`'s `total_weight`, `Var` / `Std`'s `weight`); unweighted
+        reductions (`Sum`, `Min`, `Max`, `Last`) discard weight entirely.
         """
         return self._weight
