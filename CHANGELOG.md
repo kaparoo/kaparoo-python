@@ -8,6 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-06-22
+
 ### Changed
 
 - `kaparoo.filesystem.hierarchy.locate` now yields in a fully deterministic
