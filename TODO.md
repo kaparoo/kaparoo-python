@@ -14,9 +14,6 @@ Surfaced by a source review; none are bugs.
   callable-bearing reductions.
 - `Aggregator.update` adds `weight` to the grand total even for an empty
   `values={}` batch. Skip the bump, or document it.
-- `kaparoo.filters.TemplateFilter.matches` materializes the full cartesian
-  product into a `frozenset` on first call -- a memory pitfall for very large
-  axes (`expand()` stays lazy). Document the eager-cache cost.
 - `kaparoo.filesystem.hierarchy.locate` / `validate` yield in only
   locally-sorted order (siblings sorted; sibling-subtree order follows
   `os.walk`). The *report* is sorted, so only the lazy stream order is

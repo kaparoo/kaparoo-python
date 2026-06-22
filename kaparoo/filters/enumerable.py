@@ -180,6 +180,10 @@ class TemplateFilter(Frozen, Expandable):
     lazy, so a template whose field count does not match the axes surfaces
     the error from `expand`, not at construction.
 
+    `expand` streams names lazily, but `matches` eagerly materializes and
+    caches the whole product as a `frozenset` on first use (see `matches`);
+    for very large axes, prefer `expand` and avoid `matches`.
+
     Args:
         template: A `str.format` string with one positional field per axis.
         *axes: One or more iterables of values; names are drawn from their
@@ -212,6 +216,14 @@ class TemplateFilter(Frozen, Expandable):
 
     @override
     def matches(self, target: str) -> bool:
+        """Whether `target` is one of the enumerated names.
+
+        The first call materializes the **entire** cartesian product of `axes`
+        into a `frozenset` and caches it for the filter's lifetime, trading
+        O(product size) memory for O(1) lookups after. For very large axes this
+        eager cache is a memory pitfall -- `expand()` stays lazy, so prefer it
+        when streaming the names once is enough and you never call `matches`.
+        """
         # Cache the expanded name set on first match. This is a frozen value
         # object, so stash it via `object.__setattr__` rather than a field.
         names = getattr(self, "_matchable", None)

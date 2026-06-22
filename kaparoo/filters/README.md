@@ -126,6 +126,11 @@ reliably enumerable). `Template`'s axes are materialized to tuples at
 construction; formatting is lazy, so a field-count mismatch surfaces from
 `expand()`, not the constructor.
 
+`Template.expand()` streams names lazily, but `Template.matches()` eagerly
+builds and caches the full cartesian product as a `frozenset` on first call
+(O(product size) memory, O(1) lookups after). For very large axes, prefer
+`expand()` and avoid `matches()`.
+
 `Without(base, *excluded)` is the enumerable form of
 `And(base, Not(...))` — it punches holes in an enumerable set, both
 matching and expanding `base` minus anything the `excluded` filters match
