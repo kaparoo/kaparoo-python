@@ -42,7 +42,9 @@ def _walk_depths(
 
     Yields:
         `(path, depth)` for each non-excluded entry, `depth` counted from 1 at
-        `parent`'s direct children.
+        `parent`'s direct children. Each directory's entries are yielded in
+        sorted name order and subdirectories are descended in that same order,
+        so the stream is deterministic regardless of the OS directory order.
     """
     has_max_depth = max_depth is not None
     has_excluder = excluder is not None
@@ -63,11 +65,14 @@ def _walk_depths(
 
             yield (candidate, depth)
 
-        if excluded:
-            dirnames[:] = [d for d in dirnames if d not in excluded]
-
         if has_max_depth and depth >= max_depth:
             dirnames.clear()  # prune deeper levels (Path.walk honors the edit)
+        else:
+            # Descend in the same sorted order the emission used, so the whole
+            # stream is deterministic -- not just each level. Path.walk honors
+            # an in-place reorder of `dirnames`; this also drops the excluded
+            # subdirectories.
+            dirnames[:] = sorted(d for d in dirnames if d not in excluded)
 
 
 def _entry_accepts(entry: Entry, candidate: Path, depth: int) -> bool:

@@ -59,8 +59,9 @@ def locate(
             leaf name and kind match it.
 
     Yields:
-        `(path, node)` in depth-first order, a path's overlapping nodes in
-        spec order.
+        `(path, node)` in depth-first traversal order with each directory's
+        entries sorted by name (deterministic regardless of the OS directory
+        order), a path's overlapping nodes in spec order.
 
     Raises:
         TypeError: If `root_as_top` and `tree`'s top is a `Group`.

@@ -42,6 +42,23 @@ class TestLocate:
             ("d/b.txt", File("b.txt")),
         }
 
+    def test_open_depth_stream_is_deterministic(self, tmp_path: Path) -> None:
+        # An open-depth (`depth=None`) entry makes one walk span several levels.
+        # Each directory's entries are emitted alphabetically *and*
+        # subdirectories are descended in sorted order, so the lazy stream is
+        # fully deterministic regardless of the OS directory order. `Path.walk`
+        # is top-down: a directory's own entries precede its subdirs' contents.
+        build(tmp_path, ["root/b/n.txt", "root/b/m.txt", "root/a/k.txt", "root/t.txt"])
+        spec = Directory("root", [File(Glob("*.txt"), depth=None)])
+        rel = [p.relative_to(tmp_path).as_posix() for p, _ in locate(spec, tmp_path)]
+        assert rel == [
+            "root",  # the top, matched as a child of tmp_path
+            "root/t.txt",  # root's own entries first (a/, b/ are dirs)
+            "root/a/k.txt",  # then a/ (sorted before b/)
+            "root/b/m.txt",  # then b/, entries sorted
+            "root/b/n.txt",
+        ]
+
     def test_type_must_agree(self, tmp_path: Path) -> None:
         (tmp_path / "x").mkdir()  # 'x' is a directory
         (tmp_path / "y").write_text("")  # 'y' is a file

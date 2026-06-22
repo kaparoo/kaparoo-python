@@ -8,6 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- `kaparoo.filesystem.hierarchy.locate` now yields in a fully deterministic
+  order: each directory's entries sorted by name *and* subdirectories descended
+  in that same order (so `locate_map`'s iteration order is deterministic too).
+  Previously only siblings within a level were sorted; the order across sibling
+  subtrees followed the OS directory order, so an open-depth match could vary
+  by filesystem. `validate`'s report was already sorted and is unchanged.
+
 ### Fixed
 
 - `kaparoo.filesystem.make_dirs` now detects a duplicated path in its
