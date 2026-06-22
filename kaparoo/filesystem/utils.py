@@ -124,6 +124,38 @@ def _is_anchored(path: StrPath) -> bool:
     return Path(path).anchor != ""
 
 
+def _ensure_appendable(append: StrPath | None) -> None:
+    """Reject an `append` that is absolute or drive-relative.
+
+    Loop-invariant across a `wrap_paths` batch (`append` is shared), so both
+    entry points run it once, outside the per-path work.
+
+    Raises:
+        ValueError: If `append` is given and is absolute or drive-relative.
+    """
+    if append is not None and _is_anchored(append):
+        msg = f"cannot append an absolute or drive-relative path: {append}"
+        raise ValueError(msg)
+
+
+def _wrap_path(path: StrPath, prepend: StrPath | None, append: StrPath | None) -> Path:
+    """Attach `prepend` / `append` to one `path` (the shared per-path core).
+
+    `append` must already be validated by `_ensure_appendable`; only the
+    prepend guard stays here, since it depends on the per-path `path`.
+
+    Raises:
+        ValueError: If `prepend` is given and `path` is absolute or
+            drive-relative (prepending to it would be silently discarded).
+    """
+    if prepend is not None and _is_anchored(path):
+        msg = f"cannot prepend to an absolute or drive-relative path: {path}"
+        raise ValueError(msg)
+
+    parts = [p for p in (prepend, path, append) if p is not None]
+    return Path(*parts)
+
+
 @overload
 def wrap_path(
     path: StrPath,
@@ -177,16 +209,8 @@ def wrap_path(
             drive-relative (carries a drive or root).
         ValueError: If `append` is given and is absolute or drive-relative.
     """
-    if prepend is not None and _is_anchored(path):
-        msg = f"cannot prepend to an absolute or drive-relative path: {path}"
-        raise ValueError(msg)
-    if append is not None and _is_anchored(append):
-        msg = f"cannot append an absolute or drive-relative path: {append}"
-        raise ValueError(msg)
-
-    parts = [p for p in (prepend, path, append) if p is not None]
-    result = Path(*parts)
-
+    _ensure_appendable(append)
+    result = _wrap_path(path, prepend, append)
     return stringify_path(result) if stringify else result
 
 
@@ -244,7 +268,8 @@ def wrap_paths(
             drive-relative (carries a drive or root).
         ValueError: If `append` is given and is absolute or drive-relative.
     """
-    paths = [wrap_path(path, prepend=prepend, append=append) for path in paths]
+    _ensure_appendable(append)
+    paths = [_wrap_path(path, prepend, append) for path in paths]
     return stringify_paths(paths) if stringify else paths
 
 
