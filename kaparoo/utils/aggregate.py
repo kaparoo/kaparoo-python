@@ -341,7 +341,10 @@ class Fold(UnweightedReduction[float]):
 
     Attributes:
         combine: A binary operator, associative and commutative with `initial`
-            as its unit (e.g. `(min, inf)`, `(operator.add, 0.0)`).
+            as its unit (e.g. `(min, inf)`, `(operator.add, 0.0)`). Because
+            `Aggregator.merge` compares reductions by value, pass a stable
+            callable (a module-level function), not a fresh lambda per instance,
+            when you rely on that equality -- this applies to `finalize` too.
         initial: The unit value, also reported for an empty stream.
         finalize: An optional transform applied to the accumulated scalar in
             `result` (e.g. a square root for an RMS-style fold).

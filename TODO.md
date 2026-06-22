@@ -7,11 +7,6 @@ entry once it lands.
 
 Surfaced by a source review; none are bugs.
 
-- `kaparoo.utils.aggregate.Aggregator.merge` rejects two trackers whose
-  reductions are equivalent but built from separate callables (`Fold`,
-  `Stored`) -- value-equality compares the lambdas. Documented for `Stored`;
-  extend the note to `Fold`, or key the compatibility check on `type` for
-  callable-bearing reductions.
 - `Aggregator.update` adds `weight` to the grand total even for an empty
   `values={}` batch. Skip the bump, or document it.
 
