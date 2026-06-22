@@ -233,11 +233,6 @@ def make_dirs(
     paths = _join_root_if_provided(paths, root)
     directories = [Path(p) for p in paths]
 
-    # Catch a duplicated path in the validate-first pass: with exist_ok=False
-    # and no clean, the second occurrence's `mkdir` would fail only after the
-    # first already created it, leaving a partial side effect. A repeat is
-    # harmless (idempotent) under `exist_ok` or `clean`, so the check is scoped
-    # to the strict-create case.
     if not exist_ok and not clean:
         seen: set[Path] = set()
         for directory in directories:
