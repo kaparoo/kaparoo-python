@@ -104,10 +104,34 @@ def test_wrap_path(tmp_path: Path):
 
 
 def test_wrap_path_rejects_absolute(cwd_path: Path, tmp_path: Path):
-    with pytest.raises(ValueError, match="cannot prepend to absolute path"):
+    with pytest.raises(ValueError, match="cannot prepend"):
         wrap_path(cwd_path, prepend=tmp_path)
-    with pytest.raises(ValueError, match="cannot append an absolute path"):
+    with pytest.raises(ValueError, match="cannot append"):
         wrap_path("dir", append=cwd_path)
+
+
+@pytest.mark.skipif(
+    platform.system() != "Windows",
+    reason="'C:foo' is drive-relative only on Windows; a plain name elsewhere",
+)
+def test_wrap_path_rejects_drive_relative(tmp_path: Path):
+    # `C:foo` carries a drive but no root, so joining silently discards the
+    # prefix (`Path('base', 'C:foo')` == `Path('C:foo')`). `os.path.isabs`
+    # reported it relative and missed this; the anchor check catches it.
+    with pytest.raises(ValueError, match="cannot prepend"):
+        wrap_path("C:foo", prepend=tmp_path)
+    with pytest.raises(ValueError, match="cannot append"):
+        wrap_path("dir", append="C:foo")
+
+
+@pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason="'C:foo' is drive-relative on Windows; an ordinary relative name on POSIX",
+)
+def test_wrap_path_colon_name_is_relative_on_posix(tmp_path: Path):
+    # On POSIX 'C:foo' has no drive semantics -- it is a normal relative name,
+    # so prepending is valid and not rejected.
+    assert wrap_path("C:foo", prepend=tmp_path) == tmp_path / "C:foo"
 
 
 # --- wrap_paths ------------------------------------------------------------
@@ -125,9 +149,9 @@ def test_wrap_paths(tmp_path: Path, tmp_dirs: list[Path], tmp_dirnames: list[str
 def test_wrap_paths_rejects_absolute(
     cwd_path: Path, tmp_path: Path, tmp_dirnames: list[str]
 ):
-    with pytest.raises(ValueError, match="cannot prepend to absolute path"):
+    with pytest.raises(ValueError, match="cannot prepend"):
         wrap_paths([cwd_path], prepend=tmp_path)
-    with pytest.raises(ValueError, match="cannot append an absolute path"):
+    with pytest.raises(ValueError, match="cannot append"):
         wrap_paths(tmp_dirnames, append=cwd_path)
 
 

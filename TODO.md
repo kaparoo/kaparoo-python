@@ -17,8 +17,6 @@ Surfaced by a source review; none are bugs.
 - `kaparoo.filesystem.make_dirs` with a duplicated path and `exist_ok=False`
   leaves a partial side effect (the second `mkdir` fails after the first
   created it); the validate-first pass cannot catch duplicates. Dedup or note.
-- `kaparoo.filesystem.wrap_path`'s prepend guard uses `os.path.isabs`, which
-  misses Windows drive-relative paths (`C:foo`).
 - `kaparoo.filters.TemplateFilter.matches` materializes the full cartesian
   product into a `frozenset` on first call -- a memory pitfall for very large
   axes (`expand()` stays lazy). Document the eager-cache cost.

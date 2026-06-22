@@ -8,6 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `kaparoo.filesystem.wrap_path` / `wrap_paths` now reject a Windows
+  drive-relative `prepend` target or `append` value (e.g. `C:foo` -- a drive
+  with no root) with `ValueError`, instead of silently discarding the other
+  component (`Path("base", "C:foo")` collapses to `Path("C:foo")`). The guard
+  moved from `os.path.isabs` to a `Path.anchor` check, which is platform-aware:
+  `C:foo` stays an ordinary relative name on POSIX and is unaffected.
+
 ## [0.9.0] - 2026-06-22
 
 ### Added

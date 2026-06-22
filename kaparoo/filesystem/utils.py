@@ -15,7 +15,6 @@ __all__ = (
     "wrap_paths",
 )
 
-import os
 from pathlib import Path
 from typing import TYPE_CHECKING, overload
 
@@ -110,6 +109,21 @@ def stringify_paths(
 # ========================== #
 
 
+def _is_anchored(path: StrPath) -> bool:
+    """Whether `path` carries a drive and/or root, so joining it discards a prefix.
+
+    A purely relative path has an empty `Path.anchor`; an absolute path
+    (`/foo`, `C:/foo`) or a Windows drive-relative path (`C:foo`) does not.
+    Such a path silently overrides the left-hand side when joined --
+    `Path("base", "C:foo")` is just `Path("C:foo")` -- so `wrap_path` rejects
+    it rather than dropping the `prepend` / `append`. `Path.anchor` is
+    platform-aware, so `C:foo` is drive-relative on Windows but an ordinary
+    relative name on POSIX (where `os.path.isabs` and this both report it
+    relative).
+    """
+    return Path(path).anchor != ""
+
+
 @overload
 def wrap_path(
     path: StrPath,
@@ -159,14 +173,15 @@ def wrap_path(
         A Path object or a string, depending on the value of `stringify`.
 
     Raises:
-        ValueError: If `prepend` is given and `path` is an absolute path.
-        ValueError: If `append` is given and is an absolute path.
+        ValueError: If `prepend` is given and `path` is absolute or
+            drive-relative (carries a drive or root).
+        ValueError: If `append` is given and is absolute or drive-relative.
     """
-    if prepend is not None and os.path.isabs(path):  # noqa: PTH117
-        msg = f"cannot prepend to absolute path: {path}"
+    if prepend is not None and _is_anchored(path):
+        msg = f"cannot prepend to an absolute or drive-relative path: {path}"
         raise ValueError(msg)
-    if append is not None and os.path.isabs(append):  # noqa: PTH117
-        msg = f"cannot append an absolute path: {append}"
+    if append is not None and _is_anchored(append):
+        msg = f"cannot append an absolute or drive-relative path: {append}"
         raise ValueError(msg)
     result = Path(path) if prepend is None else Path(prepend, path)
     if append is not None:
@@ -224,8 +239,9 @@ def wrap_paths(
             `stringify`.
 
     Raises:
-        ValueError: If `prepend` is given and any path is an absolute path.
-        ValueError: If `append` is given and is an absolute path.
+        ValueError: If `prepend` is given and any path is absolute or
+            drive-relative (carries a drive or root).
+        ValueError: If `append` is given and is absolute or drive-relative.
     """
     paths = [wrap_path(path, prepend=prepend, append=append) for path in paths]
     return stringify_paths(paths) if stringify else paths
