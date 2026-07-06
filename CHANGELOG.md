@@ -21,6 +21,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   For `ensure_files_exist` the accepted set is broadcast to every path (not
   paired positionally with `paths`).
 
+### Changed
+
+- **Lowered the minimum Python version from 3.14 to 3.13.** No code change --
+  the package's real floor is the PEP 696 type-parameter defaults it uses
+  (`class C[T, M = None]`, ...), which are 3.13 syntax; nothing depended on a
+  3.14-only feature. CI now runs the toolchain across 3.13 and 3.14. Widening
+  the supported range is non-breaking for existing 3.14 users.
+
 ## [0.9.1] - 2026-06-22
 
 ### Changed
