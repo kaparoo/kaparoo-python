@@ -50,7 +50,8 @@ convention — **and the `hierarchy` subpackage**, imported via
 
 ```python
 from kaparoo.filesystem import (
-    dir_exists, ensure_dir_exists, ensure_files_exist, file_exists,
+    dir_exists, ensure_dir_exists, ensure_file_exists, ensure_files_exist,
+    file_exists,
 )
 
 if file_exists("config.toml"):
@@ -65,6 +66,13 @@ files = ensure_files_exist(
     ["a.txt", "b.txt"],
     root="data",
 )
+
+# `ext=` also requires an accepted final suffix (matched case-insensitively,
+# leading dot optional). The pure check runs before touching the filesystem,
+# so a wrong suffix raises UnsupportedExtensionError even if the file is
+# missing. For the bulk form the accepted set applies to every path.
+weights = ensure_file_exists("model.safetensors", ext="safetensors")
+images = ensure_files_exist(["a.jpg", "b.png"], root="data", ext=("jpg", "png"))
 ```
 
 ## Exception hierarchy

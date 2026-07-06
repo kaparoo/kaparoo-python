@@ -8,6 +8,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `kaparoo.filesystem.ensure_file_exists` / `ensure_files_exist` gain an
+  `ext=` argument (a single extension or an iterable of acceptable ones,
+  each with or without a leading dot, matched case-insensitively) that also
+  requires the file's final suffix to be accepted, delegating to
+  `kaparoo.filesystem.utils.ensure_file_extension`. The pure extension check
+  runs *before* the filesystem is consulted, so a wrong or missing suffix
+  raises `UnsupportedExtensionError` (a `ValueError` subclass) even for a path
+  that does not exist. `ext=None` (the default) keeps the previous behavior.
+  For `ensure_files_exist` the accepted set is broadcast to every path (not
+  paired positionally with `paths`).
+
 ## [0.9.1] - 2026-06-22
 
 ### Changed

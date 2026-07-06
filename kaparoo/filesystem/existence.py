@@ -22,9 +22,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING, overload
 
 from kaparoo.filesystem.exceptions import DirectoryNotFoundError, NotAFileError
-from kaparoo.filesystem.utils import stringify_path, stringify_paths, wrap_paths
+from kaparoo.filesystem.utils import (
+    ensure_file_extension,
+    stringify_path,
+    stringify_paths,
+    wrap_paths,
+)
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from typing import Literal
 
     from kaparoo.filesystem.types import StrPath, StrPaths
@@ -82,32 +88,56 @@ def ensure_path_exists(path: StrPath, *, stringify: bool = False) -> Path | str:
 
 
 @overload
-def ensure_file_exists(path: StrPath, *, stringify: Literal[False] = False) -> Path: ...
+def ensure_file_exists(
+    path: StrPath,
+    *,
+    ext: str | Iterable[str] | None = None,
+    stringify: Literal[False] = False,
+) -> Path: ...
 
 
 @overload
-def ensure_file_exists(path: StrPath, *, stringify: Literal[True]) -> str: ...
+def ensure_file_exists(
+    path: StrPath, *, ext: str | Iterable[str] | None = None, stringify: Literal[True]
+) -> str: ...
 
 
 @overload
-def ensure_file_exists(path: StrPath, *, stringify: bool) -> Path | str: ...
+def ensure_file_exists(
+    path: StrPath, *, ext: str | Iterable[str] | None = None, stringify: bool
+) -> Path | str: ...
 
 
-def ensure_file_exists(path: StrPath, *, stringify: bool = False) -> Path | str:
+def ensure_file_exists(
+    path: StrPath,
+    *,
+    ext: str | Iterable[str] | None = None,
+    stringify: bool = False,
+) -> Path | str:
     """Ensure a given path exists and is a file, and return it.
 
     Args:
         path: The file path to check for existence.
+        ext: If given, also require the file's final suffix to be this
+            extension (or one of these), matched case-insensitively via
+            `ensure_file_extension`. A wrong or missing suffix raises before
+            the filesystem is touched. Defaults to None (no extension check).
         stringify: Whether to return the path as a string. Defaults to False.
 
     Returns:
         The path as a Path object or a string, depending on the value of `stringify`.
 
     Raises:
+        ValueError: If `ext` is given but names no extension.
+        UnsupportedExtensionError: If `ext` is given and the path's final
+            suffix is none of the accepted extensions. A `ValueError` subclass.
         FileNotFoundError: If the path does not exist.
         NotAFileError: If the path exists but is not a file.
     """
-    if (path := Path(path)).is_file():
+    path = Path(path)
+    if ext is not None:
+        path = ensure_file_extension(path, ext)
+    if path.is_file():
         return stringify_path(path) if stringify else path
     # Not a file: distinguish "missing" from "exists but wrong kind". The
     # second stat runs only on this error path, so the success path is one.
@@ -292,30 +322,50 @@ def ensure_paths_exist(
 
 @overload
 def ensure_files_exist(
-    paths: StrPaths, *, root: StrPath | None = None, stringify: Literal[False] = False
+    paths: StrPaths,
+    *,
+    root: StrPath | None = None,
+    ext: str | Iterable[str] | None = None,
+    stringify: Literal[False] = False,
 ) -> list[Path]: ...
 
 
 @overload
 def ensure_files_exist(
-    paths: StrPaths, *, root: StrPath | None = None, stringify: Literal[True]
+    paths: StrPaths,
+    *,
+    root: StrPath | None = None,
+    ext: str | Iterable[str] | None = None,
+    stringify: Literal[True],
 ) -> list[str]: ...
 
 
 @overload
 def ensure_files_exist(
-    paths: StrPaths, *, root: StrPath | None = None, stringify: bool
+    paths: StrPaths,
+    *,
+    root: StrPath | None = None,
+    ext: str | Iterable[str] | None = None,
+    stringify: bool,
 ) -> list[Path] | list[str]: ...
 
 
 def ensure_files_exist(
-    paths: StrPaths, *, root: StrPath | None = None, stringify: bool = False
+    paths: StrPaths,
+    *,
+    root: StrPath | None = None,
+    ext: str | Iterable[str] | None = None,
+    stringify: bool = False,
 ) -> list[Path] | list[str]:
     """Ensure all of the given paths exist and are files, and return them.
 
     Args:
         paths: The file paths to check for existence.
         root: The root directory to prepend to each path. Defaults to None.
+        ext: If given, also require each file's final suffix to be this
+            extension (or one of these). The same accepted set is applied to
+            every path (broadcast, not paired positionally with `paths`).
+            Defaults to None (no extension check).
         stringify: Whether to return the paths as strings. Defaults to False.
 
     Returns:
@@ -324,12 +374,15 @@ def ensure_files_exist(
     Raises:
         DirectoryNotFoundError: If `root` is provided and does not exist.
         NotADirectoryError: If `root` is provided and is not a directory.
-        ValueError: If `root` is provided and any of the paths are absolute.
+        ValueError: If `root` is provided and any of the paths are absolute,
+            or if `ext` is given but names no extension.
+        UnsupportedExtensionError: If `ext` is given and any path's final
+            suffix is none of the accepted extensions. A `ValueError` subclass.
         FileNotFoundError: If any of the paths do not exist.
         NotAFileError: If any of the paths exist but are not files.
     """
     paths = _join_root_if_provided(paths, root)
-    paths = [ensure_file_exists(p) for p in paths]
+    paths = [ensure_file_exists(p, ext=ext) for p in paths]
     return stringify_paths(paths) if stringify else paths
 
 

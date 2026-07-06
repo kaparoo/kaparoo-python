@@ -5,7 +5,11 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from kaparoo.filesystem.exceptions import DirectoryNotFoundError, NotAFileError
+from kaparoo.filesystem.exceptions import (
+    DirectoryNotFoundError,
+    NotAFileError,
+    UnsupportedExtensionError,
+)
 from kaparoo.filesystem.existence import (
     dir_exists,
     dirs_exist,
@@ -129,6 +133,29 @@ def test_ensure_file_exists_raises_when_directory(tmp_dir: Path):
         ensure_file_exists(tmp_dir)
 
 
+def test_ensure_file_exists_ext_accepts_matching(tmp_file: Path):
+    # `tmp_file` is `file.txt`; the extension check passes and returns it.
+    assert ensure_file_exists(tmp_file, ext="txt") == tmp_file
+    # A leading dot is optional and the match is case-insensitive.
+    assert ensure_file_exists(tmp_file, ext=".TXT") == tmp_file
+    # Any of several accepted extensions.
+    assert ensure_file_exists(tmp_file, ext=("md", "txt")) == tmp_file
+
+
+def test_ensure_file_exists_ext_rejects_wrong_suffix(tmp_file: Path):
+    # A wrong suffix raises before the filesystem is consulted -- even for an
+    # existing file.
+    with pytest.raises(UnsupportedExtensionError):
+        ensure_file_exists(tmp_file, ext="png")
+
+
+def test_ensure_file_exists_ext_checked_before_existence(unknown_path: Path):
+    # The pure extension check runs first, so a wrong suffix raises
+    # UnsupportedExtensionError rather than FileNotFoundError.
+    with pytest.raises(UnsupportedExtensionError):
+        ensure_file_exists(unknown_path, ext="txt")
+
+
 # --- ensure_dir_exists ------------------------------------------------------
 
 
@@ -245,6 +272,29 @@ def test_ensure_dirs_exist_stringify(
     expected = [tmp_dir, fs.root, fs.sub_dir]
     assert result == [_stringify(p) for p in expected]
     assert all(isinstance(p, str) for p in result)
+
+
+def test_ensure_files_exist_ext_broadcasts_to_every_path(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    # The accepted set is applied to every path, not paired positionally.
+    paths = ["file1.txt", "file2.txt", "sub_dir/sub_file.txt"]
+    result = ensure_files_exist(paths, root=fs.root, ext="txt")
+    assert result == [fs.file1, fs.file2, fs.sub_file]
+
+
+def test_ensure_files_exist_ext_rejects_any_wrong_suffix(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    # `file3.png` fails the `txt`-only requirement, failing the whole batch.
+    with pytest.raises(UnsupportedExtensionError):
+        ensure_files_exist(["file1.txt", "file3.png"], root=fs.root, ext="txt")
+
+
+def test_ensure_files_exist_ext_accepts_multiple(tmp_filesystem: TmpFilesystem):
+    fs = tmp_filesystem
+    # A mixed-extension batch passes when every suffix is in the accepted set.
+    paths = ["file1.txt", "file3.png"]
+    result = ensure_files_exist(paths, root=fs.root, ext=("txt", "png"))
+    assert result == [fs.file1, fs.file3]
 
 
 def test_ensure_dirs_exist_make_accepts_int_mode(tmp_path: Path):
