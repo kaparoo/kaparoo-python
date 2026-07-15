@@ -8,6 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-07-15
+
 ### Added
 
 - `kaparoo.filters.AnyFilter` / `Any`: a constant filter that matches every
