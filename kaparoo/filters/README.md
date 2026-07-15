@@ -90,6 +90,30 @@ from kaparoo.filters import And, EndsWith, Equals, Not
 And((EndsWith(".py"), Not(Equals("__init__.py"))))
 ```
 
+### Constant filter ([`constant.py`](./constant.py))
+
+Ignores the target and returns a fixed result.
+
+| Class / alias | Matches when target ... |
+| --- | --- |
+| `AnyFilter` / `Any` | always (the top element `⊤`) |
+
+`Any()` is an explicit "match anything" placeholder — clearer and cheaper
+than `Glob("*")` (no regex to compile or run), and it acts as the identity
+of `And` / absorbing element of `Or` (`And(f, Any())` matches exactly `f`).
+It carries no fields, so all instances are equal, and it is not
+`Expandable` (its matching set is infinite).
+
+```python
+from kaparoo.filters import And, Any, EndsWith
+
+And((EndsWith(".py"), Any()))   # matches exactly what EndsWith(".py") does
+```
+
+> The `Any` alias shadows `typing.Any` when star-imported (as `Literal`
+> shadows `typing.Literal`); reach for the canonical `AnyFilter` where that
+> would be ambiguous.
+
 ### Enumerable filters ([`enumerable.py`](./enumerable.py))
 
 Most filters only *test* a string (`matches`). The enumerable family also

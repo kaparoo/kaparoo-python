@@ -3,6 +3,8 @@ from __future__ import annotations
 __all__ = (
     "And",
     "AndFilter",
+    "Any",
+    "AnyFilter",
     "Contains",
     "ContainsAny",
     "ContainsAnyFilter",
@@ -44,6 +46,7 @@ __all__ = (
 )
 
 from kaparoo.filters.base import Filter
+from kaparoo.filters.constant import Any, AnyFilter
 from kaparoo.filters.enumerable import (
     Expandable,
     Literal,
