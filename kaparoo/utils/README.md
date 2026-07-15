@@ -282,7 +282,14 @@ fold_optional(index, lambda index: f"{index=}", "global")
 
 `transform` runs only when the value is present, so a side effect it carries
 never fires on the None branch. `None` is the sentinel, so a genuine `None`
-value cannot be distinguished (as with every helper here).
+value cannot be distinguished (as with every helper here). For sequences,
+`fold_optionals` applies the same branch element-wise and returns a `list`.
+
+```python
+from kaparoo.utils.optional import fold_optionals
+
+fold_optionals([1, None, 2], str, "-")   # ["1", "-", "2"]
+```
 
 ## Checks
 

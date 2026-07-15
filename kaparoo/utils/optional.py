@@ -5,6 +5,7 @@ from __future__ import annotations
 __all__ = (
     "factory_if_none",
     "fold_optional",
+    "fold_optionals",
     "replace_if_none",
     "unwrap_or_default",
     "unwrap_or_defaults",
@@ -134,3 +135,22 @@ def fold_optional[T, R](
         default: The result used when `optional` is None.
     """
     return transform(optional) if optional is not None else default
+
+
+def fold_optionals[T, R](
+    optionals: Sequence[T | None],
+    transform: Callable[[T], R],
+    default: R,
+) -> list[R]:
+    """Fold each value in `optionals` element-wise, returning a `list`.
+
+    The sequence form of `fold_optional`: apply `transform` to each present
+    value, substituting `default` for every None.
+
+    Args:
+        optionals: The values to inspect; each `None` selects `default`.
+        transform: Applied to each present value; called only for the
+            present ones, never for a None element.
+        default: The result used for every None element.
+    """
+    return [transform(o) if o is not None else default for o in optionals]

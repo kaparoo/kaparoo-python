@@ -3,6 +3,7 @@ from __future__ import annotations
 from kaparoo.utils.optional import (
     factory_if_none,
     fold_optional,
+    fold_optionals,
     replace_if_none,
     unwrap_or_default,
     unwrap_or_defaults,
@@ -126,11 +127,30 @@ def test_fold_optional_falsy_present_value_takes_transform_branch():
     assert fold_optional([], lambda _: "some", "none") == "some"
 
 
+def test_fold_optionals_maps_element_wise():
+    assert fold_optionals([1, None, 2], str, "-") == ["1", "-", "2"]
+    assert fold_optionals([], str, "-") == []
+    assert fold_optionals([None, None], lambda i: f"{i}", "none") == ["none", "none"]
+
+
+def test_fold_optionals_transform_only_for_present():
+    calls = 0
+
+    def transform(value: int) -> int:
+        nonlocal calls
+        calls += 1
+        return value + 1
+
+    assert fold_optionals([None, 1, None, 2], transform, -1) == [-1, 2, -1, 3]
+    assert calls == 2  # once per present element, never for a None
+
+
 def test_optional_helpers_reexported_from_package():
     from kaparoo import utils
 
     assert utils.factory_if_none is factory_if_none
     assert utils.fold_optional is fold_optional
+    assert utils.fold_optionals is fold_optionals
     assert utils.replace_if_none is replace_if_none
     assert utils.unwrap_or_default is unwrap_or_default
     assert utils.unwrap_or_defaults is unwrap_or_defaults
