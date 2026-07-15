@@ -8,6 +8,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `kaparoo.filters.AnyFilter` / `Any`: a constant filter that matches every
+  string -- the top element of the filter lattice. It reads as an explicit
+  "match anything" placeholder (clearer and cheaper than `Glob("*")`, with no
+  regex to compile or run) and acts as the identity of `And` / absorbing
+  element of `Or`. It is fieldless (all instances are equal), serializes as
+  `{"kind": "any"}`, and is deliberately not `Expandable` -- so as a
+  `hierarchy` node name it is an open, acceptance-only pattern like `Glob`.
+  Lives in the new `kaparoo/filters/constant.py` module.
+- `kaparoo.utils.fold_optional` / `fold_optionals`: collapse a `T | None`
+  into a possibly different type `R` by branching on presence -- apply
+  `transform` to a present value, otherwise return `default`. Unlike the
+  substitute / unwrap helpers (which keep the input type `T`), the two
+  branches may yield different values and types. `transform` runs only when
+  the value is present, so a side effect it carries never fires on the None
+  branch. `fold_optionals` applies the same branch element-wise over a
+  sequence and returns a `list`.
+
 ## [0.10.0] - 2026-07-07
 
 ### Added

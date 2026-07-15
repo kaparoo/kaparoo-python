@@ -133,7 +133,7 @@ def validate(
     unspecified directory's contents count too. A `required` entry is
     satisfied as soon as its name matches one present path -- for an
     enumerable name (`OneOf` / `Template`) *at least one* listed name must
-    exist (not all), and for an open name (`Glob` / `Regex`) any one matching
+    exist (not all), and for an open name (`Glob` / `Regex` / `Any`) any one matching
     path suffices. Each matched path is also checked against its entry's
     `condition`, with failures collected in `report.failed`.
 

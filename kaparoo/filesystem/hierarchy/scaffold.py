@@ -33,7 +33,7 @@ def scaffold(
     The write counterpart of `locate` / `validate`. Only *creatable* nodes are
     materialized -- an enumerable `name` (`Literal` / `OneOf` / `Template` /
     `Without` and the `str` / `list[str]` sugar) at a fixed `depth` of 1; open
-    names (`Glob`, `Regex`) and ranged depths are acceptance patterns, skipped
+    names (`Glob`, `Regex`, `Any`) and ranged depths are acceptance patterns, skipped
     when optional and raising when `required`. Creation is idempotent and never
     clobbers; files are created empty. Failure is best-effort: a mid-run raise
     (a conflict, an unsatisfiable `required` node, or an `on_create` that

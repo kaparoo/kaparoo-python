@@ -56,9 +56,9 @@ a spec), and `scaffold` (create the tree on disk).
 ### [`kaparoo.filters`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/filters)
 
 A declarative, composable string-matching DSL: a `Filter` family
-(pattern, multi-pattern, logical, and enumerable `Literal` / `OneOf` /
-`Template`) that round-trips through JSON-friendly dicts, plus an
-extension hook for custom filter kinds. Used by
+(pattern, multi-pattern, logical, constant `Any`, and enumerable
+`Literal` / `OneOf` / `Template`) that round-trips through JSON-friendly
+dicts, plus an extension hook for custom filter kinds. Used by
 `kaparoo.filesystem.search` for path matching and
 `kaparoo.filesystem.hierarchy` for declaring trees.
 

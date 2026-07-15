@@ -519,7 +519,7 @@ A path is **unexpected** unless it is matched or an ancestor of a match —
 so anything below an *unspecified* directory counts too. A `required` entry
 is satisfied once its name matches one present path — for an enumerable name
 (`OneOf` / `Template`) that means *at least one* of the listed names exists
-(not all), and for an open name (`Glob` / `Regex`) any one matching path.
+(not all), and for an open name (`Glob` / `Regex` / `Any`) any one matching path.
 `validate`
 also takes the same
 `exclude=` as `locate`; excluded paths are dropped from `matched` and are not
@@ -621,7 +621,7 @@ scaffold(spec, "/tmp/out", dry_run=True)   # preview only, touches nothing
 Only **enumerable** nodes are materialized: a node is creatable when its
 name is an `Expandable` filter (`Literal` / `OneOf` / `Template` / `Without`,
 and the `str` / `list[str]` sugar) **and** it sits at a fixed `depth` of 1.
-Open names (`Glob`, `Regex`) and non-fixed depths are *acceptance patterns*,
+Open names (`Glob`, `Regex`, `Any`) and non-fixed depths are *acceptance patterns*,
 not generators — they are **skipped** when optional, but a `required` one
 cannot be satisfied and raises. `Together` creates all its members
 (all-or-nothing — a non-creatable member skips the whole set unless
