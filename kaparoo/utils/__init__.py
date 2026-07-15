@@ -20,6 +20,7 @@ __all__ = (
     "ensure_in_range",
     "ensure_one_of",
     "factory_if_none",
+    "fold_optional",
     "replace_if_none",
     "unwrap_or_default",
     "unwrap_or_defaults",
@@ -47,6 +48,7 @@ from kaparoo.utils.aggregate import (
 from kaparoo.utils.checks import ensure_in_range, ensure_one_of
 from kaparoo.utils.optional import (
     factory_if_none,
+    fold_optional,
     replace_if_none,
     unwrap_or_default,
     unwrap_or_defaults,

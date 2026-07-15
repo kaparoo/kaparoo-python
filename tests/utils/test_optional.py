@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from kaparoo.utils.optional import (
     factory_if_none,
+    fold_optional,
     replace_if_none,
     unwrap_or_default,
     unwrap_or_defaults,
@@ -91,10 +92,45 @@ def test_factory_not_called_on_present_value():
     assert calls == 2
 
 
+def test_fold_optional_branches_on_presence():
+    assert fold_optional(None, lambda index: f"{index=}", "global") == "global"
+    assert fold_optional(3, lambda index: f"{index=}", "global") == "index=3"
+
+
+def test_fold_optional_changes_type():
+    # int | None -> str, and the present branch transforms the value.
+    assert fold_optional(0, str, "none") == "0"
+    assert fold_optional(None, str, "none") == "none"
+
+
+def test_fold_optional_transform_not_called_for_none():
+    # The present-branch transform (and any side effect) never runs on None.
+    calls = 0
+
+    def transform(value: int) -> int:
+        nonlocal calls
+        calls += 1
+        return value + 1
+
+    assert fold_optional(None, transform, -1) == -1
+    assert calls == 0
+
+    assert fold_optional(41, transform, -1) == 42
+    assert calls == 1
+
+
+def test_fold_optional_falsy_present_value_takes_transform_branch():
+    # `is not None`, not truthiness: 0 / "" / [] are present, so `transform` runs.
+    assert fold_optional(0, lambda _: "some", "none") == "some"
+    assert fold_optional("", lambda _: "some", "none") == "some"
+    assert fold_optional([], lambda _: "some", "none") == "some"
+
+
 def test_optional_helpers_reexported_from_package():
     from kaparoo import utils
 
     assert utils.factory_if_none is factory_if_none
+    assert utils.fold_optional is fold_optional
     assert utils.replace_if_none is replace_if_none
     assert utils.unwrap_or_default is unwrap_or_default
     assert utils.unwrap_or_defaults is unwrap_or_defaults

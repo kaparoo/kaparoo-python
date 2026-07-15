@@ -267,6 +267,23 @@ unwrap_or_defaults([None, "x", None], "y")        # ["y", "x", "y"]
 unwrap_or_defaults([None, "x"], "y", str.upper)   # ["Y", "X"]
 ```
 
+The helpers above keep the input type `T` — they only pick *which* `T` to
+return. When the two cases call for **different results** (and possibly a
+different type `R`), reach for `fold_optional`: it applies `transform` to a
+present value, otherwise returns `default`.
+
+```python
+from kaparoo.utils.optional import fold_optional
+
+# int | None -> str, branching on presence
+fold_optional(index, lambda index: f"{index=}", "global")
+# index=3 -> "index=3"; index=None -> "global"
+```
+
+`transform` runs only when the value is present, so a side effect it carries
+never fires on the None branch. `None` is the sentinel, so a genuine `None`
+value cannot be distinguished (as with every helper here).
+
 ## Checks
 
 Validation guards that return the value (so they compose into an assignment)

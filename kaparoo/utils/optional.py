@@ -4,6 +4,7 @@ from __future__ import annotations
 
 __all__ = (
     "factory_if_none",
+    "fold_optional",
     "replace_if_none",
     "unwrap_or_default",
     "unwrap_or_defaults",
@@ -107,3 +108,29 @@ def unwrap_or_factories[T](
     if callback is None:
         return [o if o is not None else factory() for o in optionals]
     return [callback(o if o is not None else factory()) for o in optionals]
+
+
+# ========================== #
+#            Fold            #
+# ========================== #
+
+
+def fold_optional[T, R](
+    optional: T | None,
+    transform: Callable[[T], R],
+    default: R,
+) -> R:
+    """Collapse `optional` into a single result, branching on presence.
+
+    Unlike the substitute / unwrap helpers (which keep the input type `T`),
+    the two branches may yield different values -- and a different result
+    type `R`: return `transform(value)` when `optional` is present, else the
+    `default`.
+
+    Args:
+        optional: The value to inspect; `None` selects the `default` branch.
+        transform: Applied to the value when it is present; called only then,
+            so any side effect it carries never fires on the None branch.
+        default: The result used when `optional` is None.
+    """
+    return transform(optional) if optional is not None else default
