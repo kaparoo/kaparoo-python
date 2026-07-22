@@ -73,6 +73,25 @@ ds.get_pair(0)       # (b"a", "cat")  (item + metadata)
 list(ds.get_metas([0, 1]))  # ["cat", "dog"]
 ```
 
+### Index handling
+
+`_normalize_index(index)` is a protected helper on the base: it wraps a
+negative index against `len(self)` and raises `IndexError` for anything
+outside `[-len(self), len(self))`. Call it from `get_item` and `get_meta`
+so both agree on bounds — especially when the two read from different
+backing stores, where only one would otherwise raise.
+
+```python
+def get_item(self, index):
+    index = self._normalize_index(index)   # -1 -> len - 1; out of range raises
+    return self._items[index]
+```
+
+The example above skips it because indexing a `list` already wraps and
+raises on its own; reach for the helper when you compute an offset from
+the index (as `WindowedSequence` does) or index a store that does not
+bounds-check.
+
 ## Composers
 
 ### `SlicedSequence`

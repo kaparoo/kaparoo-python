@@ -35,6 +35,30 @@ class ListDataSequence[T, M](DataSequence[T, M]):
         return self._metas[index]
 
 
+class NormalizingSequence[T](DataSequence[T]):
+    """`DataSequence` routing item access through `_normalize_index`.
+
+    `ListDataSequence` indexes its backing tuple directly, so it never
+    exercises the base hook. This one does, and re-exposes it as a public
+    `normalize` so tests can assert on it the way a subclass consumes it.
+    """
+
+    def __init__(self, items: Sequence[T]) -> None:
+        self._items = tuple(items)
+
+    def __len__(self) -> int:
+        return len(self._items)
+
+    def normalize(self, index: int) -> int:
+        return self._normalize_index(index)
+
+    def get_item(self, index: int) -> T:
+        return self._items[self._normalize_index(index)]
+
+    def get_meta(self, index: int) -> None:
+        return None
+
+
 # --- WindowedSequence concrete subclasses for tests ------------------------
 
 

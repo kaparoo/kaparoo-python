@@ -20,25 +20,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
 
-def _resolve_index(index: int, length: int) -> int:
-    """Normalize a possibly-negative index against `length`, validating range.
-
-    Used by `ConcatSequence`, `WindowedSequence`, and `ZippedSequence`.
-    `SlicedSequence` intentionally opts out -- it indexes its `indices` tuple
-    directly, which wraps and raises the same way but with the builtin message.
-
-    Raises:
-        IndexError: If `index` is outside `[-length, length)`.
-    """
-    original = index
-    if index < 0:
-        index += length
-    if not 0 <= index < length:
-        msg = f"index {original} out of range for length {length}"
-        raise IndexError(msg)
-    return index
-
-
 class SlicedSequence[T, M](DataSequence[T, M]):
     """A view of `source` exposing only the items at `indices`, in that order.
 
@@ -193,7 +174,7 @@ class ConcatSequence[T, M](DataSequence[T, M]):
         Raises:
             IndexError: If `index` is outside `[-len(self), len(self))`.
         """
-        index = _resolve_index(index, self._cumulative[-1])
+        index = self._normalize_index(index)
         i = bisect_right(self._cumulative, index) - 1
         return i, index - self._cumulative[i]
 
@@ -322,18 +303,6 @@ class WindowedSequence[T, M_in, M_out = M_in](DataSequence[tuple[T, ...], M_out]
     def __len__(self) -> int:
         return self._length
 
-    def _normalize_index(self, index: int) -> int:
-        """Normalize a possibly-negative window index and validate range.
-
-        Subclasses should call this from `get_meta` to apply the same
-        negative-index handling and bounds checking that `get_item`
-        performs.
-
-        Raises:
-            IndexError: If `index` is outside `[-len(self), len(self))`.
-        """
-        return _resolve_index(index, self._length)
-
     @override
     def get_item(self, index: int) -> tuple[T, ...]:
         """Build the window at `index` as a tuple of `size` strided source items."""
@@ -399,17 +368,6 @@ class ZippedSequence[T1, T2, M1 = None, M2 = None](
 
     def __len__(self) -> int:
         return self._length
-
-    def _normalize_index(self, index: int) -> int:
-        """Normalize a possibly-negative index and validate range.
-
-        Indices resolve against the zipped length (the shorter source when
-        `strict=False`), so they address the same position in both sources.
-
-        Raises:
-            IndexError: If `index` is outside `[-len(self), len(self))`.
-        """
-        return _resolve_index(index, self._length)
 
     @override
     def get_item(self, index: int) -> tuple[T1, T2]:

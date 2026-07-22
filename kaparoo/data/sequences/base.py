@@ -36,6 +36,25 @@ class DataSequence[T, M = None](Sequence[T]):
     def __len__(self) -> int:
         """Return the number of items in the sequence."""
 
+    # --- index handling ----------------------------------------------------
+
+    def _normalize_index(self, index: int) -> int:
+        """Normalize a possibly-negative index against `len(self)`, validating range.
+
+        Subclasses should call this from `get_item` and `get_meta` so both
+        apply the same negative-index wrapping and bounds checking. An
+        implementation that indexes a backing sequence directly may skip it
+        and let that sequence raise instead.
+
+        Raises:
+            IndexError: If `index` is outside `[-len(self), len(self))`.
+        """
+        length = len(self)
+        if not -length <= index < length:
+            msg = f"index {index} out of range for length {length}"
+            raise IndexError(msg)
+        return index % length
+
     # --- item access -------------------------------------------------------
 
     @overload

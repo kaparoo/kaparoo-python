@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from kaparoo.data.sequences import DataSequence
-from tests.data.sequences.helpers import ListDataSequence
+from tests.data.sequences.helpers import ListDataSequence, NormalizingSequence
 
 # --- shared fixture --------------------------------------------------------
 
@@ -21,6 +21,49 @@ def test_is_abstract():
     # `__len__`, `get_item`, and `get_meta` are all abstract.
     with pytest.raises(TypeError, match="abstract"):
         DataSequence()  # ty: ignore[missing-argument]
+
+
+# --- _normalize_index ------------------------------------------------------
+
+
+@pytest.fixture()
+def norm() -> NormalizingSequence[str]:
+    """5-item sequence whose accessors route through `_normalize_index`."""
+    return NormalizingSequence(["a", "b", "c", "d", "e"])
+
+
+def test_normalize_index_passes_through_non_negative(norm: NormalizingSequence[str]):
+    assert [norm.normalize(i) for i in range(5)] == [0, 1, 2, 3, 4]
+
+
+def test_normalize_index_wraps_negative(norm: NormalizingSequence[str]):
+    # -1 addresses the last item, -len the first.
+    assert norm.normalize(-1) == 4
+    assert norm.normalize(-5) == 0
+
+
+@pytest.mark.parametrize("index", (5, 6, -6, -100))
+def test_normalize_index_rejects_out_of_range(
+    norm: NormalizingSequence[str], index: int
+):
+    # Beyond `[-len, len)` on either end; the message reports the index as
+    # given (unwrapped) and the length.
+    with pytest.raises(IndexError, match=f"index {index} out of range for length 5"):
+        norm.normalize(index)
+
+
+def test_normalize_index_on_empty_sequence_raises_index_error():
+    # Length 0 must fail the bounds check *before* the modulo, so this is an
+    # IndexError -- never a ZeroDivisionError from `index % 0`.
+    empty = NormalizingSequence([])
+    with pytest.raises(IndexError, match="out of range for length 0"):
+        empty.normalize(0)
+
+
+def test_normalize_index_backs_item_access(norm: NormalizingSequence[str]):
+    # The hook is what a subclass's `get_item` relies on for wrapping.
+    assert norm.get_item(-1) == "e"
+    assert norm[-5] == "a"
 
 
 # --- default get_items / get_metas -----------------------------------------
