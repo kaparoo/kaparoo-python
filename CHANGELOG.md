@@ -8,26 +8,24 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Added
-
-- `kaparoo.data.sequences.DataSequence._normalize_index`: the protected
-  index helper is now on the base, so *every* `DataSequence` subclass -- not
-  just the composers -- can wrap a negative index against `len(self)` and
-  reject anything outside `[-len(self), len(self))` with `IndexError`. It
-  takes no `length` argument (it reads `len(self)`), and an empty sequence
-  raises `IndexError` rather than dividing by zero.
+## [0.11.1] - 2026-07-23
 
 ### Changed
 
-- Consolidated the sequence index-normalization logic. The private
+- Consolidated the sequence index-normalization logic onto
+  `kaparoo.data.sequences.DataSequence._normalize_index`. The private
   module-level `_resolve_index(index, length)` in
   `kaparoo.data.sequences.composers` and the duplicate `_normalize_index`
   wrappers on `WindowedSequence` / `ZippedSequence` are gone, replaced by the
-  single inherited `DataSequence._normalize_index`. Behavior, the raised
-  `IndexError`, and its message are unchanged, and `WindowedSequence`
-  subclasses calling `self._normalize_index(...)` (as the README shows) keep
-  working untouched. `SlicedSequence` still deliberately opts out, indexing
-  its `indices` tuple directly.
+  single inherited base method, which reads `len(self)` instead of taking a
+  `length`. Behavior, the raised `IndexError`, and its message are unchanged,
+  and subclasses calling `self._normalize_index(...)` (as the `data` README
+  shows) keep working untouched. Being on the base, the protected hook is now
+  inherited by every `DataSequence` rather than only the composers, so it is
+  available when subclassing the base or the file templates; an empty
+  sequence raises `IndexError` rather than dividing by zero.
+  `SlicedSequence` still deliberately opts out, indexing its `indices` tuple
+  directly.
 
 ## [0.11.0] - 2026-07-15
 
