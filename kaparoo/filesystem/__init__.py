@@ -1,6 +1,7 @@
 __all__ = (
     "DirectoryNotFoundError",
     "NotAFileError",
+    "Selector",
     "StagedDirectory",
     "StagedFile",
     "UnsupportedExtensionError",
@@ -32,9 +33,11 @@ __all__ = (
     "paths_exist",
     "reserve_path",
     "reserve_paths",
+    "resolve_selector",
     "search_dirs",
     "search_files",
     "search_paths",
+    "select",
     "stringify_path",
     "stringify_paths",
     "wrap_path",
@@ -72,7 +75,14 @@ from kaparoo.filesystem.existence import (
     path_exists,
     paths_exist,
 )
-from kaparoo.filesystem.search import search_dirs, search_files, search_paths
+from kaparoo.filesystem.search import (
+    Selector,
+    resolve_selector,
+    search_dirs,
+    search_files,
+    search_paths,
+    select,
+)
 from kaparoo.filesystem.staged import StagedDirectory, StagedFile
 from kaparoo.filesystem.utils import (
     ensure_file_extension,

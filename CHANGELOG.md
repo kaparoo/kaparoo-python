@@ -8,6 +8,38 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `kaparoo.filters.selection` -- `select` and `resolve_selector` (plus the
+  `Selector` type), re-exported from `kaparoo.filters`. `select` keeps the
+  items an `include` spec matches, then drops the ones an `exclude` spec
+  matches (so on an overlap `exclude` wins); each item is named by a `key`
+  callable and both specs default to no restriction. A spec is one of, all
+  normalized to a single `kaparoo.filters` filter: a `str` (an exact name) or
+  a `Sequence` of them; a `FilterDict` (e.g. `{"kind": "glob", "pattern":
+  "a/*"}`) or a sequence mixing name strings and `FilterDict`s; or a `Filter`
+  instance. `resolve_selector` is that shared front end, exposed so `include`
+  / `exclude` can be resolved -- and applied -- independently. When a spec is
+  an exact-name set (a string or a string list) a name matching no item raises
+  `ValueError` -- a typo says so instead of silently selecting nothing --
+  while an open pattern (`Glob` / `Regex`) matching nothing is allowed; the
+  typo check lives in `select`, not `resolve_selector`. Both take an optional
+  `normalize` callable applied to every exact-name string before matching.
+  This base is filesystem-agnostic: it resolves only in-memory specs and never
+  touches the disk.
+- `kaparoo.filesystem.search.selection` -- the path-aware extension of the
+  above (`select` / `resolve_selector` / `Selector`, re-exported from
+  `kaparoo.filesystem.search` and `kaparoo.filesystem`). It adds the two
+  filesystem-flavored features the base leaves out: a spec may also be a
+  `.json` file (a `FilterDict` object or an array) or a `.txt` file listing
+  one subpath per line (blank lines and `#` comments skipped) -- a bare string
+  is read as a file only when it ends in `.json` / `.txt`, otherwise it is a
+  single inline subpath -- and exact-name subpaths are normalized to POSIX
+  `/`. Everything else delegates to `kaparoo.filters.selection`. Unlike the
+  search entry points' `exclude=`, which prunes a subtree during the walk,
+  `select` filters an already-materialized collection, so it also works on
+  items that are not paths.
+
 ## [0.11.1] - 2026-07-23
 
 ### Changed

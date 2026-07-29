@@ -41,7 +41,9 @@ path stringification, extension helpers (`ensure_file_extension`,
 Filesystem traversal with composable filters: `search_paths` /
 `search_files` / `search_dirs`, wired to the `kaparoo.filters` DSL via
 `part_filter` / `name_filter` / `predicate`, with `min_depth` / `max_depth`
-control and a subtree-pruning `exclude`.
+control and a subtree-pruning `exclude`; plus a path-aware `select` that
+filters an already-gathered collection by an `include` / `exclude` name spec
+(exact subpaths, `.json` / `.txt` files, patterns, or filters).
 
 ### [`kaparoo.filesystem.hierarchy`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/filesystem/hierarchy)
 
@@ -58,8 +60,9 @@ a spec), and `scaffold` (create the tree on disk).
 A declarative, composable string-matching DSL: a `Filter` family
 (pattern, multi-pattern, logical, constant `Any`, and enumerable
 `Literal` / `OneOf` / `Template`) that round-trips through JSON-friendly
-dicts, plus an extension hook for custom filter kinds. Used by
-`kaparoo.filesystem.search` for path matching and
+dicts, plus an extension hook for custom filter kinds; and `select` /
+`resolve_selector`, which filter a collection by an `include` / `exclude`
+name spec. Used by `kaparoo.filesystem.search` for path matching and
 `kaparoo.filesystem.hierarchy` for declaring trees.
 
 ### [`kaparoo.utils`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/utils)

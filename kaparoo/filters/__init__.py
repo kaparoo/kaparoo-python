@@ -34,6 +34,7 @@ __all__ = (
     "PatternFilter",
     "Regex",
     "RegexFilter",
+    "Selector",
     "StartsWith",
     "StartsWithAny",
     "StartsWithAnyFilter",
@@ -43,6 +44,8 @@ __all__ = (
     "Without",
     "WithoutFilter",
     "register_filter",
+    "resolve_selector",
+    "select",
 )
 
 from kaparoo.filters.base import Filter
@@ -93,4 +96,5 @@ from kaparoo.filters.pattern import (
     StartsWith,
     StartsWithFilter,
 )
+from kaparoo.filters.selection import Selector, resolve_selector, select
 from kaparoo.filters.utils import register_filter

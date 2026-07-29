@@ -22,6 +22,7 @@ f.matches("__init__.py")    # False
 
 - [Filter catalog](#filter-catalog)
 - [JSON serialization](#json-serialization)
+- [Selection](#selection)
 - [Custom filters](#custom-filters)
 - [Case sensitivity](#case-sensitivity)
 - [See also](#see-also)
@@ -205,6 +206,42 @@ TypedDicts for static checking live in [`types.py`](./types.py):
 `MultiPatternFilterDict`, `LogicalChildFilterDict`,
 `LogicalChildrenFilterDict`, and the enumerable `LiteralFilterDict`,
 `OneOfFilterDict`, `TemplateFilterDict`, `WithoutFilterDict`.
+
+## Selection
+
+`select` filters a collection by name, and `resolve_selector` turns a spec
+into one filter. Each item is named by `key`; `include` keeps the matches and
+`exclude` drops them (on an overlap `exclude` wins), and both default to no
+restriction.
+
+```python
+from kaparoo.filters import select
+
+items = ["train/a", "train/b", "val/c"]
+select(items, key=lambda s: s, include=["train/a", "val/c"])  # ['train/a', 'val/c']
+select(items, key=lambda s: s, exclude={"kind": "glob", "pattern": "train/*"})  # ['val/c']
+```
+
+A spec is a `str` (an exact name), a `Sequence` of names and / or
+`FilterDict`s, a `FilterDict`, or a `Filter` — all normalized to one filter.
+`resolve_selector` returns that filter (or `None` for no restriction), so
+`include` and `exclude` can be resolved and applied independently. An
+all-string spec becomes a `OneOf`, so it stays enumerable: a listed name
+matching no item **raises** (a typo says so), while an open pattern (`Glob` /
+`Regex`) matching nothing is allowed.
+
+```python
+from kaparoo.filters import resolve_selector
+
+keep = resolve_selector(["train/a", "val/c"])   # a Filter, or None
+select(items, key=lambda s: s, include=["typo"])
+# ValueError: include names no such item: typo
+```
+
+Pass `normalize` to canonicalize exact names before matching (e.g.
+`str.lower`). This base is **in-memory only** — to load a spec from a `.json`
+/ `.txt` file, or match subpaths with POSIX-normalized separators, use
+[`kaparoo.filesystem.search`](../filesystem/search/), which builds on it.
 
 ## Custom filters
 

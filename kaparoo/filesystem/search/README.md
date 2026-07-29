@@ -10,6 +10,7 @@ DSL.
 - [Excluding paths (with pruning)](#excluding-paths-with-pruning)
 - [Depth control](#depth-control)
 - [Filters](#filters)
+- [Selecting from a collection](#selecting-from-a-collection)
 - [Platform notes](#platform-notes)
 - [See also](#see-also)
 
@@ -110,6 +111,73 @@ search_files(
     "src",
     name_filter={"kind": "ends_with", "pattern": ".py"},
 )
+```
+
+## Selecting from a collection
+
+`select` is the companion to a walk: given items already in hand (search
+results, or anything keyed by a name), it keeps the ones an `include` spec
+matches and drops the ones an `exclude` spec matches — on an overlap
+`exclude` wins. Each item is named by `key`; both specs are optional and
+default to no restriction.
+
+This is the **path-aware** form of
+[`kaparoo.filters.select`](../../filters/#selection) — the same matching, plus
+two filesystem extras the base leaves out: a spec may also be a `.json` /
+`.txt` file, and exact-name subpaths are normalized to POSIX `/`.
+
+```python
+from kaparoo.filesystem.search import search_dirs, select
+
+# keep only some subtrees, minus a pattern
+chosen = select(
+    search_dirs("data", max_depth=1),
+    key=lambda p: p.name,
+    include=["train", "val"],
+    exclude={"kind": "glob", "pattern": "*_tmp"},
+)
+```
+
+Each spec is normalized to one [`kaparoo.filters`](../../filters/) filter and
+accepts several forms:
+
+| Form | Example | Meaning |
+| --- | --- | --- |
+| subpath string | `"train/a"` | one exact name |
+| string list | `["train/a", "val/c"]` | those exact names |
+| `FilterDict` | `{"kind": "glob", "pattern": "train/*"}` | a pattern |
+| mixed list | `["val/c", {"kind": "regex", ...}]` | names **or** patterns |
+| `Filter` | `Glob("train/*")` | a filter instance |
+| `.txt` file | `"keep.txt"` | one subpath per line (`#` comments, blanks skipped) |
+| `.json` file | `"keep.json"` | a `FilterDict` object, or an array |
+
+A bare string is read as a file only when it ends in `.json` / `.txt`;
+otherwise it is a single inline subpath. Separators are normalized to POSIX
+`/`, and an empty spec (an empty list, or a comment-only listing) places no
+restriction, like `None`.
+
+When a spec is an exact-name set (a string, a string list, or a `.txt`
+listing), a name matching no item **raises** — a typo says so instead of
+silently selecting nothing. An open pattern (`Glob` / `Regex`) is exempt,
+since matching nothing may be intended.
+
+Unlike `exclude=` on the search entry points (which prunes a subtree during
+the walk), `select` filters an already-materialized collection, so it also
+works on items that are not paths.
+
+Need `include` and `exclude` to act separately? `resolve_selector` is the
+shared front end — it turns any spec form into one
+[`kaparoo.filters`](../../filters/) filter (or `None` for no restriction), so
+you can resolve the two and apply them in your own pipeline. The typo check
+stays in `select`, not `resolve_selector`.
+
+```python
+from kaparoo.filesystem.search import resolve_selector
+
+keep = resolve_selector(cfg["include"])   # a Filter, or None
+drop = resolve_selector(cfg["exclude"])
+chosen = [x for x in items if (keep is None or keep.matches(name(x)))
+          and not (drop is not None and drop.matches(name(x)))]
 ```
 
 ## Platform notes
