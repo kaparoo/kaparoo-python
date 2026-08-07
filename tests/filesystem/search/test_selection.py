@@ -4,7 +4,12 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from kaparoo.filesystem.search import resolve_selector, select
+from kaparoo.filesystem.search import (
+    SPEC_FILE_SUFFIXES,
+    is_spec_file,
+    resolve_selector,
+    select,
+)
 from kaparoo.filters import Filter, Glob
 
 if TYPE_CHECKING:
@@ -238,3 +243,38 @@ def test_resolve_lets_include_and_exclude_apply_independently():
     names = ["train/a", "train/b", "val/c"]
     kept = [n for n in names if include.matches(n) and not exclude.matches(n)]
     assert kept == ["train/a"]
+
+
+# --- is_spec_file / SPEC_FILE_SUFFIXES --------------------------------------
+
+
+@pytest.mark.parametrize("suffix", SPEC_FILE_SUFFIXES)
+def test_listed_suffix_is_read_as_a_file(suffix: str):
+    # `is_spec_file` agrees with `_load`: a listed suffix is read (raises on a
+    # missing file), not treated as an inline name.
+    assert is_spec_file(f"missing{suffix}")
+    with pytest.raises(FileNotFoundError):
+        resolve_selector(f"missing{suffix}")
+
+
+def test_suffix_match_is_case_insensitive():
+    assert is_spec_file("KEEP.JSON")
+    assert is_spec_file("keep.TXT")
+
+
+def test_non_spec_suffix_and_inline_name_are_not_spec_files():
+    assert not is_spec_file("train/a")
+    assert not is_spec_file("data.yaml")
+
+
+def test_dotfile_only_name_is_an_inline_name_not_a_file():
+    # a leading-dot name has no suffix, so it is inline, matching `_load`
+    assert not is_spec_file(".json")
+    resolved = resolve_selector(".json")
+    assert resolved is not None
+    assert resolved.matches(".json")  # a literal name, not a file read
+
+
+def test_is_spec_file_accepts_pathlike(tmp_path: Path):
+    assert is_spec_file(tmp_path / "x.json")
+    assert not is_spec_file(tmp_path / "x")

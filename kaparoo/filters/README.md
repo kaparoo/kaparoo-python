@@ -223,7 +223,7 @@ select(items, key=lambda s: s, exclude={"kind": "glob", "pattern": "train/*"})  
 ```
 
 A spec is a `str` (an exact name), a `Sequence` of names and / or
-`FilterDict`s, a `FilterDict`, or a `Filter` — all normalized to one filter.
+`FilterDict`s, a `FilterDict`, or a `Filter`, all normalized to one filter.
 `resolve_selector` returns that filter (or `None` for no restriction), so
 `include` and `exclude` can be resolved and applied independently. An
 all-string spec becomes a `OneOf`, so it stays enumerable: a listed name
@@ -239,7 +239,7 @@ select(items, key=lambda s: s, include=["typo"])
 ```
 
 Pass `normalize` to canonicalize exact names before matching (e.g.
-`str.lower`). This base is **in-memory only** — to load a spec from a `.json`
+`str.lower`). This base is **in-memory only**. To load a spec from a `.json`
 / `.txt` file, or match subpaths with POSIX-normalized separators, use
 [`kaparoo.filesystem.search`](../filesystem/search/), which builds on it.
 

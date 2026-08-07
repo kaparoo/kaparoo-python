@@ -117,12 +117,12 @@ search_files(
 
 `select` is the companion to a walk: given items already in hand (search
 results, or anything keyed by a name), it keeps the ones an `include` spec
-matches and drops the ones an `exclude` spec matches — on an overlap
+matches and drops the ones an `exclude` spec matches; on an overlap
 `exclude` wins. Each item is named by `key`; both specs are optional and
 default to no restriction.
 
 This is the **path-aware** form of
-[`kaparoo.filters.select`](../../filters/#selection) — the same matching, plus
+[`kaparoo.filters.select`](../../filters/#selection): the same matching, plus
 two filesystem extras the base leaves out: a spec may also be a `.json` /
 `.txt` file, and exact-name subpaths are normalized to POSIX `/`.
 
@@ -154,10 +154,14 @@ accepts several forms:
 A bare string is read as a file only when it ends in `.json` / `.txt`;
 otherwise it is a single inline subpath. Separators are normalized to POSIX
 `/`, and an empty spec (an empty list, or a comment-only listing) places no
-restriction, like `None`.
+restriction, like `None`. The recognized suffixes are exposed as
+`SPEC_FILE_SUFFIXES`, and `is_spec_file(source)` reports whether a value would
+be read as a file, applying the same case-insensitive suffix test as `select`,
+so a leading-dot name like `.json` (which has no suffix) is an inline name, not
+a file.
 
 When a spec is an exact-name set (a string, a string list, or a `.txt`
-listing), a name matching no item **raises** — a typo says so instead of
+listing), a name matching no item **raises**: a typo says so instead of
 silently selecting nothing. An open pattern (`Glob` / `Regex`) is exempt,
 since matching nothing may be intended.
 
@@ -166,7 +170,7 @@ the walk), `select` filters an already-materialized collection, so it also
 works on items that are not paths.
 
 Need `include` and `exclude` to act separately? `resolve_selector` is the
-shared front end — it turns any spec form into one
+shared front end: it turns any spec form into one
 [`kaparoo.filters`](../../filters/) filter (or `None` for no restriction), so
 you can resolve the two and apply them in your own pipeline. The typo check
 stays in `select`, not `resolve_selector`.

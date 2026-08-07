@@ -1,4 +1,5 @@
 __all__ = (
+    "SPEC_FILE_SUFFIXES",
     "DirectoryNotFoundError",
     "NotAFileError",
     "Selector",
@@ -25,6 +26,7 @@ __all__ = (
     "file_exists",
     "file_extension",
     "files_exist",
+    "is_spec_file",
     "make_dir",
     "make_dirs",
     "normalize_extension",
@@ -76,7 +78,9 @@ from kaparoo.filesystem.existence import (
     paths_exist,
 )
 from kaparoo.filesystem.search import (
+    SPEC_FILE_SUFFIXES,
     Selector,
+    is_spec_file,
     resolve_selector,
     search_dirs,
     search_files,

@@ -67,7 +67,7 @@ def resolve_selector(
     """Normalize an in-memory selector spec into a filter, `None` for no restriction.
 
     The shared front end of `select`'s `include` / `exclude`, exposed so the
-    two can be resolved -- and applied -- independently. `None` and an empty
+    two can be resolved (and applied) independently. `None` and an empty
     sequence both resolve to `None`.
 
     A `str` is a single exact name, a mapping is an inline `FilterDict`, a
@@ -78,7 +78,7 @@ def resolve_selector(
     `Filter`s are left untouched.
 
     `select`'s typo check (an exact name matching no item raises) lives in
-    `select`, not here -- resolving a spec never inspects a collection.
+    `select`, not here; resolving a spec never inspects a collection.
 
     Raises:
         ValueError: If a `FilterDict` is malformed (unknown / missing `kind`).
@@ -123,13 +123,13 @@ def select[T](
 
     Each item is named by `key`, then tested against two optional in-memory
     filter specs (see `resolve_selector` for the forms). An item survives when
-    `include` matches it (or `include` is absent) **and** `exclude` does not --
+    `include` matches it (or `include` is absent) **and** `exclude` does not,
     so on an overlap `exclude` wins. `normalize` is threaded into both specs'
     resolution.
 
     When a spec resolves to an enumerable set of names (a string, a string
     list, or an enumerable filter such as `OneOf`), a name matching no item
-    raises -- a typo says so instead of silently selecting nothing. An open
+    raises: a typo says so instead of silently selecting nothing. An open
     pattern (`Glob` / `Regex`) cannot be enumerated, so matching nothing is
     allowed.
 

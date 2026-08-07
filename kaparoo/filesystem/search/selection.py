@@ -7,7 +7,13 @@ to POSIX `/`, then delegates the in-memory matching to the base module.
 
 from __future__ import annotations
 
-__all__ = ("Selector", "resolve_selector", "select")
+__all__ = (
+    "SPEC_FILE_SUFFIXES",
+    "Selector",
+    "is_spec_file",
+    "resolve_selector",
+    "select",
+)
 
 import json
 import os
@@ -18,12 +24,26 @@ from kaparoo.filters import selection as _base
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
+    from typing import Final
 
     from kaparoo.filesystem.types import StrPath
     from kaparoo.filters import Filter
 
 
 type Selector = _base.Selector | StrPath
+
+SPEC_FILE_SUFFIXES: Final = (".json", ".txt")
+
+
+def is_spec_file(source: StrPath) -> bool:
+    """Whether `select` reads `source` as a spec file rather than an inline name.
+
+    True when `source`'s suffix is one of `SPEC_FILE_SUFFIXES` (`.json` / `.txt`),
+    matched case-insensitively. This is the same test `select` and `resolve_selector`
+    apply, so a leading-dot name such as `.json` (which has no suffix) counts as an
+    inline name, not a spec file.
+    """
+    return PurePath(source).suffix.lower() in SPEC_FILE_SUFFIXES
 
 
 def _posix(subpath: str) -> str:
@@ -98,9 +118,9 @@ def select[T](
 
     The path-aware counterpart of `kaparoo.filters.selection.select`: `include`
     / `exclude` additionally accept a `.json` / `.txt` file path, and exact-name
-    subpaths are normalized to POSIX `/`. Everything else -- the exact-name /
-    pattern forms, the `include` -> `exclude` order (`exclude` wins on overlap),
-    and the typo check on exact names -- matches the base.
+    subpaths are normalized to POSIX `/`. Everything else matches the base: the
+    exact-name / pattern forms, the `include` then `exclude` order (`exclude`
+    wins on overlap), and the typo check on exact names.
 
     Args:
         items: The items to select from.
