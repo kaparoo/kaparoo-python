@@ -57,6 +57,17 @@ class FileListSequence[T, M = Path](DataSequence[T, M]):
         """Return the full `Path` of the file at `index`."""
         return Path(self._files[index])
 
+    def get_name(self, index: int) -> str:
+        """The leaf name of the file at `index`.
+
+        Reads the stored string directly, so a loop that judges files by
+        name (numbering, extension, pattern) does not pay one `Path`
+        construction per file. Correct for both templates: the leaf is the
+        last segment whether the stored string is a full path or, in
+        `FileFolderSequence`, root-relative.
+        """
+        return self._files[index].rsplit("/", 1)[-1]
+
     @override
     def get_item(self, index: int) -> T:
         """Load the file at `index` via `load_file`."""

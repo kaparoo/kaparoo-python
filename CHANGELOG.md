@@ -13,6 +13,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `kaparoo.filesystem.WalkKwargs`: the `search_*` keyword set without
   `predicate`, for a wrapper that supplies or retypes `predicate` itself and
   forwards the remaining walk keys. `SearchKwargs` now subclasses it.
+- `FileListSequence.get_name`: the leaf name of the file at an index, read
+  from the stored string without constructing a `Path`. Inherited by
+  `FileFolderSequence`.
 
 ## [0.13.0] - 2026-08-09
 

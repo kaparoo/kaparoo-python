@@ -119,6 +119,14 @@ def test_file_folder_metadata_is_path(tmp_dir: Path):
     assert folder.get_meta(0) == tmp_dir / "a.txt"
 
 
+def test_file_folder_get_name_is_leaf_of_nested_file(tmp_dir: Path):
+    # Stored root-relative ("sub/deep.txt"); get_name still returns the leaf.
+    (tmp_dir / "sub").mkdir()
+    (tmp_dir / "sub" / "deep.txt").write_bytes(b"z")
+    folder = BytesFolder(tmp_dir, pattern="*.txt", recursive=True)
+    assert folder.get_name(0) == "deep.txt"
+
+
 def test_file_folder_subclass_options_reach_list_files(tmp_dir: Path):
     # `pattern` is stored on `self` before `super().__init__()` and
     # read by `list_files` when the base invokes it.
@@ -264,6 +272,17 @@ def test_file_list_metadata_is_path(tmp_dir: Path):
     a = tmp_dir / "a.bin"
     a.write_bytes(b"a")
     assert BytesList([a]).get_meta(0) == a
+
+
+def test_file_list_get_name_is_leaf(tmp_path: Path):
+    d1, d2 = tmp_path / "one", tmp_path / "two"
+    d1.mkdir()
+    d2.mkdir()
+    (d1 / "x.bin").write_bytes(b"x")
+    (d2 / "y.bin").write_bytes(b"y")
+
+    data = BytesList([d1 / "x.bin", d2 / "y.bin"])
+    assert [data.get_name(i) for i in range(len(data))] == ["x.bin", "y.bin"]
 
 
 def test_file_list_accepts_str_paths(tmp_dir: Path):

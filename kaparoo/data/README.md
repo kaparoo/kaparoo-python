@@ -292,6 +292,11 @@ which `FileFolderSequence` cannot represent. There is no `list_files`;
 subclasses implement only `load_file` and `get_meta`. The input order is
 preserved verbatim (duplicates kept) — sort it yourself if needed.
 
+`get_name(index) -> str` returns a file's leaf name straight from the stored
+string, so a loop that judges files by name (numbering, extension, pattern)
+skips one `Path` construction per file. It is defined here, so
+`FileFolderSequence` inherits it too.
+
 ```python
 from pathlib import Path
 from kaparoo.data.sequences import FileListSequence
