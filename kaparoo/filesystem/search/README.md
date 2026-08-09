@@ -29,6 +29,20 @@ All three share the same keyword arguments: `part_filter`, `name_filter`,
 published as `SearchKwargs`, so a wrapper can accept and forward the whole set
 as `**options: Unpack[SearchKwargs]` without re-declaring each key.
 
+A wrapper that owns its `predicate`, whether it supplies one internally or
+exposes one of a different type over the objects it returns, forwards
+`WalkKwargs` instead, which is `SearchKwargs` without `predicate`.
+`SearchKwargs` subclasses it, so the two stay in sync:
+
+```python
+from typing import Unpack
+
+from kaparoo.filesystem import WalkKwargs, contains, search_dirs
+
+def search_subdirs(root, subpath, **walk: Unpack[WalkKwargs]):
+    return search_dirs(root, predicate=contains(subpath), **walk)
+```
+
 ```python
 from kaparoo.filesystem.search import search_files
 from kaparoo.filters import EndsWith

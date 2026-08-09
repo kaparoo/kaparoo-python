@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `kaparoo.filesystem.WalkKwargs`: the `search_*` keyword set without
+  `predicate`, for a wrapper that supplies or retypes `predicate` itself and
+  forwards the remaining walk keys. `SearchKwargs` now subclasses it.
+
 ## [0.13.0] - 2026-08-09
 
 ### Added
