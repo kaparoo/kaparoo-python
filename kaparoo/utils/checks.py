@@ -5,7 +5,7 @@ from __future__ import annotations
 __all__ = ("ensure_in_range", "ensure_one_of")
 
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from kaparoo.utils.optional import replace_if_none
 
@@ -13,8 +13,13 @@ if TYPE_CHECKING:
     from collections.abc import Collection
 
 
-def ensure_one_of[T](value: T, options: Collection[T], *, name: str = "value") -> T:
+def ensure_one_of[T](
+    value: object, options: Collection[T], *, name: str = "value"
+) -> T:
     """Return `value` if it is one of `options`, else raise `ValueError`.
+
+    The return type is `options`' element type, so the result carries whatever
+    narrowing `options` declares (a `Literal` set returns that `Literal`).
 
     For a discrete integer grid, pass a `range` (e.g. `range(0, 10, 2)`):
     membership is exact and O(1). For a continuous bound, use `ensure_in_range`.
@@ -30,7 +35,7 @@ def ensure_one_of[T](value: T, options: Collection[T], *, name: str = "value") -
         msg = f"{name} must be one of {shown} (got {value!r})"
         raise ValueError(msg)
 
-    return value
+    return cast("T", value)
 
 
 def ensure_in_range[T: (int, float)](

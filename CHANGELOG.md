@@ -20,6 +20,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   not a file. Lets a caller tell in advance whether a string will be loaded
   from disk or matched inline.
 
+### Changed
+
+- `kaparoo.utils.ensure_one_of` now binds its type parameter from `options`
+  alone (`value` is typed `object`), so the return type carries `options`'
+  narrowing: `ensure_one_of(text, POLICIES)` with a `Literal` tuple `POLICIES`
+  returns that `Literal` rather than `str`. Runtime behavior is unchanged; a
+  `value` whose type is unrelated to `options` no longer fails statically (it
+  still raises at runtime).
+
 ## [0.12.0] - 2026-07-30
 
 ### Added
