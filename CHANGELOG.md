@@ -8,6 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-08-09
+
 ### Added
 
 - `kaparoo.filesystem.WalkKwargs`: the `search_*` keyword set without
