@@ -32,7 +32,7 @@ from kaparoo.filesystem.utils import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
-    from typing import Literal
+    from typing import Final, Literal
 
     from kaparoo.filesystem.types import StrPath, StrPaths
 
@@ -57,13 +57,26 @@ def dir_exists(path: StrPath) -> bool:
     return Path(path).is_dir()
 
 
-def contains(subpath: StrPath) -> Callable[[Path], bool]:
-    """Return a predicate testing whether `path / subpath` exists.
+_CONTAINS_CHECKS: Final = {
+    "any": path_exists,
+    "dir": dir_exists,
+    "file": file_exists,
+}
+
+
+def contains(
+    subpath: StrPath, *, kind: Literal["any", "dir", "file"] = "any"
+) -> Callable[[Path], bool]:
+    """Return a predicate testing whether `path / subpath` is present.
 
     A path predicate for identifying a directory by a relative entry it holds,
-    composable as a `search_*` `predicate`.
+    composable as a `search_*` `predicate`. `kind` selects what counts as
+    present: `"any"` a file or directory, `"dir"` only a directory, `"file"`
+    only a file. The check is resolved here, so the returned predicate carries
+    no branch.
     """
-    return lambda path: path_exists(path / subpath)
+    check = _CONTAINS_CHECKS[kind]
+    return lambda path: check(path / subpath)
 
 
 @overload

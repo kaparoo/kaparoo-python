@@ -118,7 +118,10 @@ search_dirs("data", predicate=holds_phase, descend=lambda p: not holds_phase(p))
 ```
 
 `contains(subpath)` is a predicate factory (from `kaparoo.filesystem`) that
-tests whether `path / subpath` exists.
+tests whether `path / subpath` is present. Pass `kind="dir"` or `kind="file"`
+to require the entry be a directory or a file; the default `"any"` accepts
+either. `contains("Phase", kind="dir")` identifies a directory by a
+**sub-directory** it holds, which `path_exists` alone cannot express.
 
 ## Depth control
 

@@ -17,6 +17,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   from the stored string without constructing a `Path`. Inherited by
   `FileFolderSequence`.
 
+### Changed
+
+- `kaparoo.filesystem.contains` gained a keyword-only `kind`
+  (`"any"` | `"dir"` | `"file"`, default `"any"`), selecting whether the held
+  entry must be a directory, a file, or either. The default keeps the existing
+  existence check, so nothing breaks.
+
 ## [0.13.0] - 2026-08-09
 
 ### Added

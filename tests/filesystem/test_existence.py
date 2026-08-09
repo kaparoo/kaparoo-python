@@ -64,6 +64,23 @@ def test_contains(tmp_path: Path):
     assert holds_marker(tmp_path / "missing") is False
 
 
+def test_contains_kind_discriminates_dir_and_file(tmp_path: Path):
+    (tmp_path / "has_dir" / "entry").mkdir(parents=True)
+    (tmp_path / "has_file").mkdir()
+    (tmp_path / "has_file" / "entry").touch()
+
+    holds_any = contains("entry")
+    holds_dir = contains("entry", kind="dir")
+    holds_file = contains("entry", kind="file")
+
+    assert holds_any(tmp_path / "has_dir") is True
+    assert holds_any(tmp_path / "has_file") is True
+    assert holds_dir(tmp_path / "has_dir") is True
+    assert holds_dir(tmp_path / "has_file") is False
+    assert holds_file(tmp_path / "has_dir") is False
+    assert holds_file(tmp_path / "has_file") is True
+
+
 def test_paths_exist(tmp_filesystem: TmpFilesystem, unknown_path: Path):
     fs = tmp_filesystem
     # All existing, with and without `root`.
