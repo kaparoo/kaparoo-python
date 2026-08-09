@@ -354,7 +354,10 @@ literal_values(Policy)                            # ("error", "reuse")
 `resolve_enum`'s `exclude` covers a sentinel member (`UNKNOWN`, `AUTO`, ...)
 no caller may request. `literal_values` raises `TypeError` on anything that
 does not resolve to a `Literal`, so an alias that quietly changed shape is
-refused rather than read as empty.
+refused rather than read as empty. A PEP 695 alias evaluates its value lazily,
+so the module defining `type X = Literal[...]` must import `Literal` at
+runtime; a `TYPE_CHECKING`-only import raises `NameError` when the value is
+first read.
 
 ## Text
 

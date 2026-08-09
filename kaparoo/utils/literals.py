@@ -18,6 +18,10 @@ def literal_values(alias: object) -> tuple[Any, ...]:
     values are read either way, and refuses anything that is not a `Literal`
     rather than reporting it as empty.
 
+    A PEP 695 alias evaluates its value lazily, so the module defining the alias
+    must import `Literal` at runtime; a `TYPE_CHECKING`-only import raises
+    `NameError` when `__value__` is first read here.
+
     Raises:
         TypeError: If `alias` does not resolve to a `Literal`.
     """
