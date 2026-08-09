@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 __all__ = (
+    "contains",
     "dir_exists",
     "dirs_exist",
     "ensure_dir_exists",
@@ -30,7 +31,7 @@ from kaparoo.filesystem.utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
     from typing import Literal
 
     from kaparoo.filesystem.types import StrPath, StrPaths
@@ -54,6 +55,15 @@ def file_exists(path: StrPath) -> bool:
 def dir_exists(path: StrPath) -> bool:
     """Test whether a given path is an existing directory."""
     return Path(path).is_dir()
+
+
+def contains(subpath: StrPath) -> Callable[[Path], bool]:
+    """Return a predicate testing whether `path / subpath` exists.
+
+    A path predicate for identifying a directory by a relative entry it holds,
+    composable as a `search_*` `predicate`.
+    """
+    return lambda path: path_exists(path / subpath)
 
 
 @overload

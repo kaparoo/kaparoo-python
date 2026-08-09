@@ -9,72 +9,33 @@ from typing import TYPE_CHECKING, overload
 from kaparoo.filesystem.search.classes import DirSearch, FileSearch, PathSearch
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
     from pathlib import Path
-    from typing import Literal
+    from typing import Literal, Unpack
 
-    from kaparoo.filesystem.exclude import ExcludeRule
+    from kaparoo.filesystem.search.types import SearchKwargs
     from kaparoo.filesystem.types import StrPath
-    from kaparoo.filters import Filter
-    from kaparoo.filters.types import FilterDict
 
 
 @overload
 def search_paths(
-    root: StrPath,
-    *,
-    part_filter: Filter | FilterDict | None = None,
-    name_filter: Filter | FilterDict | None = None,
-    predicate: Callable[[Path], bool] | None = None,
-    exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
-    min_depth: int = 1,
-    max_depth: int | None = None,
-    ordered: bool = True,
-    stringify: Literal[False] = False,
+    root: StrPath, *, stringify: Literal[False] = False, **options: Unpack[SearchKwargs]
 ) -> list[Path]: ...
 
 
 @overload
 def search_paths(
-    root: StrPath,
-    *,
-    part_filter: Filter | FilterDict | None = None,
-    name_filter: Filter | FilterDict | None = None,
-    predicate: Callable[[Path], bool] | None = None,
-    exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
-    min_depth: int = 1,
-    max_depth: int | None = None,
-    ordered: bool = True,
-    stringify: Literal[True],
+    root: StrPath, *, stringify: Literal[True], **options: Unpack[SearchKwargs]
 ) -> list[str]: ...
 
 
 @overload
 def search_paths(
-    root: StrPath,
-    *,
-    part_filter: Filter | FilterDict | None = None,
-    name_filter: Filter | FilterDict | None = None,
-    predicate: Callable[[Path], bool] | None = None,
-    exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
-    min_depth: int = 1,
-    max_depth: int | None = None,
-    ordered: bool = True,
-    stringify: bool,
+    root: StrPath, *, stringify: bool, **options: Unpack[SearchKwargs]
 ) -> list[Path] | list[str]: ...
 
 
 def search_paths(
-    root: StrPath,
-    *,
-    part_filter: Filter | FilterDict | None = None,
-    name_filter: Filter | FilterDict | None = None,
-    predicate: Callable[[Path], bool] | None = None,
-    exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
-    min_depth: int = 1,
-    max_depth: int | None = None,
-    ordered: bool = True,
-    stringify: bool = False,
+    root: StrPath, *, stringify: bool = False, **options: Unpack[SearchKwargs]
 ) -> list[Path] | list[str]:
     """Walk `root` and return file and directory paths that match.
 
@@ -83,8 +44,7 @@ def search_paths(
     (on the entry's leaf name), `predicate` (on the entry's full `Path`), and
     lie within `[min_depth, max_depth]`.
 
-    Args:
-        root: The directory to walk.
+    Keyword Args:
         part_filter: Filter on each visited directory's relative path
             string. Accepts a `Filter` or a `FilterDict`. None (default)
             accepts all directories.
@@ -92,12 +52,15 @@ def search_paths(
             or a `FilterDict`. None (default) accepts all names.
         predicate: Callable on each entry's full `Path` for a final check.
             None (default) accepts all paths.
-        exclude: Paths to skip -- a `StrPath` (absolute under `root` or
+        exclude: Paths to skip: a `StrPath` (absolute under `root` or
             root-relative), a `Filter` (on the root-relative POSIX path), a
-            `Callable` on the candidate `Path` (the real, filesystem-valid
-            path), or an iterable of these (OR-combined). An excluded
-            *directory* is pruned (its subtree is not descended). None
-            (default) excludes nothing.
+            `Callable` on the candidate `Path`, or an iterable of these
+            (OR-combined). An excluded *directory* is pruned (its subtree is
+            not descended). None (default) excludes nothing.
+        descend: Callable on each sub-directory's full `Path` deciding whether
+            to visit it. A directory that fails is still offered to the filters
+            and may be returned, but is not descended into. None (default)
+            descends into every directory.
         min_depth: Minimum inclusion depth (>= 1, direct children of
             `root` are at depth 1). Defaults to 1.
         max_depth: Maximum inclusion depth (>= `min_depth`), or None for
@@ -117,75 +80,29 @@ def search_paths(
         DirectoryNotFoundError: `root` does not exist.
         NotADirectoryError: `root` exists but is not a directory.
     """
-    return PathSearch.run(
-        root,
-        part_filter=part_filter,
-        name_filter=name_filter,
-        predicate=predicate,
-        exclude=exclude,
-        min_depth=min_depth,
-        max_depth=max_depth,
-        ordered=ordered,
-        stringify=stringify,
-    )
+    return PathSearch.run(root, stringify=stringify, **options)
 
 
 @overload
 def search_files(
-    root: StrPath,
-    *,
-    part_filter: Filter | FilterDict | None = None,
-    name_filter: Filter | FilterDict | None = None,
-    predicate: Callable[[Path], bool] | None = None,
-    exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
-    min_depth: int = 1,
-    max_depth: int | None = None,
-    ordered: bool = True,
-    stringify: Literal[False] = False,
+    root: StrPath, *, stringify: Literal[False] = False, **options: Unpack[SearchKwargs]
 ) -> list[Path]: ...
 
 
 @overload
 def search_files(
-    root: StrPath,
-    *,
-    part_filter: Filter | FilterDict | None = None,
-    name_filter: Filter | FilterDict | None = None,
-    predicate: Callable[[Path], bool] | None = None,
-    exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
-    min_depth: int = 1,
-    max_depth: int | None = None,
-    ordered: bool = True,
-    stringify: Literal[True],
+    root: StrPath, *, stringify: Literal[True], **options: Unpack[SearchKwargs]
 ) -> list[str]: ...
 
 
 @overload
 def search_files(
-    root: StrPath,
-    *,
-    part_filter: Filter | FilterDict | None = None,
-    name_filter: Filter | FilterDict | None = None,
-    predicate: Callable[[Path], bool] | None = None,
-    exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
-    min_depth: int = 1,
-    max_depth: int | None = None,
-    ordered: bool = True,
-    stringify: bool,
+    root: StrPath, *, stringify: bool, **options: Unpack[SearchKwargs]
 ) -> list[Path] | list[str]: ...
 
 
 def search_files(
-    root: StrPath,
-    *,
-    part_filter: Filter | FilterDict | None = None,
-    name_filter: Filter | FilterDict | None = None,
-    predicate: Callable[[Path], bool] | None = None,
-    exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
-    min_depth: int = 1,
-    max_depth: int | None = None,
-    ordered: bool = True,
-    stringify: bool = False,
+    root: StrPath, *, stringify: bool = False, **options: Unpack[SearchKwargs]
 ) -> list[Path] | list[str]:
     """Walk `root` and return file paths that match.
 
@@ -195,8 +112,7 @@ def search_files(
     `[min_depth, max_depth]`. Sub-directories are walked into but never
     themselves returned.
 
-    Args:
-        root: The directory to walk.
+    Keyword Args:
         part_filter: Filter on each visited directory's relative path
             string. Accepts a `Filter` or a `FilterDict`. None (default)
             accepts all directories.
@@ -204,12 +120,14 @@ def search_files(
             or a `FilterDict`. None (default) accepts all names.
         predicate: Callable on each file's full `Path` for a final check.
             None (default) accepts all paths.
-        exclude: Paths to skip -- a `StrPath` (absolute under `root` or
+        exclude: Paths to skip: a `StrPath` (absolute under `root` or
             root-relative), a `Filter` (on the root-relative POSIX path), a
-            `Callable` on the candidate `Path` (the real, filesystem-valid
-            path), or an iterable of these (OR-combined). An excluded
-            *directory* is pruned (its subtree is not descended). None
-            (default) excludes nothing.
+            `Callable` on the candidate `Path`, or an iterable of these
+            (OR-combined). An excluded *directory* is pruned (its subtree is
+            not descended). None (default) excludes nothing.
+        descend: Callable on each sub-directory's full `Path` deciding whether
+            to visit it. A directory that fails is not descended into. None
+            (default) descends into every directory.
         min_depth: Minimum inclusion depth (>= 1, direct children of
             `root` are at depth 1). Defaults to 1.
         max_depth: Maximum inclusion depth (>= `min_depth`), or None for
@@ -229,75 +147,29 @@ def search_files(
         DirectoryNotFoundError: `root` does not exist.
         NotADirectoryError: `root` exists but is not a directory.
     """
-    return FileSearch.run(
-        root,
-        part_filter=part_filter,
-        name_filter=name_filter,
-        predicate=predicate,
-        exclude=exclude,
-        min_depth=min_depth,
-        max_depth=max_depth,
-        ordered=ordered,
-        stringify=stringify,
-    )
+    return FileSearch.run(root, stringify=stringify, **options)
 
 
 @overload
 def search_dirs(
-    root: StrPath,
-    *,
-    part_filter: Filter | FilterDict | None = None,
-    name_filter: Filter | FilterDict | None = None,
-    predicate: Callable[[Path], bool] | None = None,
-    exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
-    min_depth: int = 1,
-    max_depth: int | None = None,
-    ordered: bool = True,
-    stringify: Literal[False] = False,
+    root: StrPath, *, stringify: Literal[False] = False, **options: Unpack[SearchKwargs]
 ) -> list[Path]: ...
 
 
 @overload
 def search_dirs(
-    root: StrPath,
-    *,
-    part_filter: Filter | FilterDict | None = None,
-    name_filter: Filter | FilterDict | None = None,
-    predicate: Callable[[Path], bool] | None = None,
-    exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
-    min_depth: int = 1,
-    max_depth: int | None = None,
-    ordered: bool = True,
-    stringify: Literal[True],
+    root: StrPath, *, stringify: Literal[True], **options: Unpack[SearchKwargs]
 ) -> list[str]: ...
 
 
 @overload
 def search_dirs(
-    root: StrPath,
-    *,
-    part_filter: Filter | FilterDict | None = None,
-    name_filter: Filter | FilterDict | None = None,
-    predicate: Callable[[Path], bool] | None = None,
-    exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
-    min_depth: int = 1,
-    max_depth: int | None = None,
-    ordered: bool = True,
-    stringify: bool,
+    root: StrPath, *, stringify: bool, **options: Unpack[SearchKwargs]
 ) -> list[Path] | list[str]: ...
 
 
 def search_dirs(
-    root: StrPath,
-    *,
-    part_filter: Filter | FilterDict | None = None,
-    name_filter: Filter | FilterDict | None = None,
-    predicate: Callable[[Path], bool] | None = None,
-    exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
-    min_depth: int = 1,
-    max_depth: int | None = None,
-    ordered: bool = True,
-    stringify: bool = False,
+    root: StrPath, *, stringify: bool = False, **options: Unpack[SearchKwargs]
 ) -> list[Path] | list[str]:
     """Walk `root` and return directory paths that match.
 
@@ -307,8 +179,7 @@ def search_dirs(
     within `[min_depth, max_depth]`. Files are never returned. `root` itself
     is not included.
 
-    Args:
-        root: The directory to walk.
+    Keyword Args:
         part_filter: Filter on each visited directory's relative path
             string. Accepts a `Filter` or a `FilterDict`. None (default)
             accepts all directories.
@@ -316,12 +187,15 @@ def search_dirs(
             `Filter` or a `FilterDict`. None (default) accepts all names.
         predicate: Callable on each sub-directory's full `Path` for a
             final check. None (default) accepts all paths.
-        exclude: Paths to skip -- a `StrPath` (absolute under `root` or
+        exclude: Paths to skip: a `StrPath` (absolute under `root` or
             root-relative), a `Filter` (on the root-relative POSIX path), a
-            `Callable` on the candidate `Path` (the real, filesystem-valid
-            path), or an iterable of these (OR-combined). An excluded
-            *directory* is pruned (its subtree is not descended). None
-            (default) excludes nothing.
+            `Callable` on the candidate `Path`, or an iterable of these
+            (OR-combined). An excluded *directory* is pruned (its subtree is
+            not descended). None (default) excludes nothing.
+        descend: Callable on each sub-directory's full `Path` deciding whether
+            to visit it. A directory that fails is still offered to the filters
+            and may be returned, but is not descended into. None (default)
+            descends into every directory.
         min_depth: Minimum inclusion depth (>= 1, direct sub-directories
             of `root` are at depth 1). Defaults to 1.
         max_depth: Maximum inclusion depth (>= `min_depth`), or None for
@@ -341,14 +215,4 @@ def search_dirs(
         DirectoryNotFoundError: `root` does not exist.
         NotADirectoryError: `root` exists but is not a directory.
     """
-    return DirSearch.run(
-        root,
-        part_filter=part_filter,
-        name_filter=name_filter,
-        predicate=predicate,
-        exclude=exclude,
-        min_depth=min_depth,
-        max_depth=max_depth,
-        ordered=ordered,
-        stringify=stringify,
-    )
+    return DirSearch.run(root, stringify=stringify, **options)

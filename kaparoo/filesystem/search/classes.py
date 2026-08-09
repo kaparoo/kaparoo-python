@@ -13,13 +13,12 @@ from kaparoo.filesystem.utils import stringify_path, stringify_paths
 from kaparoo.filters import Filter
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Iterable
     from pathlib import Path
-    from typing import Literal
+    from typing import Literal, Unpack
 
-    from kaparoo.filesystem.exclude import ExcludeRule
+    from kaparoo.filesystem.search.types import SearchKwargs
     from kaparoo.filesystem.types import StrPath
-    from kaparoo.filters.types import FilterDict
 
 
 class Search(ABC):
@@ -67,61 +66,25 @@ class Search(ABC):
         cls,
         root: StrPath,
         *,
-        part_filter: Filter | FilterDict | None = None,
-        name_filter: Filter | FilterDict | None = None,
-        predicate: Callable[[Path], bool] | None = None,
-        exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
-        min_depth: int = 1,
-        max_depth: int | None = None,
-        ordered: bool = True,
         stringify: Literal[False] = False,
+        **options: Unpack[SearchKwargs],
     ) -> list[Path]: ...
 
     @overload
     @classmethod
     def run(
-        cls,
-        root: StrPath,
-        *,
-        part_filter: Filter | FilterDict | None = None,
-        name_filter: Filter | FilterDict | None = None,
-        predicate: Callable[[Path], bool] | None = None,
-        exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
-        min_depth: int = 1,
-        max_depth: int | None = None,
-        ordered: bool = True,
-        stringify: Literal[True],
+        cls, root: StrPath, *, stringify: Literal[True], **options: Unpack[SearchKwargs]
     ) -> list[str]: ...
 
     @overload
     @classmethod
     def run(
-        cls,
-        root: StrPath,
-        *,
-        part_filter: Filter | FilterDict | None = None,
-        name_filter: Filter | FilterDict | None = None,
-        predicate: Callable[[Path], bool] | None = None,
-        exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
-        min_depth: int = 1,
-        max_depth: int | None = None,
-        ordered: bool = True,
-        stringify: bool,
+        cls, root: StrPath, *, stringify: bool, **options: Unpack[SearchKwargs]
     ) -> list[Path] | list[str]: ...
 
     @classmethod
     def run(
-        cls,
-        root: StrPath,
-        *,
-        part_filter: Filter | FilterDict | None = None,
-        name_filter: Filter | FilterDict | None = None,
-        predicate: Callable[[Path], bool] | None = None,
-        exclude: ExcludeRule | Iterable[ExcludeRule] | None = None,
-        min_depth: int = 1,
-        max_depth: int | None = None,
-        ordered: bool = True,
-        stringify: bool = False,
+        cls, root: StrPath, *, stringify: bool = False, **options: Unpack[SearchKwargs]
     ) -> list[Path] | list[str]:
         """Walk `root` and return the entries matching the configured filters.
 
@@ -139,12 +102,22 @@ class Search(ABC):
         `exclude` is applied before those gates: excluded entries are dropped
         and an excluded *directory* is pruned (its subtree is never visited),
         which the filters cannot do (a directory failing `name_filter` is
-        still descended).
+        still descended). `descend` only prunes: a directory failing it is
+        still offered to the filters and may be returned, but is not visited.
 
         Depth is measured from `root` (a direct child is depth 1): entries
         below `min_depth` are skipped but still descended, and entries at
         `max_depth` are included but not descended past.
         """
+        part_filter = options.get("part_filter")
+        name_filter = options.get("name_filter")
+        predicate = options.get("predicate")
+        exclude = options.get("exclude")
+        descend = options.get("descend")
+        min_depth = options.get("min_depth", 1)
+        max_depth = options.get("max_depth")
+        ordered = options.get("ordered", True)
+
         cls._validate_depth_range(min_depth, max_depth)
 
         if part_filter is not None:
@@ -159,6 +132,7 @@ class Search(ABC):
 
         has_excluder = excluder is not None
         has_predicate = predicate is not None
+        has_descend = descend is not None
         has_max_depth = max_depth is not None
 
         results: list[Path] = []
@@ -183,6 +157,8 @@ class Search(ABC):
 
             if has_max_depth and child_depth >= max_depth:
                 dirnames.clear()  # prune deeper subtree; `Path.walk` honors in-place mutation
+            elif has_descend:
+                dirnames[:] = [d for d in dirnames if descend(dirpath / d)]
 
         if ordered:
             results.sort()

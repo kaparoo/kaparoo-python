@@ -8,6 +8,7 @@ DSL.
 - [Entry points](#entry-points)
 - [How filters apply](#how-filters-apply)
 - [Excluding paths (with pruning)](#excluding-paths-with-pruning)
+- [Descending selectively](#descending-selectively)
 - [Depth control](#depth-control)
 - [Filters](#filters)
 - [Selecting from a collection](#selecting-from-a-collection)
@@ -23,7 +24,10 @@ DSL.
 | [`search_dirs`](./wrappers.py) | directories only |
 
 All three share the same keyword arguments: `part_filter`, `name_filter`,
-`predicate`, `exclude`, `min_depth`, `max_depth`, `ordered`, `stringify`.
+`predicate`, `exclude`, `descend`, `min_depth`, `max_depth`, `ordered`,
+`stringify`. That set (minus `stringify`, which selects the return type) is
+published as `SearchKwargs`, so a wrapper can accept and forward the whole set
+as `**options: Unpack[SearchKwargs]` without re-declaring each key.
 
 ```python
 from kaparoo.filesystem.search import search_files
@@ -82,6 +86,25 @@ search_files("repo", name_filter=Glob("*.py"), exclude=[".git", "node_modules"])
 
 `exclude` is applied before the filter gates, so a huge irrelevant subtree
 is never visited (unlike a `name_filter`, which would still descend into it).
+
+## Descending selectively
+
+`descend` decides whether to walk into a sub-directory, independently of
+whether it is returned. A directory that fails `descend` is still offered to
+the filters and may be returned, but its subtree is not visited. Unlike
+`exclude`, which both drops and prunes, `descend` only prunes.
+
+```python
+from kaparoo.filesystem import contains
+from kaparoo.filesystem.search import search_dirs
+
+# Return every directory that holds a "Phase" entry, without walking into them.
+holds_phase = contains("Phase")
+search_dirs("data", predicate=holds_phase, descend=lambda p: not holds_phase(p))
+```
+
+`contains(subpath)` is a predicate factory (from `kaparoo.filesystem`) that
+tests whether `path / subpath` exists.
 
 ## Depth control
 

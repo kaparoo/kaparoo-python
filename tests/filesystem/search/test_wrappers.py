@@ -355,3 +355,28 @@ def test_search_exclude_iterable_is_or_combined(tmp_filesystem: TmpFilesystem):
     assert fs.file1 not in result  # by exact path
     assert fs.file3 not in result  # by filter (*.png)
     assert fs.file2 in result
+
+
+def test_search_descend_returns_but_does_not_visit(tmp_path: Path):
+    keep = tmp_path / "keep"
+    (keep / "marker").mkdir(parents=True)
+    (keep / "inner").mkdir()
+    other = tmp_path / "other"
+    (other / "sub").mkdir(parents=True)
+
+    result = set(search_dirs(tmp_path, descend=lambda p: not (p / "marker").exists()))
+
+    assert keep in result  # a descend-failing directory is still returned
+    assert other in result
+    assert other / "sub" in result  # descended normally
+    assert keep / "marker" not in result  # not descended
+    assert keep / "inner" not in result
+
+
+def test_search_descend_does_not_drop_from_results(tmp_path: Path):
+    (tmp_path / "a" / "deep").mkdir(parents=True)
+    (tmp_path / "b").mkdir()
+
+    result = set(search_dirs(tmp_path, descend=lambda _p: False))
+
+    assert result == {tmp_path / "a", tmp_path / "b"}  # depth 1 kept, none descended

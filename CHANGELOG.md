@@ -30,6 +30,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `kaparoo.data.sequences.DataSequence.__getitems__`: a batch-fetch method
   that delegates to `get_items`, so a subclass's `get_items` override drives
   whole-batch access.
+- `kaparoo.filesystem.contains`: a predicate factory returning
+  `Callable[[Path], bool]` that tests whether `path / subpath` exists,
+  composable as a `search_*` `predicate`.
+- `kaparoo.filesystem.search.SearchKwargs` (re-exported from
+  `kaparoo.filesystem`): a `TypedDict` of the keyword set `search_paths` /
+  `search_files` / `search_dirs` share, so a wrapper can accept and forward it
+  as `**options: Unpack[SearchKwargs]` without re-declaring each key.
+- `descend` on `search_paths` / `search_files` / `search_dirs`: a
+  `Callable[[Path], bool]` deciding whether to visit a sub-directory. A
+  directory that fails it is still offered to the filters and may be returned,
+  but its subtree is not walked. Unlike `exclude` it only prunes, never drops.
 
 ### Changed
 

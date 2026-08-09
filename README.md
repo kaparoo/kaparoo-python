@@ -29,8 +29,9 @@ Each submodule ships its own README with focused examples.
 
 ### [`kaparoo.filesystem`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/filesystem)
 
-`pathlib`-based filesystem helpers: existence checks (`*_exists`),
-`ensure_*` validators, `make_dir(s)` (with a destructive `clean` reset
+`pathlib`-based filesystem helpers: existence checks (`*_exists`), the
+`contains(subpath)` predicate factory, `ensure_*` validators, `make_dir(s)`
+(with a destructive `clean` reset
 option), `dir_empty(s)`, `reserve_path(s)` guards for not-yet-existing
 destinations, `StagedFile` / `StagedDirectory` for safe (atomic) writes,
 path stringification, extension helpers (`ensure_file_extension`,
@@ -41,7 +42,9 @@ path stringification, extension helpers (`ensure_file_extension`,
 Filesystem traversal with composable filters: `search_paths` /
 `search_files` / `search_dirs`, wired to the `kaparoo.filters` DSL via
 `part_filter` / `name_filter` / `predicate`, with `min_depth` / `max_depth`
-control and a subtree-pruning `exclude`; plus a path-aware `select` that
+control, a subtree-pruning `exclude`, a walk-narrowing `descend`, and a
+`SearchKwargs` bundle for forwarding the shared keywords; plus a path-aware
+`select` that
 filters an already-gathered collection by an `include` / `exclude` name spec
 (exact subpaths, `.json` / `.txt` files, patterns, or filters).
 
@@ -70,7 +73,8 @@ name spec. Used by `kaparoo.filesystem.search` for path matching and
 `Timer` / `SpanTimer` context-manager-and-decorator timers (with
 `lap`-split and `measure`-block timings); `Aggregator` for nested,
 pluggable metric aggregation (the batch → epoch → run pattern);
-`ensure_one_of` / `ensure_in_range` validation guards; plus helpers
+`ensure_one_of` / `ensure_in_range` validation guards; `resolve_enum` /
+`literal_values` for config-driven `Enum` / `Literal` sets; plus helpers
 for `Optional[T]` values (`replace_if_none`, `unwrap_or_default`, ...).
 
 ### [`kaparoo.data`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/data)

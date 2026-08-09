@@ -2,10 +2,12 @@ __all__ = (
     "SPEC_FILE_SUFFIXES",
     "DirectoryNotFoundError",
     "NotAFileError",
+    "SearchKwargs",
     "Selector",
     "StagedDirectory",
     "StagedFile",
     "UnsupportedExtensionError",
+    "contains",
     "dir_empty",
     "dir_empty_unsafe",
     "dir_exists",
@@ -64,6 +66,7 @@ from kaparoo.filesystem.exceptions import (
     UnsupportedExtensionError,
 )
 from kaparoo.filesystem.existence import (
+    contains,
     dir_exists,
     dirs_exist,
     ensure_dir_exists,
@@ -79,6 +82,7 @@ from kaparoo.filesystem.existence import (
 )
 from kaparoo.filesystem.search import (
     SPEC_FILE_SUFFIXES,
+    SearchKwargs,
     Selector,
     is_spec_file,
     resolve_selector,

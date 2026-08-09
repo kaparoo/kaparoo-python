@@ -17,8 +17,8 @@
 
 ## Modules
 
-- [`existence`](./existence.py) — boolean predicates (`*_exists`) and
-  validating `ensure_*` variants
+- [`existence`](./existence.py) — boolean predicates (`*_exists`), the
+  `contains(subpath)` predicate factory, and validating `ensure_*` variants
 - [`directory`](./directory.py) — `make_dir(s)`, `dir_empty(s)` /
   `dir_not_empty(s)` with validation, plus `_unsafe` variants that skip
   pre-checks

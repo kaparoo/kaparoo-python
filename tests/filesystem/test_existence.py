@@ -11,6 +11,7 @@ from kaparoo.filesystem.exceptions import (
     UnsupportedExtensionError,
 )
 from kaparoo.filesystem.existence import (
+    contains,
     dir_exists,
     dirs_exist,
     ensure_dir_exists,
@@ -52,6 +53,15 @@ def test_dir_exists(tmp_dir: Path, tmp_file: Path, unknown_path: Path):
     assert dir_exists(tmp_dir) is True
     assert dir_exists(tmp_file) is False  # exists but not a directory
     assert dir_exists(unknown_path) is False
+
+
+def test_contains(tmp_path: Path):
+    (tmp_path / "with" / "marker").mkdir(parents=True)
+    (tmp_path / "without").mkdir()
+    holds_marker = contains("marker")
+    assert holds_marker(tmp_path / "with") is True
+    assert holds_marker(tmp_path / "without") is False
+    assert holds_marker(tmp_path / "missing") is False
 
 
 def test_paths_exist(tmp_filesystem: TmpFilesystem, unknown_path: Path):
