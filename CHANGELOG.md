@@ -19,6 +19,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a leading-dot name such as `.json` (which has no suffix) is an inline name,
   not a file. Lets a caller tell in advance whether a string will be loaded
   from disk or matched inline.
+- `kaparoo.utils.resolve_enum` (re-exported from `kaparoo.utils`): resolve a
+  string to a member of an `Enum` by member name, case-insensitively unless
+  `case_sensitive=True`. `exclude` rejects the given members like unknown
+  names and keeps them out of the error message.
+- `kaparoo.utils.literal_values` (re-exported from `kaparoo.utils`): return the
+  values a `Literal` admits, resolving a PEP 695 `type X = Literal[...]` alias
+  through `__value__` (which `get_args` does not see through), and raising
+  `TypeError` on anything that does not resolve to a `Literal`.
 
 ### Changed
 

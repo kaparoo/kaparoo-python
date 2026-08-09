@@ -22,7 +22,9 @@ __all__ = (
     "factory_if_none",
     "fold_optional",
     "fold_optionals",
+    "literal_values",
     "replace_if_none",
+    "resolve_enum",
     "unwrap_or_default",
     "unwrap_or_defaults",
     "unwrap_or_factories",
@@ -47,6 +49,8 @@ from kaparoo.utils.aggregate import (
     Var,
 )
 from kaparoo.utils.checks import ensure_in_range, ensure_one_of
+from kaparoo.utils.enums import resolve_enum
+from kaparoo.utils.literals import literal_values
 from kaparoo.utils.optional import (
     factory_if_none,
     fold_optional,

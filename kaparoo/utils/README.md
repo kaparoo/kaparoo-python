@@ -10,6 +10,7 @@ Small, focused helpers — not enough material for their own packages.
 - [Aggregation](#aggregation)
 - [Optional helpers](#optional-helpers)
 - [Checks](#checks)
+- [Resolving closed sets](#resolving-closed-sets)
 - [See also](#see-also)
 
 ## Modules
@@ -21,6 +22,8 @@ Small, focused helpers — not enough material for their own packages.
   `OptionalFold`)
 - [`optional`](./optional.py) — helpers for `T | None` values
 - [`checks`](./checks.py) — `ensure_one_of`, `ensure_in_range`
+- [`enums`](./enums.py): `resolve_enum`
+- [`literals`](./literals.py): `literal_values`
 
 ## Timer
 
@@ -318,6 +321,38 @@ ensure_in_range(q, lower=0.0, upper=1.0, name="q")             # closed [0.0, 1.
 ensure_in_range(w, lower=0.0, inclusive=(False, True), name="w")  # (0.0, inf): w > 0
 ensure_in_range(n, lower=0, upper=10, step=2, name="n")        # 0, 2, ..., 10
 ```
+
+The return type of `ensure_one_of` is `options`' element type, so validating a
+`Literal` set returns that `Literal`, not a widened `str`.
+
+## Resolving closed sets
+
+`resolve_enum` maps a string to an `Enum` member (case-insensitive by
+default); `literal_values` reads the values a `Literal` admits, seeing through
+a PEP 695 `type X = Literal[...]` alias that `get_args` returns empty for.
+
+```python
+from enum import Enum
+from typing import Literal
+
+from kaparoo.utils import literal_values, resolve_enum
+
+class Unit(Enum):
+    NM = 1
+    RAD = 2
+    UNKNOWN = 3
+
+resolve_enum("nm", Unit)                          # Unit.NM
+resolve_enum("x", Unit, exclude=(Unit.UNKNOWN,))  # ValueError; UNKNOWN not offered
+
+type Policy = Literal["error", "reuse"]
+literal_values(Policy)                            # ("error", "reuse")
+```
+
+`resolve_enum`'s `exclude` covers a sentinel member (`UNKNOWN`, `AUTO`, ...)
+no caller may request. `literal_values` raises `TypeError` on anything that
+does not resolve to a `Literal`, so an alias that quietly changed shape is
+refused rather than read as empty.
 
 ## See also
 
