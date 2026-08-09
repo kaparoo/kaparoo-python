@@ -74,8 +74,9 @@ name spec. Used by `kaparoo.filesystem.search` for path matching and
 `lap`-split and `measure`-block timings); `Aggregator` for nested,
 pluggable metric aggregation (the batch → epoch → run pattern);
 `ensure_one_of` / `ensure_in_range` validation guards; `resolve_enum` /
-`literal_values` for config-driven `Enum` / `Literal` sets; plus helpers
-for `Optional[T]` values (`replace_if_none`, `unwrap_or_default`, ...).
+`literal_values` for config-driven `Enum` / `Literal` sets; `quantify` for
+pluralized counts; plus helpers for `Optional[T]` values (`replace_if_none`,
+`unwrap_or_default`, ...).
 
 ### [`kaparoo.data`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/data)
 

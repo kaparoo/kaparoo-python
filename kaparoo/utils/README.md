@@ -11,6 +11,7 @@ Small, focused helpers — not enough material for their own packages.
 - [Optional helpers](#optional-helpers)
 - [Checks](#checks)
 - [Resolving closed sets](#resolving-closed-sets)
+- [Text](#text)
 - [See also](#see-also)
 
 ## Modules
@@ -24,6 +25,7 @@ Small, focused helpers — not enough material for their own packages.
 - [`checks`](./checks.py) — `ensure_one_of`, `ensure_in_range`
 - [`enums`](./enums.py): `resolve_enum`
 - [`literals`](./literals.py): `literal_values`
+- [`text`](./text.py): `quantify`
 
 ## Timer
 
@@ -353,6 +355,20 @@ literal_values(Policy)                            # ("error", "reuse")
 no caller may request. `literal_values` raises `TypeError` on anything that
 does not resolve to a `Literal`, so an alias that quietly changed shape is
 refused rather than read as empty.
+
+## Text
+
+`quantify` returns a count followed by its noun, pluralized for every count
+but one. `plural` overrides the default `noun + "s"`, so it also covers an
+irregular plural a suffix cannot.
+
+```python
+from kaparoo.utils import quantify
+
+quantify(1, "frame")               # "1 frame"
+quantify(3, "frame")               # "3 frames"
+quantify(3, "entry", "entries")    # "3 entries"
+```
 
 ## See also
 

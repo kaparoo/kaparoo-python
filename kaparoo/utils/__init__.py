@@ -23,6 +23,7 @@ __all__ = (
     "fold_optional",
     "fold_optionals",
     "literal_values",
+    "quantify",
     "replace_if_none",
     "resolve_enum",
     "unwrap_or_default",
@@ -61,4 +62,5 @@ from kaparoo.utils.optional import (
     unwrap_or_factories,
     unwrap_or_factory,
 )
+from kaparoo.utils.text import quantify
 from kaparoo.utils.timer import SpanRecord, SpanTimer, Timer
