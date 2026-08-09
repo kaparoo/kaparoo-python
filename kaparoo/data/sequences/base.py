@@ -81,6 +81,10 @@ class DataSequence[T, M = None](Sequence[T]):
         """
         return [self.get_item(index) for index in indices]
 
+    def __getitems__(self, indices: Sequence[int]) -> Sequence[T]:
+        """Fetch the items at `indices` as a batch, delegating to `get_items`."""
+        return self.get_items(indices)
+
     # --- metadata access ---------------------------------------------------
 
     @abstractmethod

@@ -87,6 +87,27 @@ def test_get_items_empty(ds: ListDataSequence[str, int]):
     assert ds.get_items([]) == []
 
 
+def test_getitems_delegates_to_get_items(ds: ListDataSequence[str, int]):
+    assert list(ds.__getitems__([0, 2, 4])) == ["a", "c", "e"]
+
+
+def test_getitems_honors_a_get_items_override():
+    class Batched(DataSequence[int]):
+        def __len__(self):
+            return 3
+
+        def get_item(self, index):
+            return index
+
+        def get_meta(self, index):
+            return None
+
+        def get_items(self, indices):
+            return [10 + index for index in indices]
+
+    assert list(Batched().__getitems__([0, 2])) == [10, 12]
+
+
 def test_get_metas_empty(ds: ListDataSequence[str, int]):
     assert ds.get_metas([]) == []
 

@@ -46,7 +46,9 @@ metadata channel. Subclasses implement two abstract methods:
 The base derives `get_items` / `get_metas` (bulk) and `get_pair` /
 `get_pairs` (item + metadata together). `__getitem__` returns one item by
 index, or a plain list of items for a slice (`get_items` over the slice's
-range) — not a `SlicedSequence`. The `M` type parameter defaults to `None`;
+range) — not a `SlicedSequence`. `__getitems__` delegates to `get_items` for
+whole-batch access, so a `get_items` override drives it. The `M` type
+parameter defaults to `None`;
 set it explicitly when items carry meaningful metadata (paths, labels, line
 numbers, ...).
 

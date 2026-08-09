@@ -27,6 +27,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   values a `Literal` admits, resolving a PEP 695 `type X = Literal[...]` alias
   through `__value__` (which `get_args` does not see through), and raising
   `TypeError` on anything that does not resolve to a `Literal`.
+- `kaparoo.data.sequences.DataSequence.__getitems__`: a batch-fetch method
+  that delegates to `get_items`, so a subclass's `get_items` override drives
+  whole-batch access.
 
 ### Changed
 
