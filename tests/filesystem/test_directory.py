@@ -16,6 +16,7 @@ from kaparoo.filesystem.directory import (
     dirs_not_empty_unsafe,
     make_dir,
     make_dirs,
+    prune_upward,
 )
 from kaparoo.filesystem.exceptions import DirectoryNotFoundError
 
@@ -340,3 +341,71 @@ def test_unsafe_variants_skip_existence_validation(tmp_path: Path) -> None:
     # ...the unsafe variant skips validation, so the raw OSError surfaces
     with pytest.raises(FileNotFoundError):
         dir_empty_unsafe(missing)
+
+
+# --- prune_upward -----------------------------------------------------------
+
+
+def test_prune_upward_removes_empty_chain(tmp_path: Path):
+    stop = tmp_path / "stop"
+    leaf = stop / "a" / "b" / "c"
+    leaf.mkdir(parents=True)
+
+    prune_upward(leaf, stop)
+
+    assert not (stop / "a").exists()  # a, b, c all removed
+    assert stop.exists()  # stop kept
+
+
+def test_prune_upward_halts_at_non_empty_parent(tmp_path: Path):
+    stop = tmp_path / "stop"
+    leaf = stop / "a" / "b" / "c"
+    leaf.mkdir(parents=True)
+    (stop / "a" / "keep").mkdir()  # makes `a` non-empty once `b` goes
+
+    prune_upward(leaf, stop)
+
+    assert not (stop / "a" / "b").exists()  # c and b removed
+    assert (stop / "a" / "keep").exists()  # a kept, still holds `keep`
+
+
+def test_prune_upward_never_removes_stop(tmp_path: Path):
+    stop = tmp_path / "stop"
+    leaf = stop / "only"
+    leaf.mkdir(parents=True)
+
+    prune_upward(leaf, stop)
+
+    assert not leaf.exists()
+    assert stop.exists()  # the boundary is kept even when it becomes empty
+
+
+def test_prune_upward_noop_when_folder_equals_stop(tmp_path: Path):
+    stop = tmp_path / "stop"
+    stop.mkdir()
+
+    prune_upward(stop, stop)
+
+    assert stop.exists()
+
+
+def test_prune_upward_noop_when_folder_outside_stop(tmp_path: Path):
+    stop = tmp_path / "stop"
+    stop.mkdir()
+    other = tmp_path / "other" / "deep"
+    other.mkdir(parents=True)
+
+    prune_upward(other, stop)  # `stop` is not an ancestor of `other`
+
+    assert other.exists()
+    assert stop.exists()
+
+
+def test_prune_upward_stops_on_missing_folder(tmp_path: Path):
+    stop = tmp_path / "stop"
+    (stop / "a").mkdir(parents=True)
+    missing = stop / "a" / "gone"
+
+    prune_upward(missing, stop)  # the leaf never existed
+
+    assert (stop / "a").exists()  # nothing removed

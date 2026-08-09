@@ -41,6 +41,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Callable[[Path], bool]` deciding whether to visit a sub-directory. A
   directory that fails it is still offered to the filters and may be returned,
   but its subtree is not walked. Unlike `exclude` it only prunes, never drops.
+- `kaparoo.filesystem.prune_upward(folder, stop)`: remove `folder` and each
+  parent it leaves empty, climbing up to but not `stop`. `stop` is a
+  strict-ancestor boundary (a `folder` not under `stop`, including
+  `folder == stop`, is left untouched), and each `rmdir` runs without a
+  preceding emptiness check, so a non-empty, missing, wrong-kind, or
+  unpermitted directory halts the climb. Destructive.
 
 ### Changed
 

@@ -35,6 +35,7 @@ __all__ = (
     "normalize_extensions",
     "path_exists",
     "paths_exist",
+    "prune_upward",
     "reserve_path",
     "reserve_paths",
     "resolve_selector",
@@ -59,6 +60,7 @@ from kaparoo.filesystem.directory import (
     dirs_not_empty_unsafe,
     make_dir,
     make_dirs,
+    prune_upward,
 )
 from kaparoo.filesystem.exceptions import (
     DirectoryNotFoundError,

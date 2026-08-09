@@ -20,8 +20,8 @@
 - [`existence`](./existence.py) — boolean predicates (`*_exists`), the
   `contains(subpath)` predicate factory, and validating `ensure_*` variants
 - [`directory`](./directory.py) — `make_dir(s)`, `dir_empty(s)` /
-  `dir_not_empty(s)` with validation, plus `_unsafe` variants that skip
-  pre-checks
+  `dir_not_empty(s)` with validation, `prune_upward` for upward empty-parent
+  removal, plus `_unsafe` variants that skip pre-checks
 - [`utils`](./utils.py) — `stringify_path(s)`, `wrap_path(s)`,
   `reserve_path(s)`, and the extension helpers `ensure_file_extension` /
   `file_extension` / `normalize_extension(s)`

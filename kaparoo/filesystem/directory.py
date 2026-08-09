@@ -13,6 +13,7 @@ __all__ = (
     "dirs_not_empty_unsafe",
     "make_dir",
     "make_dirs",
+    "prune_upward",
 )
 
 import os
@@ -365,3 +366,37 @@ def dirs_not_empty(paths: StrPaths, *, root: StrPath | None = None) -> bool:
     """
     paths = ensure_dirs_exist(paths, root=root)
     return all(dir_not_empty_unsafe(p) for p in paths)
+
+
+# ========================== #
+#            Prune           #
+# ========================== #
+
+
+def prune_upward(folder: StrPath, stop: StrPath) -> None:
+    """Remove `folder` and each parent it leaves empty, up to but not `stop`.
+
+    Climbs from `folder` toward `stop`, removing each directory `rmdir` can
+    (an empty one that is present and permitted) and halting at the first it
+    cannot. `stop` is never removed and is a strict-ancestor boundary: when
+    `stop` is not an ancestor of `folder` (including `folder == stop`), nothing
+    is touched, so a `folder` outside `stop` cannot climb past it.
+
+    Removal goes through `rmdir` with no preceding `is_dir` / emptiness check,
+    so a non-empty, missing, wrong-kind, or unpermitted directory stops the
+    climb rather than racing a check against the removal or letting its error
+    escape. Paths are compared lexically, so `folder` should be a plain
+    descendant of `stop`. **Destructive.**
+    """
+    folder = Path(folder)
+    stop = Path(stop)
+
+    if stop not in folder.parents:
+        return
+
+    while folder != stop:
+        try:
+            folder.rmdir()
+        except OSError:  # not empty, missing, wrong kind, or not permitted
+            return
+        folder = folder.parent
