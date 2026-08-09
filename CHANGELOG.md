@@ -8,6 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-08-09
+
 ### Added
 
 - `kaparoo.filesystem.search.selection.is_spec_file` and `SPEC_FILE_SUFFIXES`
