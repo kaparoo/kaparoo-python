@@ -91,6 +91,28 @@ def test_file_folder_basic(tmp_dir: Path):
     assert folder[2] == b"gamma"
 
 
+def test_file_folder_stringifies_paths_only_once(tmp_dir: Path, monkeypatch):
+    # FileFolder passes the raw file list to super and stringifies once in
+    # `_prepare_files`, not again in FileListSequence.__init__.
+    import kaparoo.data.sequences.templates as templates
+
+    (tmp_dir / "a.txt").write_bytes(b"x")
+    (tmp_dir / "b.txt").write_bytes(b"y")
+
+    calls = 0
+    original = templates.stringify_paths
+
+    def counting(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(templates, "stringify_paths", counting)
+
+    BytesFolder(tmp_dir)
+    assert calls == 1
+
+
 def test_file_folder_metadata_is_path(tmp_dir: Path):
     (tmp_dir / "a.txt").write_text("alpha")
     folder = BytesFolder(tmp_dir)

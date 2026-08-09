@@ -39,7 +39,11 @@ class FileListSequence[T, M = Path](DataSequence[T, M]):
     """
 
     def __init__(self, files: StrPaths) -> None:
-        self._files = list(stringify_paths(files))
+        self._files = self._prepare_files(files)
+
+    def _prepare_files(self, files: StrPaths) -> list[str]:
+        """Normalize input paths into the stored POSIX-string form."""
+        return list(stringify_paths(files))
 
     def __len__(self) -> int:
         return len(self._files)
@@ -113,10 +117,13 @@ class FileFolderSequence[T, M = Path](FileListSequence[T, M]):
 
     def __init__(self, root: StrPath) -> None:
         self._root = ensure_dir_exists(root)
-        # `after=root` makes each path root-relative and raises ValueError if
-        # any file is not under `root`. The base then stores the relative
-        # form; `get_file` re-prepends `root`.
-        super().__init__(stringify_paths(self.list_files(self._root), after=self._root))
+        super().__init__(self.list_files(self._root))
+
+    @override
+    def _prepare_files(self, files: StrPaths) -> list[str]:
+        # `after=root` stores each path root-relative and raises ValueError if
+        # any file is not under `root`; `get_file` re-prepends `root`.
+        return list(stringify_paths(files, after=self._root))
 
     @property
     def root(self) -> Path:
