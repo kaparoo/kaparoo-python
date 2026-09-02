@@ -371,3 +371,19 @@ class TestAcceptsCondition:
         f.write_bytes(b"")  # 0 bytes
         node = File("f", condition=Size(min=1))
         assert node.accepts_condition(f, HookResolver()) is False
+
+
+class TestDirectoryChildrenCoercion:
+    def test_a_single_node_is_taken_as_one_child(self) -> None:
+        assert Directory("d", File("a")).children == (File("a"),)
+
+    def test_a_single_node_equals_the_one_element_iterable(self) -> None:
+        assert Directory("d", File("a")) == Directory("d", [File("a")])
+
+    def test_a_nested_directory_may_be_passed_bare(self) -> None:
+        inner = Directory("images", File(Glob("*.png")))
+        assert Directory("dataset", inner).children == (inner,)
+
+    def test_a_generator_of_nodes_is_consumed(self) -> None:
+        kids = [File("a"), File("b")]
+        assert Directory("d", (kid for kid in kids)).children == tuple(kids)

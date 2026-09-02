@@ -20,6 +20,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reports only that a staging is there, never that it is dead: a concurrent
   writer's staging is indistinguishable by name.
 
+### Changed
+
+- `kaparoo.filesystem.hierarchy.Directory`'s `children` now accepts a single
+  `Node` as well as an iterable of them, so `Directory("dataset",
+  File("meta.json"))` builds the same node as the one-element list.
+  `Exclusive` already took that shape; both now share one coercion.
+
 ## [0.13.1] - 2026-08-09
 
 ### Added

@@ -37,7 +37,9 @@ run of regularly-named siblings.
 Build a tree from two node types. As name sugar, a bare `str` becomes a
 `Literal` and a `list[str]` becomes a `OneOf` (one node standing for
 several literally-named siblings that share a structure). A directory's
-`children` accepts any iterable (frozen to a tuple, order preserved).
+`children` accepts a single `Node` or any iterable of them (frozen to a
+tuple, order preserved) — so `Directory("dataset", File("meta.json"))` and
+`Directory("dataset", [File("meta.json")])` build the same node.
 
 | Class | Role |
 | --- | --- |

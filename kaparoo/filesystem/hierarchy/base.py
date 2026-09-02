@@ -12,7 +12,20 @@ from typing import TYPE_CHECKING
 from kaparoo.filesystem.hierarchy.utils import _NODE_REGISTRY
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from typing import Any
+
+
+def _as_nodes(nodes: Node | Iterable[Node]) -> tuple[Node, ...]:
+    """Coerce one node, or an iterable of them, to a tuple of nodes.
+
+    Shared by every node collection built from a single-or-many argument
+    (`Directory`'s children, an `Exclusive` alternative), so one node and a
+    one-element iterable of it construct the same thing.
+    """
+    if isinstance(nodes, Node):
+        return (nodes,)
+    return tuple(nodes)
 
 
 class Node(ABC):

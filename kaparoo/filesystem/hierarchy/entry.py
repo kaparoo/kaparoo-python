@@ -7,7 +7,7 @@ __all__ = ("Directory", "Entry", "File")
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, override
 
-from kaparoo.filesystem.hierarchy.base import Node
+from kaparoo.filesystem.hierarchy.base import Node, _as_nodes
 from kaparoo.filesystem.hierarchy.conditions import Condition
 from kaparoo.filesystem.hierarchy.utils import register_node
 from kaparoo.filters import Filter, Literal, OneOf
@@ -320,11 +320,11 @@ class File(Entry):
 class Directory(Entry):
     """An internal entry: a directory named by `name`, holding `children`.
 
-    `children` is materialized to a tuple at construction and preserves
-    insertion order. Each child is any `Node` -- a nested `File` /
-    `Directory`, or a `Group` constraint over some of them. When `name`
-    matches many sibling directories, `children` describes the shape
-    shared by every one of them.
+    `children` is a single `Node` or an iterable of them, materialized to a
+    tuple at construction and preserving insertion order. Each child is any
+    `Node` -- a nested `File` / `Directory`, or a `Group` constraint over
+    some of them. When `name` matches many sibling directories, `children`
+    describes the shape shared by every one of them.
     """
 
     __slots__ = ("_allow_extra", "_children")
@@ -336,7 +336,7 @@ class Directory(Entry):
     def __init__(
         self,
         name: str | list[str] | Filter,
-        children: Iterable[Node] = (),
+        children: Node | Iterable[Node] = (),
         *,
         depth: int | tuple[int, int | None] | None = 1,
         required: bool = False,
@@ -344,7 +344,7 @@ class Directory(Entry):
         allow_extra: bool | Filter = False,
     ) -> None:
         super().__init__(name, depth=depth, required=required, condition=condition)
-        object.__setattr__(self, "_children", tuple(children))
+        object.__setattr__(self, "_children", _as_nodes(children))
         object.__setattr__(self, "_allow_extra", allow_extra)
 
     @property

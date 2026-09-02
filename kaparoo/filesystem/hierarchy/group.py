@@ -7,7 +7,7 @@ __all__ = ("Exclusive", "Group", "Together")
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, cast, override
 
-from kaparoo.filesystem.hierarchy.base import Node
+from kaparoo.filesystem.hierarchy.base import Node, _as_nodes
 from kaparoo.filesystem.hierarchy.utils import register_node
 
 if TYPE_CHECKING:
@@ -15,13 +15,6 @@ if TYPE_CHECKING:
     from typing import Any, Literal, Self
 
     from kaparoo.filesystem.hierarchy.entry import Entry
-
-
-def _normalize_alternative(alternative: Node | Iterable[Node]) -> tuple[Node, ...]:
-    """Coerce one `Exclusive` alternative to a tuple of nodes."""
-    if isinstance(alternative, Node):
-        return (alternative,)
-    return tuple(alternative)
 
 
 class Group(Node, ABC):
@@ -150,7 +143,7 @@ class Exclusive(Group):
         required: bool = False,
         on_conflict: Literal["error", "priority"] = "error",
     ) -> None:
-        normalized = tuple(_normalize_alternative(alt) for alt in alternatives)
+        normalized = tuple(_as_nodes(alt) for alt in alternatives)
 
         if len(normalized) < 2:
             msg = "Exclusive requires at least two alternatives."
