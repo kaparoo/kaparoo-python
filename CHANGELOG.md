@@ -8,6 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-09-03
+
 ### Added
 
 - `kaparoo.filesystem.STAGING` (re-exported from `kaparoo.filesystem`): a
