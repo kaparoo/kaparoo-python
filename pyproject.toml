@@ -140,7 +140,7 @@ precision = 2
 show_missing = true
 skip_covered = false
 # ~5%p below the current measured coverage (100.00% as of 2026-09-03,
-# over 2922 statements / 646 branches) to absorb normal variation.
+# over 2970 statements / 666 branches) to absorb normal variation.
 # Raise/lower in step with the baseline.
 fail_under = 95
 exclude_lines = [
@@ -313,9 +313,6 @@ required-imports = ["from __future__ import annotations"]
 [tool.ruff.lint.pycodestyle]
 ignore-overlong-task-comments = true
 
-[tool.ruff.lint.pydoclint]
-ignore-one-line-docstrings = true
-
 # Following sections use default values and are omitted (ruff v0.16.5):
 # - tool.ruff.analyze
 # - tool.ruff.lint.flake8-boolean-trap
@@ -335,6 +332,7 @@ ignore-one-line-docstrings = true
 # - tool.ruff.lint.pep8-naming
 # - tool.ruff.lint.pyflakes
 # - tool.ruff.lint.pylint
+# - tool.ruff.lint.pydoclint
 # - tool.ruff.lint.pydocstyle
 # - tool.ruff.lint.pyupgrade
 # - tool.ruff.lint.ruff
