@@ -27,6 +27,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   File("meta.json"))` builds the same node as the one-element list.
   `Exclusive` already took that shape; both now share one coercion.
 
+### Fixed
+
+- `Directory`, `Exclusive`, and `Together` refuse a non-`Node` at
+  construction instead of storing it. A `str` used to split into characters
+  (`Directory("d", "abc")` became three string "children"), a list of
+  strings or numbers passed through untouched, and `Together` checked only
+  how many members it got. Each was caught only when a traversal
+  dereferenced it, as `AttributeError: 'int' object has no attribute
+  'max_depth'`, with nothing pointing back at the construction site. Passing
+  a collection where `Together` expects varargs now says to unpack it rather
+  than reporting "requires at least two members".
+
 ## [0.13.1] - 2026-08-09
 
 ### Added

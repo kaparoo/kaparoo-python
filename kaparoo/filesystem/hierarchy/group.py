@@ -7,7 +7,7 @@ __all__ = ("Exclusive", "Group", "Together")
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, cast, override
 
-from kaparoo.filesystem.hierarchy.base import Node, _as_nodes
+from kaparoo.filesystem.hierarchy.base import Node, _as_nodes, _ensure_nodes
 from kaparoo.filesystem.hierarchy.utils import register_node
 
 if TYPE_CHECKING:
@@ -243,6 +243,7 @@ class Together(Group):
             default), all or none.
 
     Raises:
+        TypeError: If any member is not a `Node`.
         ValueError: If fewer than two members are given.
     """
 
@@ -251,6 +252,8 @@ class Together(Group):
     _members: tuple[Node, ...]
 
     def __init__(self, *members: Node, required: bool = False) -> None:
+        members = _ensure_nodes(members)
+
         if len(members) < 2:
             msg = "Together requires at least two members."
             raise ValueError(msg)

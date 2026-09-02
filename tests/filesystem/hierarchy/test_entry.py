@@ -387,3 +387,24 @@ class TestDirectoryChildrenCoercion:
     def test_a_generator_of_nodes_is_consumed(self) -> None:
         kids = [File("a"), File("b")]
         assert Directory("d", (kid for kid in kids)).children == tuple(kids)
+
+    @pytest.mark.parametrize(
+        ("children", "match"),
+        (
+            ("abc", "expected a Node or an iterable of Nodes"),
+            ("", "expected a Node or an iterable of Nodes"),
+            (123, "expected a Node or an iterable of Nodes"),
+            (None, "expected a Node or an iterable of Nodes"),
+            (["a.txt"], "expected every node to be a Node"),
+            ([1, 2], "expected every node to be a Node"),
+        ),
+    )
+    def test_a_non_node_is_refused_at_construction(self, children, match) -> None:
+        # A non-`Node` reaching a spec tree is otherwise only caught when a
+        # traversal dereferences it, far from where it was written.
+        with pytest.raises(TypeError, match=match):
+            Directory("d", children)
+
+    def test_a_str_never_splits_into_characters(self) -> None:
+        with pytest.raises(TypeError):
+            Directory("d", "abc")

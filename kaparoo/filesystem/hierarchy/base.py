@@ -7,7 +7,7 @@ __all__ = ("Node",)
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from dataclasses import FrozenInstanceError
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from kaparoo.filesystem.hierarchy.utils import _NODE_REGISTRY
 
@@ -16,16 +16,54 @@ if TYPE_CHECKING:
     from typing import Any
 
 
+def _ensure_nodes(nodes: tuple[object, ...]) -> tuple[Node, ...]:
+    """Return `nodes` unchanged, refusing any element that is not a `Node`.
+
+    The element gate every node collection passes through. A non-`Node` that
+    slips into a spec tree is not caught until a traversal dereferences it,
+    where the failure names an attribute rather than the construction site.
+
+    Raises:
+        TypeError: If any element is not a `Node`. An element that is itself
+            a collection is named as one to unpack.
+    """
+    for node in nodes:
+        if isinstance(node, Node):
+            continue
+        got = type(node).__name__
+        hint = " -- unpack it with `*`" if isinstance(node, list | tuple | set) else ""
+        msg = f"expected every node to be a Node, got {got}{hint}"
+        raise TypeError(msg)
+
+    return cast("tuple[Node, ...]", nodes)
+
+
 def _as_nodes(nodes: Node | Iterable[Node]) -> tuple[Node, ...]:
     """Coerce one node, or an iterable of them, to a tuple of nodes.
 
     Shared by every node collection built from a single-or-many argument
     (`Directory`'s children, an `Exclusive` alternative), so one node and a
     one-element iterable of it construct the same thing.
+
+    Raises:
+        TypeError: If `nodes` is a `str` (iterable, but never the intended
+            input -- it would silently split into characters), is not
+            iterable at all, or holds an element that is not a `Node`.
     """
     if isinstance(nodes, Node):
         return (nodes,)
-    return tuple(nodes)
+
+    if isinstance(nodes, str):
+        msg = f"expected a Node or an iterable of Nodes, got {nodes!r}"
+        raise TypeError(msg)
+
+    try:
+        collected = tuple(nodes)
+    except TypeError:
+        msg = f"expected a Node or an iterable of Nodes, got {type(nodes).__name__}"
+        raise TypeError(msg) from None
+
+    return _ensure_nodes(collected)
 
 
 class Node(ABC):

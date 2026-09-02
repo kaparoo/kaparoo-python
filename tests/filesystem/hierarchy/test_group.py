@@ -236,3 +236,45 @@ class TestMaxDepthOf:
 
     def test_empty_iterable_returns_one(self) -> None:
         assert max_depth_of([]) == 1
+
+
+class TestNodeTypeRefusal:
+    @pytest.mark.parametrize(
+        ("member", "match"),
+        (
+            (123, "expected every node to be a Node"),
+            ("a", "expected every node to be a Node"),
+            (None, "expected every node to be a Node"),
+        ),
+    )
+    def test_together_refuses_a_non_node_member(self, member, match) -> None:
+        with pytest.raises(TypeError, match=match):
+            Together(member, File("a"))
+
+    def test_together_names_a_collection_as_one_to_unpack(self) -> None:
+        # Passing the members as a list makes them one member, which the arity
+        # check would otherwise report as "requires at least two".
+        with pytest.raises(TypeError, match=r"unpack it with"):
+            Together([File("a"), File("b")])
+
+    def test_together_still_refuses_fewer_than_two_members(self) -> None:
+        with pytest.raises(ValueError, match="at least two members"):
+            Together(File("a"))
+
+    @pytest.mark.parametrize(
+        ("alternative", "match"),
+        (
+            ([1, 2], "expected every node to be a Node"),
+            (["a.txt"], "expected every node to be a Node"),
+            (123, "expected a Node or an iterable of Nodes"),
+            ("abc", "expected a Node or an iterable of Nodes"),
+        ),
+    )
+    def test_exclusive_refuses_a_non_node_alternative(self, alternative, match) -> None:
+        with pytest.raises(TypeError, match=match):
+            Exclusive(File("a"), alternative)
+
+    def test_exclusive_still_accepts_a_node_or_an_iterable(self) -> None:
+        one = Exclusive(File("a"), File("b"))
+        many = Exclusive([File("a")], [File("b")])
+        assert one.alternatives == many.alternatives

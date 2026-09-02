@@ -325,6 +325,9 @@ class Directory(Entry):
     `Node` -- a nested `File` / `Directory`, or a `Group` constraint over
     some of them. When `name` matches many sibling directories, `children`
     describes the shape shared by every one of them.
+
+    Raises:
+        TypeError: If `children` is not a `Node`, or an iterable of them.
     """
 
     __slots__ = ("_allow_extra", "_children")
