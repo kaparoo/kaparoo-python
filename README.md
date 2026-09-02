@@ -33,7 +33,8 @@ Each submodule ships its own README with focused examples.
 `contains(subpath)` predicate factory, `ensure_*` validators, `make_dir(s)`
 (with a destructive `clean` reset option), `prune_upward` for upward
 empty-parent removal, `dir_empty(s)`, `reserve_path(s)` guards for not-yet-existing
-destinations, `StagedFile` / `StagedDirectory` for safe (atomic) writes,
+destinations, `StagedFile` / `StagedDirectory` for safe (atomic) writes
+(with `STAGING` to collect what an interrupted run left behind),
 path stringification, extension helpers (`ensure_file_extension`,
 `file_extension`, `normalize_extension(s)`), and a small exception hierarchy.
 
@@ -56,7 +57,8 @@ can stand for many regularly-named siblings), plus `Exclusive` / `Together`
 constraints and per-node attribute `condition`s. It drives four disk
 operations — `locate` (map on-disk paths to spec nodes), `validate` (check
 a directory against the spec), `conformer` (build a `search` predicate from
-a spec), and `scaffold` (create the tree on disk).
+a spec), and `scaffold` (create the tree on disk). `nested_dirs` builds
+one `Directory` per tier of a repeating tree from a list of levels.
 
 ### [`kaparoo.filters`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/filters)
 
@@ -75,8 +77,9 @@ name spec. Used by `kaparoo.filesystem.search` for path matching and
 pluggable metric aggregation (the batch → epoch → run pattern);
 `ensure_one_of` / `ensure_in_range` validation guards; `resolve_enum` /
 `literal_values` for config-driven `Enum` / `Literal` sets; `quantify` for
-pluralized counts; plus helpers for `Optional[T]` values (`replace_if_none`,
-`unwrap_or_default`, ...).
+pluralized counts and `strrange` for formatted number series; plus
+helpers for `Optional[T]` values (`replace_if_none`, `unwrap_or_default`,
+...).
 
 ### [`kaparoo.data`](https://github.com/kaparoo/kaparoo-python/tree/main/kaparoo/data)
 
