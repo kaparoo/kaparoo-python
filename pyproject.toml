@@ -3,7 +3,7 @@
 # ========================== #
 
 [build-system]
-requires = ["uv_build>=0.11.23,<0.12"]
+requires = ["uv_build>=0.12.9,<0.13"]
 build-backend = "uv_build"
 
 # ========================== #
@@ -71,8 +71,8 @@ Issues = "https://www.github.com/kaparoo/kaparoo-python/issues"
 dev = [
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
-    "ruff>=0.15.18",
-    "ty>=0.0.51",
+    "ruff>=0.16.5",
+    "ty>=0.0.77",
 ]
 
 [tool.uv.build-backend]
@@ -158,7 +158,7 @@ exclude_lines = [
 directory = ".cache/coverage/htmlcov"
 
 [tool.ruff]
-required-version = ">=0.15.18"
+required-version = ">=0.16.5"
 cache-dir = "./.cache/ruff"
 extend-exclude = [
     ".cache",
@@ -173,6 +173,11 @@ indent-width = 4
 # preview = true  # Uncomment to enable unstable features
 
 [tool.ruff.format]
+# Since 0.16 `ruff format` also formats the code blocks in Markdown files.
+# The READMEs align their result comments into columns, which that undoes,
+# so keep them hand-formatted. `docstring-code-format` below still applies
+# to the examples inside Python docstrings.
+exclude = ["*.md"]
 quote-style = "double"
 indent-style = "space"
 docstring-code-format = true
@@ -311,7 +316,7 @@ ignore-overlong-task-comments = true
 [tool.ruff.lint.pydoclint]
 ignore-one-line-docstrings = true
 
-# Following sections use default values and are omitted (ruff v0.15.13):
+# Following sections use default values and are omitted (ruff v0.16.5):
 # - tool.ruff.analyze
 # - tool.ruff.lint.flake8-boolean-trap
 # - tool.ruff.lint.flake8-bugbear
