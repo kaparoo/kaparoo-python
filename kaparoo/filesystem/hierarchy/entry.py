@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-__all__ = ("Directory", "Entry", "File")
+__all__ = ("Directory", "Entry", "File", "nested_dirs")
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, override
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, cast, override
 
 from kaparoo.filesystem.hierarchy.base import Node, _as_nodes
 from kaparoo.filesystem.hierarchy.conditions import Condition
@@ -13,7 +14,7 @@ from kaparoo.filesystem.hierarchy.utils import register_node
 from kaparoo.filters import Filter, Literal, OneOf
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Iterable, Sequence
     from pathlib import Path
     from typing import Any, ClassVar, Self
 
@@ -406,3 +407,126 @@ class Directory(Entry):
             condition=_condition_arg(data),
             allow_extra=_allow_extra_arg(data),
         )
+
+
+def _level_name(level: str | Sequence[str] | Filter) -> str | list[str] | Filter:
+    """Coerce one level to a name `Directory` accepts.
+
+    A one-name level collapses to that name (so it reads as a `Literal`
+    rather than a one-member `OneOf`); several become the `list[str]`
+    sugar.
+
+    Raises:
+        ValueError: If the level names nothing.
+    """
+    if isinstance(level, str | Filter):
+        return level
+
+    names = list(level)
+    if not names:
+        msg = "each level must name at least one directory"
+        raise ValueError(msg)
+
+    return names[0] if len(names) == 1 else names
+
+
+def _children_by_level(
+    children: Node | Iterable[Node] | Mapping[int, Node | Iterable[Node]],
+    levels: int,
+) -> dict[int, Node | Iterable[Node]]:
+    """Resolve `children` to `{level index: children}`, indices normalized.
+
+    Anything but a mapping is the innermost level's children. A mapping's
+    keys are indices into the levels, normalized so the two ways of naming
+    one level (from the front and from the back) collapse together -- and
+    so naming it twice is caught here rather than silently dropping one.
+
+    Raises:
+        IndexError: If a key falls outside the levels.
+        ValueError: If two keys name the same level.
+    """
+    if not isinstance(children, Mapping):
+        return {levels - 1: children}
+
+    by_level = cast("Mapping[int, Node | Iterable[Node]]", children)
+    placed: dict[int, Node | Iterable[Node]] = {}
+    indices = range(levels)
+
+    for key, value in by_level.items():
+        try:
+            index = indices[key]
+        except IndexError:
+            msg = f"level {key} is out of range for {levels} levels"
+            raise IndexError(msg) from None
+
+        if index in placed:
+            msg = f"level {key} names the same level as an earlier key ({index})"
+            raise ValueError(msg)
+
+        placed[index] = value
+
+    return placed
+
+
+def nested_dirs(
+    levels: Sequence[str | Sequence[str] | Filter],
+    children: Node | Iterable[Node] | Mapping[int, Node | Iterable[Node]] = (),
+) -> Directory:
+    """Nest one `Directory` per level, innermost last.
+
+    A tier of a tree whose shape repeats -- `dataset/{train,test,val}/
+    {images,labels}` -- is one level per tier, each naming the directories
+    that share everything below them. Writing it as nested `Directory`
+    calls says the same thing, so reach for this when the tiers come from
+    configuration, or when there are enough of them that the nesting
+    obscures the shape.
+
+    The result is ordinary `Directory` nodes: `locate`, `validate`,
+    `scaffold`, and serialization treat it as if it had been written out.
+
+    Args:
+        levels: One entry per directory tier, outermost first. Each is a
+            `Filter`, or the `str` / sequence-of-`str` sugar naming one
+            tier's directories (a one-name sequence reads as that name).
+        children: Nodes to place beside the sub-directory at a level.
+            A mapping keys them by index into `levels` -- `0` the
+            outermost, `-1` the innermost, as for any sequence -- and
+            anything else is the innermost level's children, so
+            `File("index.json")` and `{-1: File("index.json")}` agree.
+
+    Returns:
+        The outermost `Directory`, holding the rest.
+
+    Raises:
+        IndexError: If a `children` key falls outside `levels`.
+        ValueError: If `levels` is empty, a level names nothing, or two
+            `children` keys name the same level.
+
+    Example:
+        ```python
+        spec = nested_dirs(
+            [["dataset"], ["train", "test", "val"], ["images", "labels"]],
+            {0: File("README.md"), -1: File("index.json")},
+        )
+        # dataset/README.md
+        # dataset/train/images/index.json, dataset/train/labels/index.json,
+        # dataset/test/..., dataset/val/...
+        ```
+    """
+    if not levels:
+        msg = "nested_dirs needs at least one level"
+        raise ValueError(msg)
+
+    placed = _children_by_level(children, len(levels))
+    innermost = len(levels) - 1
+
+    node = Directory(
+        _level_name(levels[innermost]),
+        _as_nodes(placed.get(innermost, ())),
+    )
+
+    for index in reversed(range(innermost)):
+        here = [*_as_nodes(placed.get(index, ())), node]
+        node = Directory(_level_name(levels[index]), here)
+
+    return node

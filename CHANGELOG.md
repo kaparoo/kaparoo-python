@@ -19,6 +19,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   collects. Intended as a `name_filter`, not an `exclude` rule, and a match
   reports only that a staging is there, never that it is dead: a concurrent
   writer's staging is indistinguishable by name.
+- `kaparoo.filesystem.hierarchy.nested_dirs`: build one `Directory` per tier
+  of a repeating tree from a list of levels --
+  `nested_dirs([["dataset"], ["train", "test", "val"], ["images", "labels"]])`.
+  `children` places nodes beside the sub-directory at a level, keyed by index
+  into the levels (`0` the outermost, `-1` the innermost, as for any
+  sequence); given plainly it lands at the innermost level. The result is
+  ordinary `Directory` nodes, so every traversal and serialization treats it
+  as hand-written nesting. Exposed from `kaparoo.filesystem.hierarchy` only.
 
 ### Changed
 

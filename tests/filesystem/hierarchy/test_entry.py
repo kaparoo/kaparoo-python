@@ -8,7 +8,7 @@ import pytest
 if TYPE_CHECKING:
     from pathlib import Path
 
-from kaparoo.filesystem.hierarchy import Directory, File
+from kaparoo.filesystem.hierarchy import Directory, File, Node, nested_dirs
 from kaparoo.filesystem.hierarchy.conditions import (
     And,
     ChildCount,
@@ -408,3 +408,65 @@ class TestDirectoryChildrenCoercion:
     def test_a_str_never_splits_into_characters(self) -> None:
         with pytest.raises(TypeError):
             Directory("d", "abc")
+
+
+class TestNestedDirs:
+    def test_one_directory_per_level(self) -> None:
+        spec = nested_dirs([["dataset"], ["train", "val"], ["images", "labels"]])
+        assert spec == Directory(
+            "dataset",
+            Directory(["train", "val"], Directory(["images", "labels"])),
+        )
+
+    def test_a_one_name_level_reads_as_that_name(self) -> None:
+        assert nested_dirs([["dataset"]]).name == Literal("dataset")
+        assert nested_dirs(["dataset"]).name == Literal("dataset")
+
+    def test_a_level_may_be_a_filter(self) -> None:
+        spec = nested_dirs([["ds"], Glob("run_*")])
+        assert spec.children[0].name == Glob("run_*")  # ty: ignore[unresolved-attribute]
+
+    def test_plain_children_land_at_the_innermost_level(self) -> None:
+        spec = nested_dirs([["ds"], ["a", "b"]], File("index.json"))
+        assert spec.children[0].children == (File("index.json"),)  # ty: ignore[unresolved-attribute]
+
+    def test_plain_children_agree_with_the_innermost_key(self) -> None:
+        levels = [["ds"], ["a", "b"]]
+        assert nested_dirs(levels, File("i")) == nested_dirs(levels, {-1: File("i")})
+
+    def test_children_are_placed_beside_the_sub_directory(self) -> None:
+        spec = nested_dirs([["ds"], ["a"]], {0: File("README.md")})
+        assert spec.children == (File("README.md"), Directory("a"))
+
+    def test_both_index_directions_name_the_same_level(self) -> None:
+        levels = [["ds"], ["a"], ["b"]]
+        assert nested_dirs(levels, {0: File("x")}) == nested_dirs(
+            levels, {-3: File("x")}
+        )
+
+    def test_several_nodes_may_share_a_level(self) -> None:
+        spec = nested_dirs([["ds"], ["a"]], {0: [File("x"), Directory("logs")]})
+        assert spec.children == (File("x"), Directory("logs"), Directory("a"))
+
+    def test_the_result_is_an_ordinary_directory(self) -> None:
+        spec = nested_dirs([["ds"], ["a"]], File("x"))
+        assert type(spec) is Directory
+        assert Node.from_dict(spec.to_dict()) == spec
+
+    def test_empty_levels_are_refused(self) -> None:
+        with pytest.raises(ValueError, match="at least one level"):
+            nested_dirs([])
+
+    def test_a_level_naming_nothing_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="at least one directory"):
+            nested_dirs([["ds"], []])
+
+    @pytest.mark.parametrize("key", (3, -4, 99))
+    def test_a_key_outside_the_levels_is_refused(self, key) -> None:
+        with pytest.raises(IndexError, match="out of range for 3 levels"):
+            nested_dirs([["a"], ["b"], ["c"]], {key: File("x")})
+
+    def test_two_keys_naming_one_level_are_refused(self) -> None:
+        # `0` and `-3` are the same level; silently dropping one would lose nodes.
+        with pytest.raises(ValueError, match="same level as an earlier key"):
+            nested_dirs([["a"], ["b"], ["c"]], {0: File("x"), -3: File("y")})

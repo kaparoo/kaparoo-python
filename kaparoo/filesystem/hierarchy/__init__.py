@@ -13,13 +13,14 @@ __all__ = (
     "conformer",
     "locate",
     "locate_map",
+    "nested_dirs",
     "register_node",
     "scaffold",
     "validate",
 )
 
 from kaparoo.filesystem.hierarchy.base import Node
-from kaparoo.filesystem.hierarchy.entry import Directory, Entry, File
+from kaparoo.filesystem.hierarchy.entry import Directory, Entry, File, nested_dirs
 from kaparoo.filesystem.hierarchy.group import Exclusive, Group, Together
 from kaparoo.filesystem.hierarchy.scaffold import scaffold
 from kaparoo.filesystem.hierarchy.traverse import (

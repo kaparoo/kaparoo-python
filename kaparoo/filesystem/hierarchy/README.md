@@ -21,6 +21,7 @@ run of regularly-named siblings.
 - [Mutual exclusion: `Exclusive`](#mutual-exclusion-exclusive)
   - [Resolving conflicts by priority: `on_conflict`](#resolving-conflicts-by-priority-on_conflict)
 - [Co-occurrence: `Together`](#co-occurrence-together)
+- [Repeating tiers: `nested_dirs`](#repeating-tiers-nested_dirs)
 - [Enumerable names](#enumerable-names)
 - [Value semantics](#value-semantics)
 - [Serialization](#serialization)
@@ -49,6 +50,7 @@ characters.
 | [`File`](./entry.py) | a leaf entry |
 | [`Directory`](./entry.py) | an entry holding ordered `children` (any `Node`s) |
 | [`Entry`](./entry.py) | abstract base of `File` / `Directory` (carries `name`) |
+| [`nested_dirs`](./entry.py) | a helper building one `Directory` per tier |
 | [`Exclusive`](./group.py) | a mutual-exclusion constraint among siblings |
 | [`Together`](./group.py) | a co-occurrence (all-or-nothing) constraint among siblings |
 | [`Group`](./group.py) | abstract base of the constraint nodes (`Exclusive`, `Together`) |
@@ -299,6 +301,38 @@ Exclusive(Together(File("a"), File("b")), File("c")).entries  # (File("a"), File
 
 The structured view (`alternatives` / `members`) keeps the nesting;
 `entries` flattens it to the leaves.
+
+## Repeating tiers: `nested_dirs`
+
+A tree whose shape repeats tier by tier -- `dataset/{train,test,val}/{images,labels}`
+-- is one level per tier. `nested_dirs` writes the nesting for you:
+
+```python
+from kaparoo.filesystem.hierarchy import File, nested_dirs
+
+spec = nested_dirs(
+    [["dataset"], ["train", "test", "val"], ["images", "labels"]],
+    {0: File("README.md"), -1: File("index.json")},
+)
+# dataset/README.md
+# dataset/train/images/index.json   dataset/train/labels/index.json
+# dataset/test/images/index.json    dataset/test/labels/index.json
+# dataset/val/images/index.json     dataset/val/labels/index.json
+```
+
+Each level is a `Filter`, or the `str` / sequence-of-`str` sugar naming that
+tier's directories; a one-name level reads as that name. `children` places
+nodes *beside* the sub-directory at a level, keyed by index into the levels --
+`0` the outermost and `-1` the innermost, as for any sequence, so the two ways
+of naming one level agree and naming it twice raises. Given plainly rather
+than as a mapping it lands at the innermost level, so `File("index.json")` and
+`{-1: File("index.json")}` build the same thing.
+
+The result is ordinary `Directory` nodes -- `locate`, `validate`, `scaffold`,
+and serialization treat it exactly as if the nesting had been written by hand.
+Writing it out says the same thing, so reach for this when the tiers come from
+configuration, or when there are enough of them that the nesting hides the
+shape.
 
 ## Enumerable names
 
