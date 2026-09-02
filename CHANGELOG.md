@@ -38,6 +38,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   'max_depth'`, with nothing pointing back at the construction site. Passing
   a collection where `Together` expects varargs now says to unpack it rather
   than reporting "requires at least two members".
+- The coverage `exclude_lines` pattern for an ellipsis stub body is now
+  anchored (`^\s*\.\.\.\s*$`). Unanchored, it also matched a
+  `tuple[X, ...]` annotation, and on a `def` line coverage dropped the whole
+  function from measurement -- 281 statements and 100 branches across the
+  package went unmeasured, reported as 100%.
 
 ## [0.13.1] - 2026-08-09
 
