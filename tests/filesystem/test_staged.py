@@ -7,8 +7,9 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from kaparoo.filesystem import staged
+from kaparoo.filesystem import search_files, staged
 from kaparoo.filesystem.staged import (
+    STAGING,
     StagedDirectory,
     StagedFile,
     _default_dir_mode,
@@ -564,3 +565,91 @@ def test_dir_overwrite_preserves_existing_mode(tmp_path: Path):
     with StagedDirectory(dest, overwrite=True) as d:
         (d.workdir / "a.txt").write_text("a", encoding="utf-8")
     assert stat.S_IMODE(dest.stat().st_mode) == 0o750
+
+
+# ===========================================================================
+# STAGING
+# ===========================================================================
+
+
+def test_staging_matches_a_real_staged_file_name(tmp_path: Path):
+    f = StagedFile(tmp_path / "report.json")
+    try:
+        staged_names = [p.name for p in tmp_path.iterdir()]
+        assert staged_names  # the writer put something beside the destination
+        assert all(STAGING.matches(name) for name in staged_names)
+    finally:
+        f.abort()
+
+
+def test_staging_matches_a_real_staged_directory_name(tmp_path: Path):
+    d = StagedDirectory(tmp_path / "dataset")
+    try:
+        assert STAGING.matches(d.workdir.name)
+    finally:
+        d.abort()
+
+
+def test_staging_matches_the_backup_a_crashed_replace_strands(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    # A crash *between* the two renames leaves the displaced original in a
+    # sibling `.old` directory. Nothing else collects it, so the filter that
+    # finds leftovers has to match it too.
+    dest = tmp_path / "dataset"
+    dest.mkdir()
+    (dest / "old.txt").write_text("old", encoding="utf-8")
+
+    d = StagedDirectory(dest, overwrite=True)
+    (d.workdir / "new.txt").write_text("new", encoding="utf-8")
+
+    real_rename = staged.Path.rename
+    workdir_name = d.workdir.name
+
+    def crashing_rename(self: staged.Path, target: object) -> None:
+        if self.name == workdir_name:  # the staged->dest move
+            raise KeyboardInterrupt
+        return real_rename(self, target)
+
+    monkeypatch.setattr(staged.Path, "rename", crashing_rename)
+
+    with pytest.raises(KeyboardInterrupt):
+        d.commit()
+
+    stranded = [p.name for p in tmp_path.iterdir() if p.name.endswith(".old")]
+    assert stranded, "the replace should have stranded a backup"
+    assert all(STAGING.matches(name) for name in stranded)
+
+
+@pytest.mark.parametrize(
+    "name",
+    (
+        "report.json",  # the committed file
+        "dataset",  # the committed directory
+        ".vimrc.tmp",  # an unrelated editor dotfile
+        ".eslintcache.tmp",  # an unrelated tool dotfile
+        "report.json.a1b2c3d4.tmp",  # not hidden
+        ".report.json.a1b2c3d4.tmp.bak",  # a suffix nothing here writes
+    ),
+)
+def test_staging_rejects_what_this_module_did_not_stage(name: str):
+    assert not STAGING.matches(name)
+
+
+def test_staging_finds_leftovers_as_a_name_filter(tmp_path: Path):
+    # The documented use: a `name_filter`, which matches an entry's leaf name,
+    # so a staging nested below the search root is still found.
+    nested = tmp_path / "sub"
+    nested.mkdir()
+    f = StagedFile(nested / "report.json")
+    try:
+        found = search_files(tmp_path, name_filter=STAGING)
+        assert found == list(nested.iterdir())
+    finally:
+        f.abort()
+
+
+def test_staging_reexported_from_package():
+    from kaparoo import filesystem
+
+    assert filesystem.STAGING is STAGING

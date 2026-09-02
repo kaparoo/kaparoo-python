@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__all__ = ("StagedDirectory", "StagedFile")
+__all__ = ("STAGING", "StagedDirectory", "StagedFile")
 
 import contextlib
 import os
@@ -12,9 +12,10 @@ import tempfile
 import weakref
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, cast, overload, override
+from typing import TYPE_CHECKING, Final, cast, overload, override
 
 from kaparoo.filesystem.utils import reserve_path
+from kaparoo.filters import Regex
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -22,6 +23,44 @@ if TYPE_CHECKING:
     from typing import IO, ClassVar, Literal, Self
 
     from kaparoo.filesystem.types import StrPath
+
+
+# ========================== #
+#      Staging names         #
+# ========================== #
+
+# The shape every staging on disk takes: a hidden `<prefix><destination>.
+# <token><suffix>` sibling of the destination, plus -- for the directory
+# replace path -- a `<backup>`-suffixed copy of what was displaced. `STAGING`
+# is derived from the same three pieces the names are built from, so a change
+# to either cannot leave the filter matching the old shape.
+_STAGING_PREFIX: Final = "."
+_STAGING_SUFFIX: Final = ".tmp"
+_BACKUP_SUFFIX: Final = ".old"
+
+STAGING: Final = Regex(
+    rf"\{_STAGING_PREFIX}.+\.[^.]+\{_STAGING_SUFFIX}(\{_BACKUP_SUFFIX})?"
+)
+"""A filter matching the leaf names `StagedFile` / `StagedDirectory` stage under.
+
+Matches both the in-flight staging (`.report.json.a1b2c3d4.tmp`) and the
+displaced-original backup a directory replace leaves behind
+(`.dataset.a1b2c3d4.tmp.old`) -- the latter is what a crash *between*
+`StagedDirectory`'s two renames strands on disk, and nothing else collects it.
+
+Pass it as a `name_filter`, which matches an entry's leaf name:
+
+    leftovers = search_dirs(root, name_filter=STAGING)
+
+Not an `exclude` rule: `exclude` matches a *root-relative path string*, which
+a nested staging's leading directories keep from matching.
+
+Matching a name says only that a staging is there, never that it is dead. A
+concurrent writer's staging looks exactly the same, so removing what this
+finds can destroy a live write in progress. Gate a cleanup on age (an mtime
+older than any run could still be holding) or on knowing no other writer is
+running.
+"""
 
 
 # ========================== #
@@ -282,7 +321,9 @@ class StagedFile[AnyStrT: (str, bytes)](StagedTarget):
         """
         path = reserve_path(path, exist_ok=overwrite, make_parents=make_parents)
         fd, name = tempfile.mkstemp(
-            dir=path.parent, prefix=f".{path.name}.", suffix=".tmp"
+            dir=path.parent,
+            prefix=f"{_STAGING_PREFIX}{path.name}.",
+            suffix=_STAGING_SUFFIX,
         )
         self._path = path
         self._overwrite = overwrite
@@ -463,7 +504,11 @@ class StagedDirectory(StagedTarget):
         self._overwrite = overwrite
         self._committed = False
         self._workdir = Path(
-            tempfile.mkdtemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+            tempfile.mkdtemp(
+                dir=path.parent,
+                prefix=f"{_STAGING_PREFIX}{path.name}.",
+                suffix=_STAGING_SUFFIX,
+            )
         )
         self._finalizer = weakref.finalize(self, _discard_dir, self._workdir)
 
@@ -511,7 +556,7 @@ class StagedDirectory(StagedTarget):
             # already correct). A crash *between* the two moves is the residual
             # non-atomic window -- the previous contents remain in a sibling
             # `<name>.old` directory for manual recovery.
-            backup = self._path.with_name(f"{self._workdir.name}.old")
+            backup = self._path.with_name(f"{self._workdir.name}{_BACKUP_SUFFIX}")
             self._path.rename(backup)
             try:
                 self._workdir.rename(self._path)

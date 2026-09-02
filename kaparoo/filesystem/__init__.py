@@ -1,5 +1,6 @@
 __all__ = (
     "SPEC_FILE_SUFFIXES",
+    "STAGING",
     "DirectoryNotFoundError",
     "NotAFileError",
     "SearchKwargs",
@@ -95,7 +96,7 @@ from kaparoo.filesystem.search import (
     search_paths,
     select,
 )
-from kaparoo.filesystem.staged import StagedDirectory, StagedFile
+from kaparoo.filesystem.staged import STAGING, StagedDirectory, StagedFile
 from kaparoo.filesystem.utils import (
     ensure_file_extension,
     file_extension,

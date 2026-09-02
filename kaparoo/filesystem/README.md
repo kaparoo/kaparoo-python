@@ -12,6 +12,7 @@
 - [Extensions](#extensions)
 - [Reserving a destination](#reserving-a-destination)
 - [Safe (atomic) writes](#safe-atomic-writes)
+  - [Finding what an interrupted run left](#finding-what-an-interrupted-run-left)
 - [Platform notes](#platform-notes)
 - [See also](#see-also)
 
@@ -25,7 +26,7 @@
 - [`utils`](./utils.py) — `stringify_path(s)`, `wrap_path(s)`,
   `reserve_path(s)`, and the extension helpers `ensure_file_extension` /
   `file_extension` / `normalize_extension(s)`
-- [`staged`](./staged.py) — `StagedFile` / `StagedDirectory`, safe
+- [`staged`](./staged.py) — `StagedFile` / `StagedDirectory`, `STAGING`, safe
   (atomic) writers usable as a context manager or explicitly
 - [`exceptions`](./exceptions.py) — `DirectoryNotFoundError`, `NotAFileError`,
   `UnsupportedExtensionError`
@@ -297,6 +298,33 @@ fsynced; if their contents must survive a crash right after commit, fsync
 them yourself (e.g. write each via `StagedFile`). For the create path,
 concurrent readers always see the complete directory regardless; the
 overwrite replace has the brief absent window noted above.
+
+### Finding what an interrupted run left
+
+Both writers stage under a hidden name derived from the destination
+(`.report.json.a1b2c3d4.tmp`), and a directory *replace* additionally leaves
+the displaced original in a sibling `.old` directory if it is interrupted
+between its two renames. `STAGING` matches both shapes, so a run can collect
+what an earlier one never got to clean up:
+
+```python
+import shutil
+
+from kaparoo.filesystem import STAGING, search_dirs
+
+for leftover in search_dirs(root, name_filter=STAGING):
+    shutil.rmtree(leftover, ignore_errors=True)
+```
+
+Two things to know before acting on what it finds:
+
+- **It is a `name_filter`, not an `exclude` rule.** `name_filter` matches an
+  entry's leaf name; `exclude` matches a root-relative *path* string, which a
+  nested staging's leading directories keep from matching.
+- **A match means a staging is there, not that it is dead.** A concurrent
+  writer's staging looks identical, so deleting what this finds can destroy a
+  live write. Gate a cleanup on age (an mtime older than any run could still
+  be holding) or on knowing that no other writer is running.
 
 ## Platform notes
 

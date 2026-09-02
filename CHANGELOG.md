@@ -8,6 +8,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `kaparoo.filesystem.STAGING` (re-exported from `kaparoo.filesystem`): a
+  `Filter` matching the leaf names `StagedFile` / `StagedDirectory` stage
+  under, for collecting what an interrupted run left behind. It matches the
+  in-flight staging (`.report.json.a1b2c3d4.tmp`) and the displaced-original
+  backup a directory replace strands on a crash between its two renames
+  (`.dataset.a1b2c3d4.tmp.old`) -- the latter is the one nothing else
+  collects. Intended as a `name_filter`, not an `exclude` rule, and a match
+  reports only that a staging is there, never that it is dead: a concurrent
+  writer's staging is indistinguishable by name.
+
 ## [0.13.1] - 2026-08-09
 
 ### Added
