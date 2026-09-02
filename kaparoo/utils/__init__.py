@@ -26,6 +26,7 @@ __all__ = (
     "quantify",
     "replace_if_none",
     "resolve_enum",
+    "strrange",
     "unwrap_or_default",
     "unwrap_or_defaults",
     "unwrap_or_factories",
@@ -62,5 +63,5 @@ from kaparoo.utils.optional import (
     unwrap_or_factories,
     unwrap_or_factory,
 )
-from kaparoo.utils.text import quantify
+from kaparoo.utils.text import quantify, strrange
 from kaparoo.utils.timer import SpanRecord, SpanTimer, Timer

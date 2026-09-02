@@ -25,7 +25,7 @@ Small, focused helpers — not enough material for their own packages.
 - [`checks`](./checks.py) — `ensure_one_of`, `ensure_in_range`
 - [`enums`](./enums.py): `resolve_enum`
 - [`literals`](./literals.py): `literal_values`
-- [`text`](./text.py): `quantify`
+- [`text`](./text.py): `quantify`, `strrange`
 
 ## Timer
 
@@ -372,6 +372,35 @@ quantify(1, "frame")               # "1 frame"
 quantify(3, "frame")               # "3 frames"
 quantify(3, "entry", "entries")    # "3 entries"
 ```
+
+`strrange` formats a range of integers into strings, taking `range`'s own
+arguments (or a `range` itself). `template` is a `str.format` string with one
+field, so it carries the number's spelling *and* whatever surrounds it:
+
+```python
+from kaparoo.utils import strrange
+
+strrange(3)                              # ('0', '1', '2')
+strrange(8, template="{:03d}")           # ('000', '001', ..., '007')
+strrange(0, 10, 2, template="{:02d}")    # ('00', '02', '04', '06', '08')
+strrange(3, template="cam_{}")           # ('cam_0', 'cam_1', 'cam_2')
+strrange(3, template="{:04d}.png")       # ('0000.png', '0001.png', '0002.png')
+strrange(2, template="frame_{:05d}.npy") # ('frame_00000.npy', 'frame_00001.npy')
+strrange(range(2, 5))                    # ('2', '3', '4')
+```
+
+It pairs with the directory-tree specs, where a level is named by a list of
+strings:
+
+```python
+from kaparoo.filesystem.hierarchy import nested_dirs
+
+nested_dirs([["dataset"], strrange(8, template="cam_{:02d}"), ["images", "labels"]])
+```
+
+For a pattern that also *matches* the names it stands for, rather than a
+plain list of them, reach for
+[`kaparoo.filters.Template`](../filters/) instead.
 
 ## See also
 

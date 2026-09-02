@@ -27,6 +27,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   sequence); given plainly it lands at the innermost level. The result is
   ordinary `Directory` nodes, so every traversal and serialization treats it
   as hand-written nesting. Exposed from `kaparoo.filesystem.hierarchy` only.
+- `kaparoo.utils.strrange` (re-exported from `kaparoo.utils`): format a range
+  of integers into strings, taking `range`'s own arguments or a `range`
+  itself. `template` is a `str.format` string with one field, carrying the
+  number's spelling and whatever surrounds it -- `strrange(8,
+  template="shard_{:03d}")` gives `("shard_000", ..., "shard_007")`, the
+  padded, regular names a directory level or a file series is built from. A
+  pattern that also *matches* the names it stands for stays
+  `kaparoo.filters.Template`'s job.
 
 ### Changed
 
