@@ -471,6 +471,14 @@ def _check_group(
                         demoted.extend(_walk_nodes(node))
                 return None, False, tuple(demoted)
 
+        case _:
+            # `Group`'s world is closed (`Together` / `Exclusive`); a third
+            # subclass would otherwise fall through to an unbound
+            # `has_violation`, blaming this frame rather than the new kind.
+            name = type(group).__name__
+            msg = f"unsupported group type {name!r}: expected Together or Exclusive"
+            raise TypeError(msg)
+
     if has_violation:
         leaves = _present_leaves(group.entries, present)
         return Violation(group, leaves), False, ()

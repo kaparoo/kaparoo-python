@@ -43,6 +43,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `tuple[X, ...]` annotation, and on a `def` line coverage dropped the whole
   function from measurement -- 281 statements and 100 branches across the
   package went unmeasured, reported as 100%.
+- `validate` refuses a `Group` subclass that is neither `Together` nor
+  `Exclusive` with a `TypeError` naming the kind. Such a group previously
+  fell through the constraint check to an unbound name, raising
+  `UnboundLocalError` from inside `validate` instead. `Group`'s world is
+  closed, so this is reachable only from a new subclass.
 
 ## [0.13.1] - 2026-08-09
 

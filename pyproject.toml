@@ -139,8 +139,9 @@ omit = ["kaparoo/filesystem/types.py"]
 precision = 2
 show_missing = true
 skip_covered = false
-# ~5%p below the current measured coverage (100.00% as of 2026-05-28)
-# to absorb normal variation. Raise/lower in step with the baseline.
+# ~5%p below the current measured coverage (100.00% as of 2026-09-03,
+# over 2922 statements / 646 branches) to absorb normal variation.
+# Raise/lower in step with the baseline.
 fail_under = 95
 exclude_lines = [
     "pragma: no cover",

@@ -6,8 +6,10 @@ import pytest
 
 from kaparoo.filesystem.hierarchy import (
     Directory,
+    Entry,
     Exclusive,
     File,
+    Group,
     Together,
     ValidationReport,
     conformer,
@@ -571,3 +573,31 @@ class TestAllowExtra:
         spec = Directory("dataset", [File("meta.json")])
         assert not conformer(spec)(tmp_path / "dataset")  # strict: clutter rejected
         assert conformer(spec, allow_extra=True)(tmp_path / "dataset")  # blanket ok
+
+
+class TestCheckGroupClosedWorld:
+    def test_a_group_outside_the_closed_world_is_refused(self, tmp_path: Path) -> None:
+        # `Group` is closed over `Together` / `Exclusive`. A third subclass
+        # would otherwise reach `if has_violation:` with the name unbound and
+        # raise `UnboundLocalError`, pointing at `_check_group` rather than at
+        # the unsupported kind.
+        class Neither(Group):
+            __slots__ = ()
+
+            @property
+            def entries(self) -> tuple[Entry, ...]:
+                return (File("a"),)
+
+            def _key(self) -> tuple[object, ...]:
+                return ()
+
+            def to_dict(self) -> dict[str, object]:
+                return {"node": "neither"}
+
+        holder = tmp_path / "d"
+        holder.mkdir()
+        (holder / "a").write_text("a", encoding="utf-8")
+        spec = Directory("d", Neither())
+
+        with pytest.raises(TypeError, match="expected Together or Exclusive"):
+            validate(spec, tmp_path)
